@@ -203,13 +203,13 @@ export default function ClassSchedule() {
                       <td
                         key={day}
                         rowSpan={rowSpan}
-                        className='p-1 border-b border-r border-gray-200 align-top'
+                        className='p-2 border-b border-r border-gray-200 align-top'
                       >
                         <div
-                          className={`w-full p-2 rounded cursor-pointer border-3 transition-all shadow-sm ${
+                          className={`w-full p-2 rounded cursor-pointer transition-all shadow-sm outline outline-3 ${
                             isAttended
-                              ? `${courseColor} border-green-500 ring-2 ring-green-200`
-                              : `${courseColor} border-red-500 ring-2 ring-red-200`
+                              ? `${courseColor} outline-green-500 outline-offset-[-2px]`
+                              : `${courseColor} outline-red-500 outline-offset-[-2px]`
                           }`}
                           onClick={() => toggleAttendance(course.id, currentWeek)}
                         >
