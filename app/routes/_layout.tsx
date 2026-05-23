@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink } from 'react-router'
+import { NavLink, Outlet } from 'react-router'
 import { Calendar, User, GraduationCap } from 'lucide-react'
 import { cn } from '~/lib/utils'
 import { ScrollArea } from '~/components/ui/scroll-area'
@@ -7,7 +7,7 @@ import { Separator } from '~/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '~/components/ui/avatar'
 import { useClassStore } from '~/store/classStore'
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout() {
   const { school } = useClassStore()
 
   return (
@@ -61,7 +61,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* 主内容区域 */}
-      <main className="flex-1 overflow-hidden">{children}</main>
+      <main className="flex-1 overflow-hidden"><Outlet /></main>
     </div>
   )
 }
