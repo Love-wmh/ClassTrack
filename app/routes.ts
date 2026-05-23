@@ -1,4 +1,3 @@
-
 import { type RouteConfig, index, layout, route } from '@react-router/dev/routes'
 
 export default [
@@ -7,4 +6,3 @@ export default [
     route('profile', 'routes/profile.tsx'),
   ]),
 ] satisfies RouteConfig
-
