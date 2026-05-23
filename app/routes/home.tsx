@@ -1,13 +1,13 @@
 import type { Route } from './+types/home'
-import { Welcome } from '../welcome/welcome'
+import ClassSchedule from '../components/ClassSchedule'
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: 'New React Router App' },
-    { name: 'description', content: 'Welcome to React Router!' },
+    { title: 'ClassTrack - 课程表' },
+    { name: 'description', content: '课程表管理应用' },
   ]
 }
 
 export default function Home() {
-  return <Welcome />
+  return <ClassSchedule />
 }
