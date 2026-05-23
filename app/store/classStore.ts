@@ -2,21 +2,28 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Class, ClassMark } from '~/lib/types';
+import type { Class, ClassMark, School, AppData } from '~/lib/types';
 
-interface ClassStore {
-  // 状态
-  classes: Class[];
-  classMarks: Record<string, ClassMark>; // key: `${classId}-${week}`
-  currentWeek: number;
-  isInitialized: boolean;
-
-  // 动作
+interface ClassStore extends AppData {
+  // UI 状态
+  showSchoolDialog: boolean;
+  showImportDialog: boolean;
+  selectedSchool: School | null;
+  selectedParserId: string | null;
+  
+  // Actions
+  setShowSchoolDialog: (show: boolean) => void;
+  setShowImportDialog: (show: boolean) => void;
+  setSelectedSchool: (school: School | null) => void;
+  setSelectedParserId: (parserId: string | null) => void;
+  setSchool: (school: School | null) => void;
   setClasses: (classes: Class[]) => void;
   toggleAttendance: (classId: string, week: number) => void;
   setNote: (classId: string, week: number, note: string) => void;
   setCurrentWeek: (week: number) => void;
-  initialize: () => void;
+  setIsInitialized: (initialized: boolean) => void;
+  resetData: () => void;
+  importClasses: (data: any, parser: (data: any) => Class[]) => void;
 }
 
 // 获取 classMark 的 key
@@ -24,19 +31,48 @@ const getMarkKey = (classId: string, week: number) => `${classId}-${week}`;
 
 export const useClassStore = create<ClassStore>()(
   persist(
-    immer((set, get) => ({
+    immer((set) => ({
+      // 数据状态
+      school: null,
       classes: [],
       classMarks: {},
       currentWeek: 1,
       isInitialized: false,
-
+      
+      // UI 状态
+      showSchoolDialog: false,
+      showImportDialog: false,
+      selectedSchool: null,
+      selectedParserId: null,
+      
+      // Actions
+      setShowSchoolDialog: (show) => {
+        set({ showSchoolDialog: show });
+      },
+      
+      setShowImportDialog: (show) => {
+        set({ showImportDialog: show });
+      },
+      
+      setSelectedSchool: (school) => {
+        set({ selectedSchool: school });
+      },
+      
+      setSelectedParserId: (parserId) => {
+        set({ selectedParserId: parserId });
+      },
+      
+      setSchool: (school) => {
+        set({ school });
+      },
+      
       setClasses: (classes) => {
         set({ classes });
       },
-
+      
       toggleAttendance: (classId, week) => {
-        const key = getMarkKey(classId, week);
         set((state) => {
+          const key = getMarkKey(classId, week);
           if (!state.classMarks[key]) {
             state.classMarks[key] = {
               classId,
@@ -49,10 +85,10 @@ export const useClassStore = create<ClassStore>()(
           }
         });
       },
-
+      
       setNote: (classId, week, note) => {
-        const key = getMarkKey(classId, week);
         set((state) => {
+          const key = getMarkKey(classId, week);
           if (!state.classMarks[key]) {
             state.classMarks[key] = {
               classId,
@@ -65,18 +101,42 @@ export const useClassStore = create<ClassStore>()(
           }
         });
       },
-
+      
       setCurrentWeek: (week) => {
         set({ currentWeek: week });
       },
-
-      initialize: () => {
-        set({ isInitialized: true });
+      
+      setIsInitialized: (initialized) => {
+        set({ isInitialized: initialized });
+      },
+      
+      resetData: () => {
+        set({
+          school: null,
+          classes: [],
+          classMarks: {},
+          currentWeek: 1,
+          isInitialized: false,
+        });
+      },
+      
+      importClasses: (data, parser) => {
+        const classes = parser(data);
+        set({ classes });
       },
     })),
     {
       name: 'class-track-storage',
       storage: createJSONStorage(() => localStorage),
+      // 只持久化数据，不持久化UI状态
+      partialize: (state) => ({
+        school: state.school,
+        classes: state.classes,
+        classMarks: state.classMarks,
+        currentWeek: state.currentWeek,
+        isInitialized: state.isInitialized,
+      }),
     }
   )
 );
+

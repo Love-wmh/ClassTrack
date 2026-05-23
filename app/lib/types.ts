@@ -44,8 +44,27 @@ export interface ClassMark {
   note: string; // 备注
 }
 
+// 学校类型
+export interface School {
+  id: string;
+  name: string;
+  parserId: string; // 默认解析器ID
+}
+
 // 解析器类型
 export interface ClassParser {
+  id: string;
   name: string;
+  description: string;
   parse: (data: any) => Class[];
 }
+
+// 应用状态类型
+export interface AppData {
+  school: School | null;
+  classes: Class[];
+  classMarks: Record<string, ClassMark>;
+  currentWeek: number;
+  isInitialized: boolean;
+}
+
