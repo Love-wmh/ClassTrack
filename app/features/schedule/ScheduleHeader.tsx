@@ -10,7 +10,7 @@ type ScheduleHeaderProps = {
 
 export default function ScheduleHeader({ currentWeek, maxWeek, currentRealWeek, onWeekChange }: ScheduleHeaderProps) {
   return (
-    <div className="mb-5 flex items-center justify-between border-t border-gray-100 pt-5">
+    <div className="mb-5 flex items-center justify-between pt-5">
       <div className="flex items-center gap-1.5">
         <Button
           variant="ghost"
