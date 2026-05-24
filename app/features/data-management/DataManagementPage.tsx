@@ -1,5 +1,6 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef } from 'react'
 import { Download, Upload } from 'lucide-react'
+import { toast } from 'sonner'
 import DataDisplayButton from '~/components/common/DataDisplayButton'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -9,7 +10,6 @@ import { useDataExportImport } from './hooks/useDataExportImport'
 export default function DataManagementPage() {
   const { classes, classMarks, currentWeek } = useClassStore()
   const { exportData, handleFileSelect } = useDataExportImport()
-  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const totalClasses = classes.length
@@ -25,7 +25,11 @@ export default function DataManagementPage() {
     if (!file) return
 
     const result = await handleFileSelect(file)
-    setImportStatus(result.success ? { type: 'success', message: '数据导入成功' } : { type: 'error', message: result.error || '导入失败' })
+    if (result.success) {
+      toast.success('数据导入成功')
+    } else {
+      toast.error(result.error || '导入失败')
+    }
     event.target.value = ''
   }
 
@@ -65,13 +69,6 @@ export default function DataManagementPage() {
                 <CardTitle>数据导入导出</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {importStatus && (
-                  <div
-                    className={`rounded-md px-4 py-3 text-sm ${importStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}
-                  >
-                    {importStatus.message}
-                  </div>
-                )}
                 <div className="flex items-center justify-between py-2">
                   <div className="text-sm font-medium">导出数据</div>
                   <Button onClick={exportData}>
