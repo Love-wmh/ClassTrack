@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import SchoolSelectDialog from '~/components/SchoolSelectDialog'
-import ImportDialog from '~/components/ImportDialog'
+import SchoolSelectDialog from '~/components/dialog/SchoolSelectDialog'
+import ImportDialog from '~/components/dialog/ImportDialog'
 import { useClassStore } from '~/store'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'

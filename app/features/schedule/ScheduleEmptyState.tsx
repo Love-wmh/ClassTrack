@@ -1,5 +1,5 @@
-import SchoolSelectDialog from '~/components/SchoolSelectDialog'
-import ImportDialog from '~/components/ImportDialog'
+import SchoolSelectDialog from '~/components/dialog/SchoolSelectDialog'
+import ImportDialog from '~/components/dialog/ImportDialog'
 import type { School } from '~/lib/types'
 
 type ScheduleEmptyStateProps = {
