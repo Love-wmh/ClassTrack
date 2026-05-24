@@ -1,5 +1,7 @@
+import { CheckCircle2, CircleAlert } from 'lucide-react'
 import { Input } from '~/components/ui/input'
 import type { Class, ClassMark } from '~/lib/types'
+import { cn } from '~/lib/utils'
 import { getCourseColor } from './utils'
 
 type EditingNote = {
@@ -37,21 +39,32 @@ export default function ScheduleCourseCell({
 
   return (
     <div
-      className={`w-full p-2 rounded cursor-pointer transition-all shadow-sm outline outline-3 ${
-        isAttended ? `${courseColor} outline-green-500 outline-offset-[-2px]` : `${courseColor} outline-red-500 outline-offset-[-2px]`
-      }`}
+      className={cn(
+        'group relative flex h-full min-h-[74px] w-full cursor-pointer flex-col overflow-hidden px-2 py-1.5 transition-colors',
+        courseColor,
+        isAttended ? 'ring-1 ring-inset ring-emerald-400/70' : 'ring-1 ring-inset ring-rose-400/70'
+      )}
       onClick={() => onToggleAttendance(course.id, currentWeek)}
+      title={isAttended ? '已上' : '未上'}
     >
-      <div className="font-medium text-sm mb-1">{course.name}</div>
-      <div className="text-xs text-gray-600 mb-1">{course.classroom}</div>
+      <div className={cn('absolute left-0 top-0 h-full w-1', isAttended ? 'bg-emerald-500' : 'bg-rose-500')} />
+      <div className="flex items-start justify-between gap-1 pl-1">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-base font-medium leading-5 text-slate-900">{course.name}</div>
+          <div className="mt-0.5 truncate text-sm leading-5 text-slate-600">{course.classroom}</div>
+        </div>
+        <div className={cn('mt-0.5 shrink-0', isAttended ? 'text-emerald-600' : 'text-rose-600')}>
+          {isAttended ? <CheckCircle2 className="size-4" /> : <CircleAlert className="size-4" />}
+        </div>
+      </div>
 
       {isEditingNote ? (
-        <div className="mt-1">
+        <div className="mt-1 pl-1" onClick={(event) => event.stopPropagation()}>
           <Input
             value={noteText}
             onChange={(event) => onNoteTextChange(event.target.value)}
             placeholder="添加备注..."
-            className="text-xs h-6 px-2"
+            className="h-6 rounded-sm bg-white/70 px-2 text-xs"
             autoFocus
             onBlur={onSaveNote}
             onKeyDown={(event) => {
@@ -60,18 +73,17 @@ export default function ScheduleCourseCell({
                 onSaveNote()
               }
             }}
-            onClick={(event) => event.stopPropagation()}
           />
         </div>
       ) : (
         <div
-          className="text-xs text-gray-700 mt-1 bg-white/40 rounded px-1 py-0.5 min-h-[18px] cursor-pointer"
+          className="mt-auto min-h-[18px] truncate pl-1 text-xs leading-[18px] text-slate-600/90"
           onClick={(event) => {
             event.stopPropagation()
             onStartEditingNote({ id: course.id, week: currentWeek }, note || '')
           }}
         >
-          {note || <span className="text-gray-400 italic text-xs">点击添加备注</span>}
+          {note || <span className="text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">点击添加备注</span>}
         </div>
       )}
     </div>

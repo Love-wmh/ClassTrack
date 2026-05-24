@@ -37,17 +37,17 @@ export default function ScheduleTable({
   const getClassMark = (classId: string, week: number) => classMarks[`${classId}-${week}`]
 
   return (
-    <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
-      <table className="w-full border-collapse">
+    <div className="overflow-x-auto border border-slate-200 bg-white">
+      <table className="w-full table-fixed border-collapse">
         <thead>
-          <tr className="bg-gray-50">
-            <th className="w-16 p-3 text-center text-sm font-medium text-gray-600 border-b border-r border-gray-200">节</th>
+          <tr className="bg-slate-50">
+            <th className="h-9 w-[210px] border-b border-r border-slate-200 text-center text-base font-normal text-slate-600">节</th>
             {weekDays.map((day) => {
               const date = getDayDate(firstWeekStartDate, currentWeek, day)
               return (
-                <th key={day} className="p-3 text-center text-sm font-medium text-gray-700 border-b border-r border-gray-200 min-w-[120px]">
-                  <div>{dayNames[day]}</div>
-                  {date && <div className="text-xs text-muted-foreground mt-1">{format(date, 'MM/dd')}</div>}
+                <th key={day} className="h-9 border-b border-r border-slate-200 text-center text-base font-normal text-slate-600 last:border-r-0">
+                  <span>{dayNames[day]}</span>
+                  {date && <span className="ml-2">{format(date, 'MM.dd')}</span>}
                 </th>
               )
             })}
@@ -56,8 +56,8 @@ export default function ScheduleTable({
 
         <tbody>
           {sections.map((section) => (
-            <tr key={section} className="hover:bg-gray-50/50">
-              <td className="p-2 text-center text-sm text-gray-600 border-b border-r border-gray-200 bg-gray-50/80">{section}</td>
+            <tr key={section} className="h-[37px]">
+              <td className="border-b border-r border-slate-200 text-center text-lg font-normal text-zinc-500">{section}</td>
 
               {weekDays.map((day) => {
                 const course = weekClasses.find((classItem) => classItem.dayOfWeek === day && classItem.startSection === section)
@@ -66,17 +66,17 @@ export default function ScheduleTable({
                 )
 
                 if (coveredCourse && !course) {
-                  return <td key={day} className="border-b border-r border-gray-200" />
+                  return <td key={day} className="border-b border-r border-slate-200 last:border-r-0" />
                 }
 
                 if (!course) {
-                  return <td key={day} className="p-2 border-b border-r border-gray-200 min-h-[60px]" />
+                  return <td key={day} className="border-b border-r border-slate-200 last:border-r-0" />
                 }
 
                 const rowSpan = course.endSection - course.startSection + 1
 
                 return (
-                  <td key={day} rowSpan={rowSpan} className="p-2 border-b border-r border-gray-200 align-top">
+                  <td key={day} rowSpan={rowSpan} className="border-b border-r border-slate-200 align-top last:border-r-0">
                     <ScheduleCourseCell
                       course={course}
                       currentWeek={currentWeek}

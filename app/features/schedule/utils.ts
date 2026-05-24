@@ -28,3 +28,18 @@ export function getMaxWeek(classes: Class[]) {
     return Math.max(max, classMaxWeek)
   }, 20)
 }
+
+export function getCurrentWeek(firstWeekStartDate: string | null, maxWeek: number) {
+  if (!firstWeekStartDate) return 1
+
+  try {
+    const baseDate = new Date(firstWeekStartDate)
+    const today = new Date()
+    const diffTime = today.getTime() - baseDate.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    const week = Math.floor(diffDays / 7) + 1
+    return Math.min(Math.max(week, 1), maxWeek)
+  } catch {
+    return 1
+  }
+}

@@ -5,7 +5,7 @@ import { useClassStore } from '~/store'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
-import { getMaxWeek } from './utils'
+import { getCurrentWeek, getMaxWeek } from './utils'
 
 type EditingNote = {
   id: string
@@ -43,6 +43,7 @@ export default function SchedulePage() {
   const weekClasses = useMemo(() => classes.filter((classItem) => classItem.weeks.includes(currentWeek)), [classes, currentWeek])
 
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
+  const currentRealWeek = useMemo(() => getCurrentWeek(firstWeekStartDate, maxWeek), [firstWeekStartDate, maxWeek])
 
   const handleStartEditingNote = (editingNote: EditingNote, note: string) => {
     setEditingNote(editingNote)
@@ -62,12 +63,12 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="h-full bg-gray-50 py-6 px-4 overflow-auto">
+    <div className="h-full bg-white px-6 py-7 overflow-auto">
       <SchoolSelectDialog />
       <ImportDialog />
 
-      <div className="max-w-7xl mx-auto">
-        <ScheduleHeader school={school} currentWeek={currentWeek} maxWeek={maxWeek} onWeekChange={setCurrentWeek} />
+      <div className="mx-auto max-w-[1410px]">
+        <ScheduleHeader currentWeek={currentWeek} maxWeek={maxWeek} currentRealWeek={currentRealWeek} onWeekChange={setCurrentWeek} />
         <ScheduleTable
           weekClasses={weekClasses}
           classMarks={classMarks}

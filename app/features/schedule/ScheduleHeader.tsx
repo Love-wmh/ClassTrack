@@ -1,42 +1,44 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '~/components/ui/button'
-import type { School } from '~/lib/types'
 
 type ScheduleHeaderProps = {
-  school: School | null
   currentWeek: number
   maxWeek: number
+  currentRealWeek: number
   onWeekChange: (week: number) => void
 }
 
-export default function ScheduleHeader({ school, currentWeek, maxWeek, onWeekChange }: ScheduleHeaderProps) {
+export default function ScheduleHeader({ currentWeek, maxWeek, currentRealWeek, onWeekChange }: ScheduleHeaderProps) {
   return (
-    <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">课程表</h1>
-        {school && <p className="text-sm text-gray-500">{school.name}</p>}
-      </div>
-      <div className="flex items-center gap-3">
+    <div className="mb-5 flex items-center justify-between border-t border-gray-100 pt-5">
+      <div className="flex items-center gap-1.5">
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={() => onWeekChange(Math.max(1, currentWeek - 1))}
           disabled={currentWeek <= 1}
-          className="h-10 w-10"
+          className="h-12 w-12 rounded-none bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
         >
           <ChevronLeft className="size-5" />
         </Button>
-        <span className="text-lg font-medium text-gray-700 w-20 text-center">第 {currentWeek} 周</span>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={() => onWeekChange(Math.min(maxWeek, currentWeek + 1))}
           disabled={currentWeek >= maxWeek}
-          className="h-10 w-10"
+          className="h-12 w-12 rounded-none bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
         >
           <ChevronRight className="size-5" />
         </Button>
       </div>
+
+      <Button
+        variant="ghost"
+        onClick={() => onWeekChange(currentRealWeek)}
+        className="h-12 rounded-none bg-gray-50 px-4 text-base font-medium text-slate-700 hover:bg-gray-100 hover:text-slate-900"
+      >
+        返回本周
+      </Button>
     </div>
   )
 }
