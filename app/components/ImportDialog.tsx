@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -9,10 +9,19 @@ import { useClassStore } from '~/store'
 import { parsers, getParserById } from '~/lib/parsers'
 
 export default function ImportDialog() {
-  const { showImportDialog, selectedParserId, setShowImportDialog, setSelectedParserId, importClasses, setIsInitialized } = useClassStore()
+  const { showImportDialog, selectedSchool, selectedParserId, setShowImportDialog, setSelectedParserId, importClasses, setIsInitialized } = useClassStore()
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (showImportDialog && selectedSchool && !selectedParserId) {
+      const matchedParser = getParserById(selectedSchool.id)
+      if (matchedParser) {
+        setSelectedParserId(matchedParser.id)
+      }
+    }
+  }, [showImportDialog, selectedSchool, selectedParserId, setSelectedParserId])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null

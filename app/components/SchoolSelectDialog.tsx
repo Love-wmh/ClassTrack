@@ -7,15 +7,12 @@ import { useClassStore } from '~/store'
 import { schools } from '~/lib/parsers'
 
 export default function SchoolSelectDialog() {
-  const { showSchoolDialog, selectedSchool, setShowSchoolDialog, setSelectedSchool, setSchool, setShowImportDialog, setSelectedParserId } =
+  const { showSchoolDialog, selectedSchool, setShowSchoolDialog, setSelectedSchool, setSchool, setShowImportDialog } =
     useClassStore()
 
   const handleSchoolChange = (schoolId: string) => {
     const school = schools.find((s) => s.id === schoolId)
     setSelectedSchool(school || null)
-    if (school) {
-      setSelectedParserId(school.parserId)
-    }
   }
 
   const handleConfirm = () => {
@@ -31,7 +28,7 @@ export default function SchoolSelectDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>选择学校</DialogTitle>
-          <DialogDescription>请选择您的学校，以便我们为您提供合适的课程表解析器</DialogDescription>
+          <DialogDescription>请选择您的学校</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">

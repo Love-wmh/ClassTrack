@@ -47,7 +47,6 @@ export interface ClassMark {
 export interface School {
   id: string
   name: string
-  parserId: string // 默认解析器ID
 }
 
 // 解析器类型
