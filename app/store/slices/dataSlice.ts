@@ -1,9 +1,10 @@
-import type { Class, School, AppData } from '~/lib/types'
+import type {Class, School, AppData, ClassMark} from '~/lib/types'
 import type { StoreSlice } from '../types'
 
 export interface DataSlice extends AppData {
   setSchool: (school: School | null) => void
   setClasses: (classes: Class[]) => void
+  setClassMarks: (marks: Record<string, ClassMark>) => void
   toggleAttendance: (classId: string, week: number) => void
   markWeekAsAttended: (classIds: string[], week: number) => void
   markWeekAsUnattended: (classIds: string[], week: number) => void
@@ -31,6 +32,10 @@ export const createDataSlice: StoreSlice<DataSlice> = (set) => ({
 
   setClasses: (classes) => {
     set({ classes })
+  },
+
+  setClassMarks: (marks) => {
+    set({ classMarks: marks })
   },
 
   toggleAttendance: (classId, week) => {

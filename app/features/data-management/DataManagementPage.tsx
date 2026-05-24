@@ -1,13 +1,33 @@
+import React, { useRef, useState } from 'react'
+import { Download, Upload } from 'lucide-react'
 import DataDisplayButton from '~/components/common/DataDisplayButton'
+import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
+import { useDataExportImport } from './hooks/useDataExportImport'
 
 export default function DataManagementPage() {
   const { classes, classMarks, currentWeek } = useClassStore()
+  const { exportData, handleFileSelect } = useDataExportImport()
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const totalClasses = classes.length
   const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
   const totalWithNote = Object.values(classMarks).filter((mark) => mark.note).length
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const result = await handleFileSelect(file)
+    setImportStatus(result.success ? { type: 'success', message: '数据导入成功' } : { type: 'error', message: result.error || '导入失败' })
+    event.target.value = ''
+  }
 
   return (
     <div className="flex-1 w-full bg-background p-4 md:p-6 overflow-hidden flex flex-col h-full relative">
@@ -37,6 +57,36 @@ export default function DataManagementPage() {
                   <div className="text-sm font-medium">备注数量</div>
                   <DataDisplayButton>{totalWithNote}</DataDisplayButton>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card id="card-data-io">
+              <CardHeader>
+                <CardTitle>数据导入导出</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {importStatus && (
+                  <div
+                    className={`rounded-md px-4 py-3 text-sm ${importStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}
+                  >
+                    {importStatus.message}
+                  </div>
+                )}
+                <div className="flex items-center justify-between py-2">
+                  <div className="text-sm font-medium">导出数据</div>
+                  <Button onClick={exportData}>
+                    <Download className="mr-1.5 size-4" />
+                    导出
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <div className="text-sm font-medium">导入数据</div>
+                  <Button onClick={handleImportClick} variant="outline">
+                    <Upload className="mr-1.5 size-4" />
+                    导入
+                  </Button>
+                </div>
+                <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
               </CardContent>
             </Card>
           </div>
