@@ -14,10 +14,10 @@ function generateClassId(rawClass: any): string {
   return `${rawClass.JXBID}-${rawClass.SKXQ}-${rawClass.KSJC}`
 }
 
-export const tianjinUniversityOfTechnologyParser: ClassParser = {
-  id: 'tianjin-university-of-technology',
-  name: '天津理工大学',
-  description: '适用于天津理工大学教务系统导出的JSON课程表',
+export const tianjinPolytechnicUniversityParser: ClassParser = {
+  id: 'tianjin-polytechnic-university',
+  name: '天津工业大学',
+  description: '适用于天津工业大学教务系统导出的JSON课程表',
   parse: (data: any): Class[] => {
     const rawClasses: any[] = data?.datas?.cxxszhxqkb?.rows || []
 
