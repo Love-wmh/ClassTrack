@@ -3,6 +3,7 @@ import { useClassStore } from '~/store/classStore'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { format, addDays } from 'date-fns'
 import type { Class } from '~/lib/types'
 import SchoolSelectDialog from '~/components/SchoolSelectDialog'
 import ImportDialog from '~/components/ImportDialog'
@@ -43,7 +44,21 @@ export default function SchedulePage() {
     toggleAttendance,
     setNote,
     setCurrentWeek,
+    firstWeekStartDate,
   } = useClassStore()
+
+  // 计算当前周每一天的日期
+  const getDayDate = (dayOfWeek: number) => {
+    if (!firstWeekStartDate) return null
+    try {
+      const baseDate = new Date(firstWeekStartDate)
+      // 计算偏移天数: (当前周数 - 1) * 7 + (星期几 - 1)
+      const daysOffset = (currentWeek - 1) * 7 + (dayOfWeek - 1)
+      return addDays(baseDate, daysOffset)
+    } catch {
+      return null
+    }
+  }
 
   const [editingNote, setEditingNote] = useState<{ id: string; week: number } | null>(null)
   const [noteText, setNoteText] = useState('')
@@ -149,14 +164,22 @@ export default function SchedulePage() {
                 <th className="w-16 p-3 text-center text-sm font-medium text-gray-600 border-b border-r border-gray-200">
                   节
                 </th>
-                {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                  <th
-                    key={day}
-                    className="p-3 text-center text-sm font-medium text-gray-700 border-b border-r border-gray-200 min-w-[120px]"
-                  >
-                    {dayNames[day]}
-                  </th>
-                ))}
+                {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                  const date = getDayDate(day)
+                  return (
+                    <th
+                      key={day}
+                      className="p-3 text-center text-sm font-medium text-gray-700 border-b border-r border-gray-200 min-w-[120px]"
+                    >
+                      <div>{dayNames[day]}</div>
+                      {date && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {format(date, 'MM/dd')}
+                        </div>
+                      )}
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
 

@@ -65,4 +65,5 @@ export interface AppData {
   classMarks: Record<string, ClassMark>
   currentWeek: number
   isInitialized: boolean
+  firstWeekStartDate: string | null // 第一周第一天的日期 (ISO 日期字符串)
 }

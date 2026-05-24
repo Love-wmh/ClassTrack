@@ -23,6 +23,7 @@ interface ClassStore extends AppData {
   setIsInitialized: (initialized: boolean) => void
   resetData: () => void
   importClasses: (data: any, parser: (data: any) => Class[]) => void
+  setFirstWeekStartDate: (date: string | null) => void
 }
 
 // 获取 classMark 的 key
@@ -37,6 +38,7 @@ export const useClassStore = create<ClassStore>()(
       classMarks: {},
       currentWeek: 1,
       isInitialized: false,
+      firstWeekStartDate: null,
 
       // UI 状态
       showSchoolDialog: false,
@@ -116,12 +118,17 @@ export const useClassStore = create<ClassStore>()(
           classMarks: {},
           currentWeek: 1,
           isInitialized: false,
+          firstWeekStartDate: null,
         })
       },
 
       importClasses: (data, parser) => {
         const classes = parser(data)
         set({ classes })
+      },
+
+      setFirstWeekStartDate: (date) => {
+        set({ firstWeekStartDate: date })
       },
     })),
     {
@@ -134,6 +141,7 @@ export const useClassStore = create<ClassStore>()(
         classMarks: state.classMarks,
         currentWeek: state.currentWeek,
         isInitialized: state.isInitialized,
+        firstWeekStartDate: state.firstWeekStartDate,
       }),
     }
   )
