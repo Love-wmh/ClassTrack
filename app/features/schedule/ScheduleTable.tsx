@@ -39,13 +39,19 @@ export default function ScheduleTable({
   return (
     <div className="overflow-x-auto border border-slate-200 bg-white">
       <table className="w-full table-fixed border-collapse">
+        <colgroup>
+          <col className="w-16" />
+          {weekDays.map((day) => (
+            <col key={day} style={{ width: `${100 / 7}%` }} />
+          ))}
+        </colgroup>
         <thead>
           <tr className="bg-slate-50">
-            <th className="h-9 w-16 border-b border-r border-slate-200 text-center text-base font-normal text-slate-600">节</th>
+            <th className="h-9 border-b border-r border-slate-200 text-center text-base font-normal text-slate-600">节</th>
             {weekDays.map((day) => {
               const date = getDayDate(firstWeekStartDate, currentWeek, day)
               return (
-                <th key={day} className="h-9 w-1/7 border-b border-r border-slate-200 text-center text-base font-normal text-slate-600 last:border-r-0">
+                <th key={day} className="h-9 border-b border-r border-slate-200 text-center text-base font-normal text-slate-600 last:border-r-0">
                   <span>{dayNames[day]}</span>
                   {date && <span className="ml-2">{format(date, 'MM.dd')}</span>}
                 </th>

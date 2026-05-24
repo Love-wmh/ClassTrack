@@ -5,6 +5,8 @@ export interface DataSlice extends AppData {
   setSchool: (school: School | null) => void
   setClasses: (classes: Class[]) => void
   toggleAttendance: (classId: string, week: number) => void
+  markWeekAsAttended: (classIds: string[], week: number) => void
+  markWeekAsUnattended: (classIds: string[], week: number) => void
   setNote: (classId: string, week: number, note: string) => void
   setCurrentWeek: (week: number) => void
   setIsInitialized: (initialized: boolean) => void
@@ -44,6 +46,42 @@ export const createDataSlice: StoreSlice<DataSlice> = (set) => ({
       } else {
         state.classMarks[key].isAttended = !state.classMarks[key].isAttended
       }
+    })
+  },
+
+  markWeekAsAttended: (classIds, week) => {
+    set((state) => {
+      classIds.forEach((classId) => {
+        const key = getMarkKey(classId, week)
+        if (!state.classMarks[key]) {
+          state.classMarks[key] = {
+            classId,
+            week,
+            isAttended: true,
+            note: '',
+          }
+        } else {
+          state.classMarks[key].isAttended = true
+        }
+      })
+    })
+  },
+
+  markWeekAsUnattended: (classIds, week) => {
+    set((state) => {
+      classIds.forEach((classId) => {
+        const key = getMarkKey(classId, week)
+        if (!state.classMarks[key]) {
+          state.classMarks[key] = {
+            classId,
+            week,
+            isAttended: false,
+            note: '',
+          }
+        } else {
+          state.classMarks[key].isAttended = false
+        }
+      })
     })
   },
 

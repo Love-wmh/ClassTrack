@@ -6,6 +6,7 @@ import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import { getCurrentWeek, getMaxWeek } from './utils'
+import { useWeekAttendance } from './hooks/useWeekAttendance'
 
 type EditingNote = {
   id: string
@@ -45,6 +46,8 @@ export default function SchedulePage() {
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentWeek(firstWeekStartDate, maxWeek), [firstWeekStartDate, maxWeek])
 
+  const { markAllAsAttended, markAllAsUnattended } = useWeekAttendance()
+
   const handleStartEditingNote = (editingNote: EditingNote, note: string) => {
     setEditingNote(editingNote)
     setNoteText(note)
@@ -68,7 +71,14 @@ export default function SchedulePage() {
       <ImportDialog />
 
       <div className="mx-auto max-w-[1410px]">
-        <ScheduleHeader currentWeek={currentWeek} maxWeek={maxWeek} currentRealWeek={currentRealWeek} onWeekChange={setCurrentWeek} />
+        <ScheduleHeader
+          currentWeek={currentWeek}
+          maxWeek={maxWeek}
+          currentRealWeek={currentRealWeek}
+          onWeekChange={setCurrentWeek}
+          onMarkAllAsAttended={markAllAsAttended}
+          onMarkAllAsUnattended={markAllAsUnattended}
+        />
         <ScheduleTable
           weekClasses={weekClasses}
           classMarks={classMarks}
