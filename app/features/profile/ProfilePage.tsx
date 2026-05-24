@@ -6,12 +6,11 @@ import { DatePicker } from '~/components/ui/date-picker'
 import { useClassStore } from '~/store'
 
 export default function ProfilePage() {
-  const { school, classes, classMarks, currentWeek, firstWeekStartDate, setFirstWeekStartDate } = useClassStore()
+  const { school, classes, classMarks, firstWeekStartDate, setFirstWeekStartDate } = useClassStore()
   const [activeKey, setActiveKey] = useState('overview')
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const overviewCardRef = useRef<HTMLDivElement>(null)
   const semesterCardRef = useRef<HTMLDivElement>(null)
-  const dataCardRef = useRef<HTMLDivElement>(null)
 
   const totalClasses = classes.length
   const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
@@ -21,7 +20,6 @@ export default function ProfilePage() {
     () => [
       { key: 'overview', label: '个人信息' },
       { key: 'semester', label: '学期设置' },
-      { key: 'data', label: '课程数据' },
     ],
     []
   )
@@ -30,7 +28,6 @@ export default function ProfilePage() {
     () => ({
       overview: overviewCardRef,
       semester: semesterCardRef,
-      data: dataCardRef,
     }),
     []
   )
@@ -68,17 +65,13 @@ export default function ProfilePage() {
       const containerTop = container.getBoundingClientRect().top
       const overviewRect = overviewCardRef.current?.getBoundingClientRect()
       const semesterRect = semesterCardRef.current?.getBoundingClientRect()
-      const dataRect = dataCardRef.current?.getBoundingClientRect()
-      const containerHeight = container.clientHeight
 
-      if (overviewRect && semesterRect && dataRect) {
+      if (overviewRect && semesterRect) {
         const overviewTop = overviewRect.top - containerTop
         const semesterTop = semesterRect.top - containerTop
-        const dataTop = dataRect.top - containerTop
+        const containerHeight = container.clientHeight
 
-        if (dataTop < containerHeight / 2) {
-          setActiveKey('data')
-        } else if (semesterTop < containerHeight / 2) {
+        if (semesterTop < containerHeight / 2) {
           setActiveKey('semester')
         } else if (overviewTop < containerHeight / 2) {
           setActiveKey('overview')
@@ -93,7 +86,7 @@ export default function ProfilePage() {
   return (
     <div className="flex-1 w-full bg-background p-4 md:p-6 overflow-hidden flex flex-col h-full relative">
       <div className="flex flex-1 overflow-hidden max-w-4xl mx-auto w-full relative gap-6">
-        <div className="flex-shrink-0 w-34">
+        <div className="shrink-0 w-34">
           <SmoothTabs items={tabItems} activeKey={activeKey} onChange={handleTabChange} orientation="vertical" />
         </div>
 
@@ -133,26 +126,6 @@ export default function ProfilePage() {
                     onSelect={handleDateSelect}
                     placeholder="选择日期"
                   />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card ref={dataCardRef} id="card-data">
-              <CardHeader>
-                <CardTitle>课程数据</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between py-2">
-                  <div className="text-sm font-medium">课程总数</div>
-                  <DataDisplayButton>{totalClasses}</DataDisplayButton>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div className="text-sm font-medium">当前周次</div>
-                  <DataDisplayButton>第 {currentWeek} 周</DataDisplayButton>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <div className="text-sm font-medium">备注数量</div>
-                  <DataDisplayButton>{totalWithNote}</DataDisplayButton>
                 </div>
               </CardContent>
             </Card>

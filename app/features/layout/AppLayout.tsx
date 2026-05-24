@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router'
-import { Calendar, User, GraduationCap } from 'lucide-react'
+import { Calendar, Database, User, GraduationCap } from 'lucide-react'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { Separator } from '~/components/ui/separator'
 import { useClassStore } from '~/store'
@@ -10,6 +10,11 @@ const navItems = [
     to: '/',
     icon: <Calendar className="w-5 h-5" />,
     label: '课程表',
+  },
+  {
+    to: '/data-management',
+    icon: <Database className="w-5 h-5" />,
+    label: '数据管理',
   },
   {
     to: '/profile',
