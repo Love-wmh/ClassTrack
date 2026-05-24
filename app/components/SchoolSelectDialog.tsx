@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { useClassStore } from '~/store/classStore'
+import { useClassStore } from '~/store'
 import { schools } from '~/lib/parsers'
 
 export default function SchoolSelectDialog() {

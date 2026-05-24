@@ -5,7 +5,7 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Upload } from 'lucide-react'
-import { useClassStore } from '~/store/classStore'
+import { useClassStore } from '~/store'
 import { parsers, getParserById } from '~/lib/parsers'
 
 export default function ImportDialog() {

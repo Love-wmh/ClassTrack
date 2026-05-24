@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useClassStore } from '~/store/classStore'
+import { useClassStore } from '~/store'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { ChevronLeft, ChevronRight } from 'lucide-react'

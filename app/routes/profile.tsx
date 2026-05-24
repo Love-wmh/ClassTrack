@@ -1,7 +1,7 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card'
 import { Label } from '~/components/ui/label'
-import { useClassStore } from '~/store/classStore'
+import { useClassStore } from '~/store'
 import { DatePicker } from '~/components/ui/date-picker'
 
 export default function ProfilePage() {
