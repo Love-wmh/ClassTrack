@@ -10,7 +10,7 @@ export default function DataDisplayButton({ children, className }: DataDisplayBu
   return (
     <div
       className={cn(
-        'border-input dark:bg-input/30 dark:hover:bg-input/50 flex max-w-[var(--global-display-min-width)] items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs h-9',
+        'border-input dark:bg-input/30 dark:hover:bg-input/50 flex max-w-(--global-display-min-width) items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs h-9',
         className
       )}
     >
