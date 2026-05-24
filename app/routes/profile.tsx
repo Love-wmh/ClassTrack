@@ -43,25 +43,19 @@ export default function ProfilePage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                已标记课程
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">已标记课程</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {totalAttended}
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  / {totalClasses}
-                </span>
+                <span className="text-sm font-normal text-muted-foreground ml-2">/ {totalClasses}</span>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                有备注课程
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">有备注课程</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalWithNote}</div>
@@ -83,9 +77,7 @@ export default function ProfilePage() {
                 onSelect={handleDateSelect}
                 placeholder="选择第一周第一天"
               />
-              <p className="text-sm text-muted-foreground">
-                设置第一周的开始日期后，课程表会在星期几旁边显示对应的日期
-              </p>
+              <p className="text-sm text-muted-foreground">设置第一周的开始日期后，课程表会在星期几旁边显示对应的日期</p>
             </div>
           </CardContent>
         </Card>

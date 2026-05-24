@@ -108,9 +108,7 @@ export default function SchedulePage() {
       <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">欢迎使用课程表</h2>
-          <p className="text-muted-foreground mb-8">
-            {!school ? '请先选择学校' : classes.length === 0 ? '请导入课程表' : '正在加载...'}
-          </p>
+          <p className="text-muted-foreground mb-8">{!school ? '请先选择学校' : classes.length === 0 ? '请导入课程表' : '正在加载...'}</p>
         </div>
         <SchoolSelectDialog />
         <ImportDialog />
@@ -140,9 +138,7 @@ export default function SchedulePage() {
             >
               <ChevronLeft className="size-5" />
             </Button>
-            <span className="text-lg font-medium text-gray-700 w-20 text-center">
-              第 {currentWeek} 周
-            </span>
+            <span className="text-lg font-medium text-gray-700 w-20 text-center">第 {currentWeek} 周</span>
             <Button
               variant="outline"
               size="icon"
@@ -161,9 +157,7 @@ export default function SchedulePage() {
             {/* 表头 */}
             <thead>
               <tr className="bg-gray-50">
-                <th className="w-16 p-3 text-center text-sm font-medium text-gray-600 border-b border-r border-gray-200">
-                  节
-                </th>
+                <th className="w-16 p-3 text-center text-sm font-medium text-gray-600 border-b border-r border-gray-200">节</th>
                 {[1, 2, 3, 4, 5, 6, 7].map((day) => {
                   const date = getDayDate(day)
                   return (
@@ -172,11 +166,7 @@ export default function SchedulePage() {
                       className="p-3 text-center text-sm font-medium text-gray-700 border-b border-r border-gray-200 min-w-[120px]"
                     >
                       <div>{dayNames[day]}</div>
-                      {date && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {format(date, 'MM/dd')}
-                        </div>
-                      )}
+                      {date && <div className="text-xs text-muted-foreground mt-1">{format(date, 'MM/dd')}</div>}
                     </th>
                   )
                 })}
@@ -188,23 +178,16 @@ export default function SchedulePage() {
               {Array.from({ length: 12 }, (_, i) => i + 1).map((section) => (
                 <tr key={section} className="hover:bg-gray-50/50">
                   {/* 节次 */}
-                  <td className="p-2 text-center text-sm text-gray-600 border-b border-r border-gray-200 bg-gray-50/80">
-                    {section}
-                  </td>
+                  <td className="p-2 text-center text-sm text-gray-600 border-b border-r border-gray-200 bg-gray-50/80">{section}</td>
 
                   {/* 每天的课程 */}
                   {[1, 2, 3, 4, 5, 6, 7].map((day) => {
                     // 查找在这个位置开始的课程
-                    const course = weekClasses.find(
-                      (cls) => cls.dayOfWeek === day && cls.startSection === section
-                    )
+                    const course = weekClasses.find((cls) => cls.dayOfWeek === day && cls.startSection === section)
 
                     // 查找覆盖这个位置的课程（用于判断是否需要渲染空单元格）
                     const coveredCourse = weekClasses.find(
-                      (cls) =>
-                        cls.dayOfWeek === day &&
-                        cls.startSection < section &&
-                        cls.endSection >= section
+                      (cls) => cls.dayOfWeek === day && cls.startSection < section && cls.endSection >= section
                     )
 
                     if (coveredCourse && !course) {
@@ -214,12 +197,7 @@ export default function SchedulePage() {
 
                     if (!course) {
                       // 没有课程，渲染空单元格
-                      return (
-                        <td
-                          key={day}
-                          className="p-2 border-b border-r border-gray-200 min-h-[60px]"
-                        />
-                      )
+                      return <td key={day} className="p-2 border-b border-r border-gray-200 min-h-[60px]" />
                     }
 
                     // 计算课程占几行
@@ -230,11 +208,7 @@ export default function SchedulePage() {
                     const courseColor = getCourseColor(course.courseId)
 
                     return (
-                      <td
-                        key={day}
-                        rowSpan={rowSpan}
-                        className="p-2 border-b border-r border-gray-200 align-top"
-                      >
+                      <td key={day} rowSpan={rowSpan} className="p-2 border-b border-r border-gray-200 align-top">
                         <div
                           className={`w-full p-2 rounded cursor-pointer transition-all shadow-sm outline outline-3 ${
                             isAttended
@@ -277,9 +251,7 @@ export default function SchedulePage() {
                                 setNoteText(note || '')
                               }}
                             >
-                              {note || (
-                                <span className="text-gray-400 italic text-xs">点击添加备注</span>
-                              )}
+                              {note || <span className="text-gray-400 italic text-xs">点击添加备注</span>}
                             </div>
                           )}
                         </div>

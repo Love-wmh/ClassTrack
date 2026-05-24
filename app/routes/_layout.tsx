@@ -44,24 +44,20 @@ export default function AppLayout() {
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage src="" />
-              <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                {school?.name?.charAt(0) || 'U'}
-              </AvatarFallback>
+              <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">{school?.name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">
-                {school?.name || '未登录'}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {school ? '已导入课程' : '请先导入课程'}
-              </p>
+              <p className="text-sm font-medium text-gray-800 truncate">{school?.name || '未登录'}</p>
+              <p className="text-xs text-gray-500 truncate">{school ? '已导入课程' : '请先导入课程'}</p>
             </div>
           </div>
         </div>
       </aside>
 
       {/* 主内容区域 */}
-      <main className="flex-1 overflow-hidden"><Outlet /></main>
+      <main className="flex-1 overflow-hidden">
+        <Outlet />
+      </main>
     </div>
   )
 }
@@ -75,9 +71,7 @@ function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label
       className={({ isActive }) =>
         cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-blue-50 text-blue-600'
-            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+          isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
         )
       }
     >

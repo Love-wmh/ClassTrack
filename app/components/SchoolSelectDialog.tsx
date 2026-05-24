@@ -1,34 +1,14 @@
 import React from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '~/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { useClassStore } from '~/store/classStore'
 import { schools } from '~/lib/parsers'
 
 export default function SchoolSelectDialog() {
-  const {
-    showSchoolDialog,
-    selectedSchool,
-    setShowSchoolDialog,
-    setSelectedSchool,
-    setSchool,
-    setShowImportDialog,
-    setSelectedParserId,
-  } = useClassStore()
+  const { showSchoolDialog, selectedSchool, setShowSchoolDialog, setSelectedSchool, setSchool, setShowImportDialog, setSelectedParserId } =
+    useClassStore()
 
   const handleSchoolChange = (schoolId: string) => {
     const school = schools.find((s) => s.id === schoolId)

@@ -1,35 +1,15 @@
 import React, { useState } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '~/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '~/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Upload } from 'lucide-react'
 import { useClassStore } from '~/store/classStore'
 import { parsers, getParserById } from '~/lib/parsers'
 
 export default function ImportDialog() {
-  const {
-    showImportDialog,
-    selectedParserId,
-    setShowImportDialog,
-    setSelectedParserId,
-    importClasses,
-    setIsInitialized,
-  } = useClassStore()
+  const { showImportDialog, selectedParserId, setShowImportDialog, setSelectedParserId, importClasses, setIsInitialized } = useClassStore()
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -78,17 +58,9 @@ export default function ImportDialog() {
           <div className="space-y-2">
             <Label htmlFor="file">课程表文件</Label>
             <div className="flex items-center gap-2">
-              <Input
-                id="file"
-                type="file"
-                accept=".json"
-                onChange={handleFileChange}
-                className="cursor-pointer"
-              />
+              <Input id="file" type="file" accept=".json" onChange={handleFileChange} className="cursor-pointer" />
             </div>
-            {selectedFile && (
-              <p className="text-sm text-muted-foreground">已选择: {selectedFile.name}</p>
-            )}
+            {selectedFile && <p className="text-sm text-muted-foreground">已选择: {selectedFile.name}</p>}
           </div>
 
           <div className="space-y-2">
@@ -106,9 +78,7 @@ export default function ImportDialog() {
               </SelectContent>
             </Select>
             {selectedParserId && (
-              <p className="text-sm text-muted-foreground">
-                {parsers.find((p) => p.id === selectedParserId)?.description}
-              </p>
+              <p className="text-sm text-muted-foreground">{parsers.find((p) => p.id === selectedParserId)?.description}</p>
             )}
           </div>
 
