@@ -31,7 +31,7 @@ export default function AppLayout() {
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="px-4 py-5">
           <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50/80 px-3 py-3 shadow-sm">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-200">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm shadow-gray-200">
               <GraduationCap className="h-5 w-5" />
             </div>
             <div className="min-w-0">

@@ -16,7 +16,7 @@ export default function NavItem({ to, icon, label }: NavItemProps) {
       className={({ isActive }) =>
         cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-          isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+          isActive ? 'bg-gray-100 text-gray-950' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
         )
       }
     >
