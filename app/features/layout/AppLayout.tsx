@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router'
-import { Calendar, Database, User, GraduationCap } from 'lucide-react'
+import { BarChart3, Calendar, Database, User, GraduationCap } from 'lucide-react'
 import { ScrollArea } from '~/components/ui/scroll-area'
 import { Separator } from '~/components/ui/separator'
 import { useClassStore } from '~/store'
@@ -10,6 +10,11 @@ const navItems = [
     to: '/',
     icon: <Calendar className="w-5 h-5" />,
     label: '课程表',
+  },
+  {
+    to: '/dashboard',
+    icon: <BarChart3 className="w-5 h-5" />,
+    label: '数据看板',
   },
   {
     to: '/data-management',
