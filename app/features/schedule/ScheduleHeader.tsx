@@ -44,14 +44,14 @@ export default function ScheduleHeader({
 
   return (
     <>
-      <div className="mb-5 flex items-center justify-between pt-5">
-        <div className="flex items-center gap-1.5">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onWeekChange(Math.max(1, currentWeek - 1))}
             disabled={currentWeek <= 1}
-            className="h-12 w-12 rounded-none bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
+            className="h-10 w-10 bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground disabled:opacity-40"
           >
             <ChevronLeft className="size-5" />
           </Button>
@@ -60,14 +60,14 @@ export default function ScheduleHeader({
             size="icon"
             onClick={() => onWeekChange(Math.min(maxWeek, currentWeek + 1))}
             disabled={currentWeek >= maxWeek}
-            className="h-12 w-12 rounded-none bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
+            className="h-10 w-10 bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground disabled:opacity-40"
           >
             <ChevronRight className="size-5" />
           </Button>
           <Button
             variant="ghost"
             onClick={() => setConfirmAction('attended')}
-            className="h-12 rounded-none bg-emerald-50 px-4 text-base font-medium text-emerald-700 hover:bg-emerald-100 hover:text-emerald-900"
+            className="h-10 bg-emerald-50 px-3.5 font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900"
           >
             <CheckCircle2 className="mr-1.5 size-4" />
             全部已上
@@ -75,7 +75,7 @@ export default function ScheduleHeader({
           <Button
             variant="ghost"
             onClick={() => setConfirmAction('unattended')}
-            className="h-12 rounded-none bg-rose-50 px-4 text-base font-medium text-rose-700 hover:bg-rose-100 hover:text-rose-900"
+            className="h-10 bg-rose-50 px-3.5 font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900"
           >
             <CircleAlert className="mr-1.5 size-4" />
             全部未上
@@ -85,7 +85,7 @@ export default function ScheduleHeader({
         <Button
           variant="ghost"
           onClick={() => onWeekChange(currentRealWeek)}
-          className="h-12 rounded-none bg-gray-50 px-4 text-base font-medium text-slate-700 hover:bg-gray-100 hover:text-slate-900"
+          className="h-10 bg-card px-3.5 font-medium text-foreground shadow-xs hover:bg-muted"
         >
           返回本周
         </Button>

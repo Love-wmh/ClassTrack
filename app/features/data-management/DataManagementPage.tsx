@@ -34,9 +34,9 @@ export default function DataManagementPage() {
   }
 
   return (
-    <div className="flex-1 w-full bg-background p-4 md:p-6 overflow-hidden flex flex-col h-full relative">
-      <div className="flex flex-1 overflow-hidden max-w-4xl mx-auto w-full relative">
-        <div className="flex-1 overflow-y-auto pr-2 no-scrollbar">
+    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-5 md:p-6">
+      <div className="relative mx-auto flex w-full max-w-4xl flex-1 overflow-hidden">
+        <div className="no-scrollbar flex-1 overflow-y-auto pr-2">
           <div className="space-y-4">
             <Card id="card-course-data">
               <CardHeader>

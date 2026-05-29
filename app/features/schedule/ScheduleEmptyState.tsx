@@ -41,14 +41,14 @@ export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmpty
   }[state]
 
   return (
-    <div className="flex h-full items-center justify-center bg-gray-50 px-6 py-8">
-      <Empty className="max-w-xl border border-gray-200 bg-white px-8 py-10 shadow-sm">
+    <div className="flex h-full items-center justify-center bg-background px-6 py-8">
+      <Empty className="max-w-xl border border-border bg-card px-8 py-10 shadow-xs">
         <EmptyHeader>
-          <EmptyMedia variant="icon" className="size-12 rounded-xl bg-primary/10 text-primary [&_svg:not([class*='size-'])]:size-5">
+          <EmptyMedia variant="icon" className="size-12 rounded-md bg-primary/10 text-primary [&_svg:not([class*='size-'])]:size-5">
             {emptyState.icon}
           </EmptyMedia>
-          <EmptyTitle className="text-xl font-semibold text-gray-900">{emptyState.title}</EmptyTitle>
-          <EmptyDescription className="max-w-md text-sm text-gray-500">{emptyState.description}</EmptyDescription>
+          <EmptyTitle className="text-lg font-semibold text-foreground">{emptyState.title}</EmptyTitle>
+          <EmptyDescription className="max-w-md text-sm text-muted-foreground">{emptyState.description}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           {emptyState.action && emptyState.onAction && (

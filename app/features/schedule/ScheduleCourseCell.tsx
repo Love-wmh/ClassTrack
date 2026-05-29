@@ -42,16 +42,16 @@ export default function ScheduleCourseCell({
       className={cn(
         'group relative flex h-full min-h-[74px] w-full cursor-pointer flex-col overflow-hidden px-2 py-1.5 transition-colors',
         courseColor,
-        isAttended ? 'ring-1 ring-inset ring-emerald-400/70' : 'ring-1 ring-inset ring-rose-400/70'
+        isAttended ? 'ring-1 ring-inset ring-emerald-300/70' : 'ring-1 ring-inset ring-rose-300/70'
       )}
       onClick={() => onToggleAttendance(course.id, currentWeek)}
       title={isAttended ? '已上' : '未上'}
     >
-      <div className={cn('absolute left-0 top-0 h-full w-1', isAttended ? 'bg-emerald-500' : 'bg-rose-500')} />
+      <div className={cn('absolute left-0 top-0 h-full w-0.5', isAttended ? 'bg-emerald-500' : 'bg-rose-500')} />
       <div className="flex items-start justify-between gap-1 pl-1">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-medium leading-5 text-slate-900">{course.name}</div>
-          <div className="mt-0.5 truncate text-sm leading-5 text-slate-600">{course.classroom}</div>
+          <div className="truncate text-sm font-medium leading-5 text-slate-950">{course.name}</div>
+          <div className="mt-0.5 truncate text-xs leading-5 text-slate-600">{course.classroom}</div>
         </div>
         <div className={cn('mt-0.5 shrink-0', isAttended ? 'text-emerald-600' : 'text-rose-600')}>
           {isAttended ? <CheckCircle2 className="size-4" /> : <CircleAlert className="size-4" />}

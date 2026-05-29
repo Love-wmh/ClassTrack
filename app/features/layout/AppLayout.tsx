@@ -27,16 +27,16 @@ export default function AppLayout() {
   const school = useClassStore((state) => state.school)
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+    <div className="flex h-screen bg-background">
+      <aside className="flex w-64 flex-col border-r border-sidebar-border bg-sidebar">
         <div className="px-4 py-5">
-          <div className="flex items-center gap-3 rounded-md border border-gray-100 bg-gray-50/80 px-3 py-3 shadow-sm">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gray-200 text-black shadow-sm shadow-gray-200">
+          <div className="flex items-center gap-3 rounded-md border border-sidebar-border bg-white/70 px-3 py-3 shadow-xs">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-gray-900 text-white shadow-xs">
               <GraduationCap className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-semibold tracking-tight text-gray-900">ClassTrack</h1>
-              <p className="truncate text-xs text-gray-500">{school?.name || '请选择学校'}</p>
+              <h1 className="truncate text-base font-semibold tracking-tight text-sidebar-foreground">ClassTrack</h1>
+              <p className="truncate text-xs text-muted-foreground">{school?.name || '请选择学校'}</p>
             </div>
           </div>
         </div>
