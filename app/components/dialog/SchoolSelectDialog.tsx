@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { useClassStore } from '~/store'
 import type { ImportMethod } from '~/store/slices/uiSlice'
 import { schools } from '~/lib/parsers'
-import { cn } from '~/lib/utils'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
+import { ImportMethodOption } from './ImportMethodOption'
 
 const importMethods: Array<{
   value: ImportMethod
@@ -110,33 +110,16 @@ export default function SchoolSelectDialog() {
           <div className="space-y-2">
             <Label>导入方式</Label>
             <div className="grid gap-2">
-              {importMethods.map((method) => {
-                const isSelected = selectedImportMethod === method.value
-                return (
-                  <button
-                    key={method.value}
-                    type="button"
-                    onClick={() => setSelectedImportMethod(method.value)}
-                    className={cn(
-                      'flex w-full items-start gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:bg-muted/60',
-                      isSelected ? 'border-primary ring-2 ring-primary/10' : 'border-border'
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border',
-                        isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted text-muted-foreground'
-                      )}
-                    >
-                      {method.icon}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-foreground">{method.title}</span>
-                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">{method.description}</span>
-                    </span>
-                  </button>
-                )
-              })}
+              {importMethods.map((method) => (
+                <ImportMethodOption
+                  key={method.value}
+                  title={method.title}
+                  description={method.description}
+                  icon={method.icon}
+                  selected={selectedImportMethod === method.value}
+                  onClick={() => setSelectedImportMethod(method.value)}
+                />
+              ))}
             </div>
           </div>
 
