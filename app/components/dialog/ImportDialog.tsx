@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
@@ -12,7 +13,6 @@ export default function ImportDialog() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (showImportDialog && selectedSchool && !selectedParserId) {
@@ -26,12 +26,11 @@ export default function ImportDialog() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
     setSelectedFile(file)
-    setError(null)
   }
 
   const handleImport = async () => {
     if (!selectedFile || !selectedParserId) {
-      setError('请选择文件和解析器')
+      toast.error('请选择文件和解析器')
       return
     }
 
@@ -44,16 +43,19 @@ export default function ImportDialog() {
         throw new Error('解析器未找到')
       }
 
-      importClasses(data, parser.parse)
+      const classes = importClasses(data, parser.parse)
+      if (classes.length === 0) {
+        throw new Error('未解析到课程数据')
+      }
+
       setShowImportDialog(false)
       setIsInitialized(true)
       setSelectedFile(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-      setError(null)
     } catch (err) {
-      setError('文件解析失败，请检查文件格式')
+      toast.error('文件解析失败，请检查是否选择了正确的解析器')
       console.error(err)
     }
   }
@@ -97,8 +99,6 @@ export default function ImportDialog() {
               <p className="text-sm text-muted-foreground">{parsers.find((p) => p.id === selectedParserId)?.description}</p>
             )}
           </div>
-
-          {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
         <DialogFooter>

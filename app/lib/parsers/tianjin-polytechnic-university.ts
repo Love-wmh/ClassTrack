@@ -19,7 +19,11 @@ export const tianjinPolytechnicUniversityParser: ClassParser = {
   name: '天津工业大学',
   description: '适用于天津工业大学教务系统导出的JSON课程表',
   parse: (data: any): Class[] => {
-    const rawClasses: any[] = data?.datas?.cxxszhxqkb?.rows || []
+    const rawClasses = data?.datas?.cxxszhxqkb?.rows
+
+    if (!Array.isArray(rawClasses) || rawClasses.length === 0) {
+      throw new Error('未解析到课程数据')
+    }
 
     return rawClasses.map((rawClass) => ({
       id: generateClassId(rawClass),

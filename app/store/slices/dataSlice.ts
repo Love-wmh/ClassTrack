@@ -12,7 +12,7 @@ export interface DataSlice extends AppData {
   setCurrentWeek: (week: number) => void
   setIsInitialized: (initialized: boolean) => void
   resetData: () => void
-  importClasses: (data: unknown, parser: (data: unknown) => Class[]) => void
+  importClasses: (data: unknown, parser: (data: unknown) => Class[]) => Class[]
   setFirstWeekStartDate: (date: string | null) => void
 }
 
@@ -128,6 +128,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set) => ({
   importClasses: (data, parser) => {
     const classes = parser(data)
     set({ classes })
+    return classes
   },
 
   setFirstWeekStartDate: (date) => {
