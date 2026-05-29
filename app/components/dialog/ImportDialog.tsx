@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
-import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Upload } from 'lucide-react'
+import { FileSelector } from '~/components/common/FileSelector'
 import { useClassStore } from '~/store'
 import { parsers, getParserById } from '~/lib/parsers'
 
 export default function ImportDialog() {
   const { showImportDialog, selectedSchool, selectedParserId, setShowImportDialog, setSelectedParserId, importClasses, setIsInitialized } = useClassStore()
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,6 +49,9 @@ export default function ImportDialog() {
       setShowImportDialog(false)
       setIsInitialized(true)
       setSelectedFile(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
       setError(null)
     } catch (err) {
       setError('文件解析失败，请检查文件格式')
@@ -66,10 +70,14 @@ export default function ImportDialog() {
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="file">课程表文件</Label>
-            <div className="flex items-center gap-2">
-              <Input id="file" type="file" accept=".json" onChange={handleFileChange} className="cursor-pointer" />
-            </div>
-            {selectedFile && <p className="text-sm text-muted-foreground">已选择: {selectedFile.name}</p>}
+            <FileSelector
+              ref={fileInputRef}
+              id="file"
+              accept=".json"
+              fileName={selectedFile?.name}
+              placeholder="请选择课程表 JSON 文件"
+              onChange={handleFileChange}
+            />
           </div>
 
           <div className="space-y-2">
