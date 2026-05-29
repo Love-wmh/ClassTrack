@@ -45,7 +45,7 @@ export function useDataExportImport() {
             setClasses(data.classes)
             setClassMarks(data.classMarks || {})
             setCurrentWeek(data.currentWeek || 1)
-            setIsInitialized(data.isInitialized ?? false)
+            setIsInitialized(data.isInitialized ?? true)
             setFirstWeekStartDate(data.firstWeekStartDate || null)
 
             resolve({ success: true })

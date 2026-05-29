@@ -1,15 +1,19 @@
 import type { School } from '~/lib/types'
 import type { StoreSlice } from '../types'
 
+export type ImportMethod = 'backup' | 'parser'
+
 export interface UiSlice {
   showSchoolDialog: boolean
   showImportDialog: boolean
   selectedSchool: School | null
   selectedParserId: string | null
+  selectedImportMethod: ImportMethod
   setShowSchoolDialog: (show: boolean) => void
   setShowImportDialog: (show: boolean) => void
   setSelectedSchool: (school: School | null) => void
   setSelectedParserId: (parserId: string | null) => void
+  setSelectedImportMethod: (method: ImportMethod) => void
 }
 
 export const createUiSlice: StoreSlice<UiSlice> = (set) => ({
@@ -17,6 +21,7 @@ export const createUiSlice: StoreSlice<UiSlice> = (set) => ({
   showImportDialog: false,
   selectedSchool: null,
   selectedParserId: null,
+  selectedImportMethod: 'parser',
 
   setShowSchoolDialog: (show) => {
     set({ showSchoolDialog: show })
@@ -32,5 +37,9 @@ export const createUiSlice: StoreSlice<UiSlice> = (set) => ({
 
   setSelectedParserId: (parserId) => {
     set({ selectedParserId: parserId })
+  },
+
+  setSelectedImportMethod: (method) => {
+    set({ selectedImportMethod: method })
   },
 })
