@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { Upload } from 'lucide-react'
 import { FileSelector } from '~/components/common/FileSelector'
 import { useClassStore } from '~/store'
 import { parsers, getParserById } from '~/lib/parsers'
@@ -107,7 +106,6 @@ export default function ImportDialog() {
             取消
           </Button>
           <Button onClick={handleImport} disabled={!selectedFile || !selectedParserId}>
-            <Upload className="w-4 h-4 mr-2" />
             导入
           </Button>
         </DialogFooter>
