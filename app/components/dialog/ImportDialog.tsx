@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
@@ -6,6 +6,7 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { FileSelector } from '~/components/common/FileSelector'
+import { BookmarkletButton } from '~/components/common/BookmarkletButton'
 import { useClassStore } from '~/store'
 import { parsers, getParserById } from '~/lib/parsers'
 import { getBookmarkletAdapterBySchoolId } from '~/lib/bookmarklets'
@@ -44,12 +45,6 @@ export default function ImportDialog() {
       }
     }
   }, [showImportDialog, bookmarkletAdapter])
-
-  const setBookmarkletRef = useCallback((node: HTMLAnchorElement | null) => {
-    if (node && bookmarkletHref) {
-      node.setAttribute('href', bookmarkletHref)
-    }
-  }, [bookmarkletHref])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null
@@ -130,11 +125,7 @@ export default function ImportDialog() {
               <p className="text-sm text-muted-foreground">{bookmarkletAdapter.description}</p>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Button asChild variant="secondary">
-                <a ref={setBookmarkletRef} href="#" onClick={(event) => event.preventDefault()}>
-                  拖到书签栏保存
-                </a>
-              </Button>
+              <BookmarkletButton href={bookmarkletHref} />
               <Button type="button" variant="outline" onClick={handleCopyBookmarklet}>
                 复制书签脚本
               </Button>
