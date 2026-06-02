@@ -14,10 +14,10 @@ export function BookmarkletRunStep({ onOpenEducationalSystem }: BookmarkletRunSt
           <li>在新标签页登录，并确认已经进入课程表页面。</li>
           <li>点击浏览器书签栏里的“拖到书签栏保存”脚本。</li>
           <li>脚本会自动下载课程表 JSON 文件。</li>
-          <li>回到 ClassTrack 上传该 JSON 文件。</li>
+          <li>下载完成后回到 ClassTrack，点击下一步上传该 JSON 文件。</li>
         </ol>
       </div>
-      <Button type="button" className="w-full" onClick={onOpenEducationalSystem}>
+      <Button type="button" className="w-full" variant="outline" onClick={onOpenEducationalSystem}>
         打开课程表页面
       </Button>
     </div>

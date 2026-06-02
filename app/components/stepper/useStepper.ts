@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type StepperStep = {
   id: string
@@ -13,14 +13,19 @@ type UseStepperOptions = {
 export function useStepper({ initialStep = 0, stepCount }: UseStepperOptions) {
   const [currentStep, setCurrentStep] = useState(initialStep)
 
+  const maxStep = Math.max(0, stepCount - 1)
   const canGoBack = currentStep > 0
-  const canGoNext = currentStep < stepCount - 1
+  const canGoNext = currentStep < maxStep
+
+  useEffect(() => {
+    setCurrentStep((step) => Math.min(step, maxStep))
+  }, [maxStep])
 
   const goToStep = useCallback(
     (step: number) => {
-      setCurrentStep(Math.max(0, Math.min(step, stepCount - 1)))
+      setCurrentStep(Math.max(0, Math.min(step, maxStep)))
     },
-    [stepCount]
+    [maxStep]
   )
 
   const goBack = useCallback(() => {
@@ -28,8 +33,8 @@ export function useStepper({ initialStep = 0, stepCount }: UseStepperOptions) {
   }, [])
 
   const goNext = useCallback(() => {
-    setCurrentStep((step) => Math.min(stepCount - 1, step + 1))
-  }, [stepCount])
+    setCurrentStep((step) => Math.min(maxStep, step + 1))
+  }, [maxStep])
 
   const reset = useCallback(() => {
     goToStep(initialStep)
@@ -41,9 +46,9 @@ export function useStepper({ initialStep = 0, stepCount }: UseStepperOptions) {
       canGoBack,
       canGoNext,
       isFirstStep: currentStep === 0,
-      isLastStep: currentStep === stepCount - 1,
+      isLastStep: currentStep === maxStep,
     }),
-    [canGoBack, canGoNext, currentStep, stepCount]
+    [canGoBack, canGoNext, currentStep, maxStep]
   )
 
   return useMemo(

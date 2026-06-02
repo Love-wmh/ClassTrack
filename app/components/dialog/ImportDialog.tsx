@@ -2,7 +2,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { BackupImportStep } from '~/components/import-flow/BackupImportStep'
 import { BookmarkletInstallStep } from '~/components/import-flow/BookmarkletInstallStep'
 import { BookmarkletRunStep } from '~/components/import-flow/BookmarkletRunStep'
-import { ImportCompleteStep } from '~/components/import-flow/ImportCompleteStep'
 import { ImportSchoolStep } from '~/components/import-flow/ImportSchoolStep'
 import { ParserImportStep } from '~/components/import-flow/ParserImportStep'
 import { Stepper, StepperActions } from '~/components/stepper'
@@ -24,10 +23,6 @@ export default function ImportDialog() {
     }
 
     if (importFlow.isBackupImport) {
-      if (importFlow.isLastStep) {
-        return <ImportCompleteStep title={importFlow.completeMessage.title} description={importFlow.completeMessage.description} />
-      }
-
       return (
         <BackupImportStep
           inputRef={importFlow.backupFileInputRef}
@@ -50,21 +45,18 @@ export default function ImportDialog() {
     }
 
     if (importFlow.currentStep === 2) {
-      return (
-        <div className="space-y-4">
-          <BookmarkletRunStep onOpenEducationalSystem={importFlow.handleOpenEducationalSystem} />
-          <ParserImportStep
-            inputRef={importFlow.parserFileInputRef}
-            fileName={importFlow.parserFile?.name}
-            selectedParserId={importFlow.selectedParserId}
-            onFileChange={importFlow.handleParserFileChange}
-            onParserChange={importFlow.setSelectedParserId}
-          />
-        </div>
-      )
+      return <BookmarkletRunStep onOpenEducationalSystem={importFlow.handleOpenEducationalSystem} />
     }
 
-    return <ImportCompleteStep title={importFlow.completeMessage.title} description={importFlow.completeMessage.description} />
+    return (
+      <ParserImportStep
+        inputRef={importFlow.parserFileInputRef}
+        fileName={importFlow.parserFile?.name}
+        selectedParserId={importFlow.selectedParserId}
+        onFileChange={importFlow.handleParserFileChange}
+        onParserChange={importFlow.setSelectedParserId}
+      />
+    )
   }
 
   return (
