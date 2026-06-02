@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { BackupImportStep } from '~/components/import-flow/BackupImportStep'
 import { BookmarkletInstallStep } from '~/components/import-flow/BookmarkletInstallStep'
 import { BookmarkletRunStep } from '~/components/import-flow/BookmarkletRunStep'
@@ -64,7 +64,6 @@ export default function ImportDialog() {
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>导入课程数据</DialogTitle>
-          <DialogDescription>选择学校与导入方式，并按步骤完成课程数据导入。</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-4">
