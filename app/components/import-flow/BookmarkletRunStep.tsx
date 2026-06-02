@@ -8,8 +8,7 @@ export function BookmarkletRunStep({ onOpenEducationalSystem }: BookmarkletRunSt
   return (
     <div className="space-y-4">
       <div className="rounded-md border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
-        <p className="font-medium text-foreground">操作步骤</p>
-        <ol className="mt-2 list-decimal space-y-1 pl-5">
+        <ol className="list-decimal space-y-1 pl-5">
           <li>点击下方按钮打开学校教务系统课程表页面。</li>
           <li>在新标签页登录，并确认已经进入课程表页面。</li>
           <li>点击浏览器书签栏里的 “数据导出器”。</li>
