@@ -26,8 +26,8 @@ export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmpty
     classes: {
       icon: <Upload className="size-5" />,
       title: '还没有课程数据',
-      description: `${school?.name || '当前学校'} 已选择，请导入课程表 JSON 文件，开始管理你的上课记录。`,
-      action: '导入课程表',
+      description: `您选择的学校是 ${school?.name}，请导入课程数据，开始管理您的上课记录。`,
+      action: '立即导入',
       onAction: () => setShowImportDialog(true),
     },
     loading: {
