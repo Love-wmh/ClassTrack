@@ -49,7 +49,7 @@ export function BookmarkletInstallStep({ adapter, term, bookmarkletHref, onTermC
       <div className="grid grid-cols-2 gap-2">
         <BookmarkletButton href={bookmarkletHref} />
         <Button type="button" variant="outline" onClick={onCopyBookmarklet}>
-          复制书签脚本
+          复制脚本代码
         </Button>
       </div>
     </div>
