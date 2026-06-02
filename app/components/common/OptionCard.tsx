@@ -24,7 +24,7 @@ export function OptionCard({ title, description, icon, selected = false, disable
       {icon && (
         <span
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-md border',
+            'flex size-9 shrink-0 items-center justify-center rounded-md border',
             selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-muted text-muted-foreground'
           )}
         >
@@ -33,7 +33,7 @@ export function OptionCard({ title, description, icon, selected = false, disable
       )}
       <span className="min-w-0">
         <span className="block text-sm font-medium text-foreground">{title}</span>
-        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>
+        <span className="block text-xs leading-5 text-muted-foreground">{description}</span>
       </span>
     </button>
   )
