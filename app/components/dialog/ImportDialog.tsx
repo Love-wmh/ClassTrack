@@ -1,12 +1,11 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
-import { Button } from '~/components/ui/button'
 import { BackupImportStep } from '~/components/import-flow/BackupImportStep'
 import { BookmarkletInstallStep } from '~/components/import-flow/BookmarkletInstallStep'
 import { BookmarkletRunStep } from '~/components/import-flow/BookmarkletRunStep'
 import { ImportCompleteStep } from '~/components/import-flow/ImportCompleteStep'
 import { ImportSchoolStep } from '~/components/import-flow/ImportSchoolStep'
 import { ParserImportStep } from '~/components/import-flow/ParserImportStep'
-import { Stepper } from '~/components/import-flow/Stepper'
+import { Stepper, StepperActions } from '~/components/stepper'
 import { useImportFlow } from '~/components/import-flow/useImportFlow'
 
 export default function ImportDialog() {
@@ -82,17 +81,15 @@ export default function ImportDialog() {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => importFlow.handleOpenChange(false)}>
-            取消
-          </Button>
-          {importFlow.canGoBack && !importFlow.isLastStep && (
-            <Button variant="outline" onClick={importFlow.goBack}>
-              上一步
-            </Button>
-          )}
-          <Button onClick={importFlow.handlePrimaryAction} disabled={importFlow.primaryDisabled}>
-            {importFlow.primaryLabel}
-          </Button>
+          <StepperActions
+            canGoBack={importFlow.canGoBack}
+            isLastStep={importFlow.isLastStep}
+            primaryLabel={importFlow.primaryLabel}
+            primaryDisabled={importFlow.primaryDisabled}
+            onBack={importFlow.goBack}
+            onPrimary={importFlow.handlePrimaryAction}
+            onCancel={() => importFlow.handleOpenChange(false)}
+          />
         </DialogFooter>
       </DialogContent>
     </Dialog>

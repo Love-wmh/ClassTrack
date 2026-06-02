@@ -6,7 +6,7 @@ import { getParserById } from '~/lib/parsers'
 import { useClassStore } from '~/store'
 import type { ImportMethod } from '~/store/slices/uiSlice'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
-import { useStepper } from './useStepper'
+import { useStepper } from '~/components/stepper'
 
 export const importFlowSteps = [
   { id: 'source', label: '来源' },
@@ -48,7 +48,7 @@ export function useImportFlow() {
 
   useEffect(() => {
     if (showImportDialog) {
-      stepper.goToStep(0)
+      stepper.reset()
       setParserFile(null)
       setBackupFile(null)
       setIsImporting(false)
@@ -59,7 +59,7 @@ export function useImportFlow() {
       parserFileInputRef.current && (parserFileInputRef.current.value = '')
       backupFileInputRef.current && (backupFileInputRef.current.value = '')
     }
-  }, [showImportDialog, school, selectedSchool, setSelectedSchool, stepper])
+  }, [showImportDialog, school, selectedSchool, setSelectedSchool, stepper.reset])
 
   useEffect(() => {
     if (showImportDialog) {

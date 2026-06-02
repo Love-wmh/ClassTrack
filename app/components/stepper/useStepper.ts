@@ -31,6 +31,10 @@ export function useStepper({ initialStep = 0, stepCount }: UseStepperOptions) {
     setCurrentStep((step) => Math.min(stepCount - 1, step + 1))
   }, [stepCount])
 
+  const reset = useCallback(() => {
+    goToStep(initialStep)
+  }, [goToStep, initialStep])
+
   const state = useMemo(
     () => ({
       currentStep,
@@ -48,7 +52,8 @@ export function useStepper({ initialStep = 0, stepCount }: UseStepperOptions) {
       goToStep,
       goBack,
       goNext,
+      reset,
     }),
-    [goBack, goNext, goToStep, state]
+    [goBack, goNext, goToStep, reset, state]
   )
 }
