@@ -2,6 +2,8 @@ import { BookmarkletButton } from '~/components/common/BookmarkletButton'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
+import { ImportStepDescription } from './ImportStepDescription'
 import type { BookmarkletAdapter } from '~/lib/types'
 
 type BookmarkletInstallStepProps = {
@@ -11,6 +13,13 @@ type BookmarkletInstallStepProps = {
   onTermChange: (term: string) => void
   onCopyBookmarklet: () => void
 }
+
+const installDescriptionSteps = [
+  '确认学年学期代码正确。',
+  '将下方“数据导出器”按钮拖拽到浏览器书签栏。',
+  '如果无法拖拽，可以点击“复制书签脚本”后手动新建书签。',
+  '安装完成后点击下一步，前往教务系统导出课程表 JSON 文件。',
+]
 
 export function BookmarkletInstallStep({ adapter, term, bookmarkletHref, onTermChange, onCopyBookmarklet }: BookmarkletInstallStepProps) {
   if (!adapter) {
@@ -26,9 +35,17 @@ export function BookmarkletInstallStep({ adapter, term, bookmarkletHref, onTermC
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="term">学年学期代码</Label>
-        <Input id="term" value={term} placeholder={adapter.defaultTerm} onChange={(event) => onTermChange(event.target.value)} />
-        <p className="text-xs text-muted-foreground">该参数会写入书签脚本，重新修改后需要重新拖拽或复制书签。</p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Input id="term" value={term} placeholder={adapter.defaultTerm} onChange={(event) => onTermChange(event.target.value)} />
+            </TooltipTrigger>
+            <TooltipContent side="top">该参数会写入书签脚本，重新修改后需要重新拖拽安装脚本或复制脚本代码。</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
+
+      <ImportStepDescription steps={installDescriptionSteps} />
 
       <div className="rounded-md border bg-muted/30 p-4">
         <div className="space-y-1">
