@@ -15,7 +15,7 @@ export function BookmarkletButton({ href }: BookmarkletButtonProps) {
   return (
     <Button asChild variant="secondary">
       <a ref={setRef} href="#" onClick={(event) => event.preventDefault()}>
-        拖到书签栏保存
+        数据导出器
       </a>
     </Button>
   )

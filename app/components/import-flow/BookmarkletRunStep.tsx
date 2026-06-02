@@ -12,7 +12,7 @@ export function BookmarkletRunStep({ onOpenEducationalSystem }: BookmarkletRunSt
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>点击下方按钮打开学校教务系统课程表页面。</li>
           <li>在新标签页登录，并确认已经进入课程表页面。</li>
-          <li>点击浏览器书签栏里的“拖到书签栏保存”脚本。</li>
+          <li>点击浏览器书签栏里的 “数据导出器”。</li>
           <li>脚本会自动下载课程表 JSON 文件。</li>
           <li>下载完成后回到 ClassTrack，点击下一步上传该 JSON 文件。</li>
         </ol>
