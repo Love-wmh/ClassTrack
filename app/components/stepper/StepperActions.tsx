@@ -30,7 +30,7 @@ export function StepperActions({
           {cancelLabel}
         </Button>
       )}
-      {canGoBack && !isLastStep && (
+      {canGoBack && (
         <Button variant="outline" onClick={onBack}>
           {backLabel}
         </Button>
