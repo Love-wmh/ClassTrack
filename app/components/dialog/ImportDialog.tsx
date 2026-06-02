@@ -132,7 +132,7 @@ export default function ImportDialog() {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Button asChild variant="secondary">
-                <a ref={bookmarkletRef} href="#" onClick={(event) => event.preventDefault()}>
+                <a ref={bookmarkletRef}  href="#" onClick={(event) => event.preventDefault()}>
                   拖到书签栏保存
                 </a>
               </Button>
