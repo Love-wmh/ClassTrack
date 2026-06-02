@@ -1,7 +1,7 @@
 import type { ClassParser, School } from '../types'
 
 // 导入所有解析器
-// 新增解析器：在 parsers/ 目录下创建新文件，然后在此处导入
+// 新增解析器：在 parsers/ 目录下创建新的学校文件夹，然后在此处导入
 import { tianjinUniversityOfTechnologyParser } from './tianjin-university-of-technology'
 import { tianjinPolytechnicUniversityParser } from './tianjin-polytechnic-university'
 
