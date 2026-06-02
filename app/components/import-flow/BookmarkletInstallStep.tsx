@@ -16,17 +16,16 @@ type BookmarkletInstallStepProps = {
 
 const installDescriptionSteps = [
   '确认学年学期代码正确。',
-  '将下方“数据导出器”按钮拖拽到浏览器书签栏。',
-  '如果无法拖拽，可以点击“复制书签脚本”后手动新建书签。',
-  '安装完成后点击下一步，前往教务系统导出课程表 JSON 文件。',
+  '将下方“数据导出器”按钮拖拽到浏览器书签栏以安装。',
+  '如果无法拖拽，可以点击“复制书签脚本”后手动新建书签 / 网页 / 收藏。',
+  '安装完成后点击下一步。',
 ]
 
 export function BookmarkletInstallStep({ adapter, term, bookmarkletHref, onTermChange, onCopyBookmarklet }: BookmarkletInstallStepProps) {
   if (!adapter) {
     return (
       <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-        当前学校暂未配置书签脚本导出器，请先让贡献者在 <code className="rounded bg-muted px-1 py-0.5">app/lib/bookmarklets</code>{' '}
-        中新增适配器。
+        当前学校暂未配置书签脚本导出器，请提issue反馈学校名称。
       </div>
     )
   }
@@ -47,18 +46,11 @@ export function BookmarkletInstallStep({ adapter, term, bookmarkletHref, onTermC
 
       <ImportStepDescription steps={installDescriptionSteps} />
 
-      <div className="rounded-md border bg-muted/30 p-4">
-        <div className="space-y-1">
-          <Label>{adapter.name}</Label>
-          <p className="text-sm text-muted-foreground">{adapter.description}</p>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <BookmarkletButton href={bookmarkletHref} />
-          <Button type="button" variant="outline" onClick={onCopyBookmarklet}>
-            复制书签脚本
-          </Button>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">如果看不到书签栏，可先显示浏览器书签栏，再把按钮拖到书签栏。</p>
+      <div className="grid grid-cols-2 gap-2">
+        <BookmarkletButton href={bookmarkletHref} />
+        <Button type="button" variant="outline" onClick={onCopyBookmarklet}>
+          复制书签脚本
+        </Button>
       </div>
     </div>
   )
