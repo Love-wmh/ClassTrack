@@ -57,6 +57,17 @@ export interface ClassParser {
   parse: (data: any) => Class[]
 }
 
+// 书签脚本适配器类型
+export interface BookmarkletAdapter {
+  id: string
+  schoolId: string
+  name: string
+  description: string
+  educationalSystemUrl: string
+  defaultTerm: string
+  createScript: (params: { term: string }) => string
+}
+
 // 应用状态类型
 export interface AppData {
   school: School | null
