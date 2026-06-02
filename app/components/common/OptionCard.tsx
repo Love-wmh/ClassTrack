@@ -17,7 +17,7 @@ export function OptionCard({ title, description, icon, selected = false, disable
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex w-full items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-60',
+        'flex w-full cursor-pointer items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-60',
         selected ? 'border-primary ring-2 ring-primary/10' : 'border-border'
       )}
     >
