@@ -51,7 +51,10 @@ export default function ScheduleTable({
             {weekDays.map((day) => {
               const date = getDayDate(firstWeekStartDate, currentWeek, day)
               return (
-                <th key={day} className="h-9 border-b border-r border-border text-center text-sm font-medium text-muted-foreground last:border-r-0">
+                <th
+                  key={day}
+                  className="h-9 border-b border-r border-border text-center text-sm font-medium text-muted-foreground last:border-r-0"
+                >
                   <span>{dayNames[day]}</span>
                   {date && <span className="ml-2">{format(date, 'MM.dd')}</span>}
                 </th>

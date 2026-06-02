@@ -49,10 +49,31 @@ export function DashboardOverview({ overview, formatPercent }: DashboardOverview
         icon={<ClipboardList className="size-5" />}
         tone={overview.pastUnmarkedSessions > 0 ? 'warning' : 'success'}
       />
-      <DashboardMetricCard title="课程实例" value={overview.totalClasses} description={`${overview.uniqueCourseNames} 门课程名称`} icon={<BookOpenCheck className="size-5" />} />
-      <DashboardMetricCard title="总课次数量" value={overview.totalSessions} description={`${overview.pastSessions} 个已发生课次`} icon={<BarChart3 className="size-5" />} />
-      <DashboardMetricCard title="未标记课次" value={overview.pastUnmarkedSessions} description="已发生但还没有记录状态" icon={<CircleSlash className="size-5" />} tone="warning" />
-      <DashboardMetricCard title="备注数量" value={overview.notedSessions} description="带有备注的课程记录" icon={<NotebookTabs className="size-5" />} />
+      <DashboardMetricCard
+        title="课程实例"
+        value={overview.totalClasses}
+        description={`${overview.uniqueCourseNames} 门课程名称`}
+        icon={<BookOpenCheck className="size-5" />}
+      />
+      <DashboardMetricCard
+        title="总课次数量"
+        value={overview.totalSessions}
+        description={`${overview.pastSessions} 个已发生课次`}
+        icon={<BarChart3 className="size-5" />}
+      />
+      <DashboardMetricCard
+        title="未标记课次"
+        value={overview.pastUnmarkedSessions}
+        description="已发生但还没有记录状态"
+        icon={<CircleSlash className="size-5" />}
+        tone="warning"
+      />
+      <DashboardMetricCard
+        title="备注数量"
+        value={overview.notedSessions}
+        description="带有备注的课程记录"
+        icon={<NotebookTabs className="size-5" />}
+      />
     </div>
   )
 }

@@ -76,15 +76,27 @@ export function useDashboardStats() {
       }
     })
 
-    const courseRanking = groupByName(classes.map((classItem) => classItem.name), sessions, (session) => session.classItem.name)
+    const courseRanking = groupByName(
+      classes.map((classItem) => classItem.name),
+      sessions,
+      (session) => session.classItem.name
+    )
       .sort((left, right) => right.absent - left.absent || right.pastTotal - left.pastTotal)
       .slice(0, 8)
 
-    const categoryBreakdown = groupByName(classes.map((classItem) => classItem.courseCategory || '未分类'), sessions, (session) => session.classItem.courseCategory || '未分类')
+    const categoryBreakdown = groupByName(
+      classes.map((classItem) => classItem.courseCategory || '未分类'),
+      sessions,
+      (session) => session.classItem.courseCategory || '未分类'
+    )
       .sort((left, right) => right.total - left.total)
       .slice(0, 8)
 
-    const typeBreakdown = groupByName(classes.map((classItem) => classItem.courseType || '未分类'), sessions, (session) => session.classItem.courseType || '未分类')
+    const typeBreakdown = groupByName(
+      classes.map((classItem) => classItem.courseType || '未分类'),
+      sessions,
+      (session) => session.classItem.courseType || '未分类'
+    )
       .sort((left, right) => right.total - left.total)
       .slice(0, 8)
 
@@ -114,7 +126,11 @@ export function useDashboardStats() {
   }, [school, classes, classMarks, currentWeek, firstWeekStartDate])
 }
 
-function groupByName(names: string[], sessions: ReturnType<typeof expandCourseSessions>, selector: (session: ReturnType<typeof expandCourseSessions>[number]) => string): GroupStats[] {
+function groupByName(
+  names: string[],
+  sessions: ReturnType<typeof expandCourseSessions>,
+  selector: (session: ReturnType<typeof expandCourseSessions>[number]) => string
+): GroupStats[] {
   return Array.from(new Set(names)).map((name) => {
     const items = sessions.filter((session) => selector(session) === name)
     const pastItems = items.filter((session) => session.isPast)

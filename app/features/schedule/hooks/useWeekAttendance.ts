@@ -4,9 +4,7 @@ import { useClassStore } from '~/store'
 export function useWeekAttendance() {
   const { classes, currentWeek, markWeekAsAttended, markWeekAsUnattended } = useClassStore()
 
-  const weekClassIds = classes
-    .filter((classItem) => classItem.weeks.includes(currentWeek))
-    .map((c) => c.id)
+  const weekClassIds = classes.filter((classItem) => classItem.weeks.includes(currentWeek)).map((c) => c.id)
 
   const handleMarkAllAsAttended = useCallback(() => {
     markWeekAsAttended(weekClassIds, currentWeek)

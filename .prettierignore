@@ -3,3 +3,7 @@ dist
 build
 .vite
 .idea
+app/components/ui
+*.md
+**/*.md
+

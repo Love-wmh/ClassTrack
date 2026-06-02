@@ -6,11 +6,14 @@ interface BookmarkletButtonProps {
 }
 
 export function BookmarkletButton({ href }: BookmarkletButtonProps) {
-  const setRef = useCallback((node: HTMLAnchorElement | null) => {
-    if (node && href) {
-      node.setAttribute('href', href)
-    }
-  }, [href])
+  const setRef = useCallback(
+    (node: HTMLAnchorElement | null) => {
+      if (node && href) {
+        node.setAttribute('href', href)
+      }
+    },
+    [href]
+  )
 
   return (
     <Button asChild variant="secondary">

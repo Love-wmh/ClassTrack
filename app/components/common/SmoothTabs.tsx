@@ -51,7 +51,10 @@ export default function SmoothTabs({
   const isVertical = orientation === 'vertical'
 
   return (
-    <div ref={containerRef} className={cn('relative bg-muted text-primary rounded-md', isVertical ? 'inline-flex flex-col' : 'inline-flex', className)}>
+    <div
+      ref={containerRef}
+      className={cn('relative bg-muted text-primary rounded-md', isVertical ? 'inline-flex flex-col' : 'inline-flex', className)}
+    >
       <div
         className="absolute bg-primary text-primary transition-all duration-300 ease-out shadow-sm pointer-events-none rounded-md"
         style={

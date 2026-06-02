@@ -1,4 +1,4 @@
-import type {Class, School, AppData, ClassMark} from '~/lib/types'
+import type { Class, School, AppData, ClassMark } from '~/lib/types'
 import type { StoreSlice } from '../types'
 
 export interface DataSlice extends AppData {
