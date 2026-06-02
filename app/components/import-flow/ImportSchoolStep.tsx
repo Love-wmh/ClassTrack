@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { schools } from '~/lib/parsers'
 import type { School } from '~/lib/types'
 import type { ImportMethod } from '~/store/slices/uiSlice'
-import { ImportMethodOption } from './ImportMethodOption'
+import { OptionCard } from '~/components/common/OptionCard'
 
 const importMethods: Array<{
   value: ImportMethod
@@ -61,7 +61,7 @@ export function ImportSchoolStep({ selectedSchool, selectedImportMethod, onSchoo
         <Label>导入方式</Label>
         <div className="grid gap-2">
           {importMethods.map((method) => (
-            <ImportMethodOption
+            <OptionCard
               key={method.value}
               title={method.title}
               description={method.description}
