@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '~/components/ui/dialog'
 import { Button } from '~/components/ui/button'
@@ -18,7 +18,6 @@ export default function ImportDialog() {
   const { showImportDialog, school, selectedSchool, selectedParserId, setShowImportDialog, setSelectedParserId, importClasses, setIsInitialized } = useClassStore()
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const bookmarkletRef = useRef<HTMLAnchorElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [currentStep, setCurrentStep] = useState<ImportStep>(0)
   const importSchool = selectedSchool || school
@@ -46,9 +45,9 @@ export default function ImportDialog() {
     }
   }, [showImportDialog, bookmarkletAdapter])
 
-  useEffect(() => {
-    if (bookmarkletHref) {
-      bookmarkletRef.current?.setAttribute('href', bookmarkletHref)
+  const setBookmarkletRef = useCallback((node: HTMLAnchorElement | null) => {
+    if (node && bookmarkletHref) {
+      node.setAttribute('href', bookmarkletHref)
     }
   }, [bookmarkletHref])
 
@@ -132,7 +131,7 @@ export default function ImportDialog() {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Button asChild variant="secondary">
-                <a ref={bookmarkletRef}  href="#" onClick={(event) => event.preventDefault()}>
+                <a ref={setBookmarkletRef} href="#" onClick={(event) => event.preventDefault()}>
                   拖到书签栏保存
                 </a>
               </Button>
