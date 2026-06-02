@@ -154,4 +154,28 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .animate-stepper-flow {
+    animation: stepper-flow 500ms ease-out forwards;
+  }
+  .animate-stepper-flow-reverse {
+    animation: stepper-flow-reverse 500ms ease-out forwards;
+  }
+}
+
+@keyframes stepper-flow {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes stepper-flow-reverse {
+  from {
+    transform: translateX(200%);
+  }
+  to {
+    transform: translateX(-100%);
+  }
 }
