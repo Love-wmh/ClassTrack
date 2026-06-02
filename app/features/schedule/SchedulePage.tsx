@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import SchoolSelectDialog from '~/components/dialog/SchoolSelectDialog'
 import ImportDialog from '~/components/dialog/ImportDialog'
 import { useClassStore } from '~/store'
 import ScheduleEmptyState from './ScheduleEmptyState'
@@ -20,7 +19,6 @@ export default function SchedulePage() {
     currentWeek,
     isInitialized,
     school,
-    setShowSchoolDialog,
     setShowImportDialog,
     toggleAttendance,
     setNote,
@@ -34,12 +32,12 @@ export default function SchedulePage() {
   useEffect(() => {
     if (!isInitialized) {
       if (!school) {
-        setShowSchoolDialog(true)
+        setShowImportDialog(true)
       }
     } else if (classes.length === 0) {
       setShowImportDialog(true)
     }
-  }, [isInitialized, school, classes.length, setShowSchoolDialog, setShowImportDialog])
+  }, [isInitialized, school, classes.length, setShowImportDialog])
 
   const weekClasses = useMemo(() => classes.filter((classItem) => classItem.weeks.includes(currentWeek)), [classes, currentWeek])
 
@@ -67,7 +65,6 @@ export default function SchedulePage() {
 
   return (
     <div className="h-full overflow-auto bg-background px-5 py-6">
-      <SchoolSelectDialog />
       <ImportDialog />
 
       <div className="mx-auto max-w-[1410px]">

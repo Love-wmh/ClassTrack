@@ -1,6 +1,5 @@
 import { GraduationCap, Loader2, School, Upload } from 'lucide-react'
 import ImportDialog from '~/components/dialog/ImportDialog'
-import SchoolSelectDialog from '~/components/dialog/SchoolSelectDialog'
 import { Button } from '~/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '~/components/ui/empty'
 import { useClassStore } from '~/store'
@@ -12,7 +11,7 @@ type ScheduleEmptyStateProps = {
 }
 
 export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmptyStateProps) {
-  const { setShowImportDialog, setShowSchoolDialog } = useClassStore()
+  const { setShowImportDialog } = useClassStore()
 
   const state = !school ? 'school' : !hasClasses ? 'classes' : 'loading'
 
@@ -22,7 +21,7 @@ export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmpty
       title: '先选择你的学校',
       description: '选择学校后，系统会自动匹配对应的课程表解析器，帮助你更快完成课程导入。',
       action: '选择学校',
-      onAction: () => setShowSchoolDialog(true),
+      onAction: () => setShowImportDialog(true),
     },
     classes: {
       icon: <Upload className="size-5" />,
@@ -59,7 +58,6 @@ export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmpty
           )}
         </EmptyContent>
       </Empty>
-      <SchoolSelectDialog />
       <ImportDialog />
     </div>
   )
