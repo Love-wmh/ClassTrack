@@ -1,5 +1,6 @@
 import type { Class, School, AppData, ClassMark } from '~/lib/types'
 import type { StoreSlice } from '../types'
+import { createPastClassMarks, getMarkKey } from '../utils'
 
 export interface DataSlice extends AppData {
   setSchool: (school: School | null) => void
@@ -16,9 +17,7 @@ export interface DataSlice extends AppData {
   setFirstWeekStartDate: (date: string | null) => void
 }
 
-const getMarkKey = (classId: string, week: number) => `${classId}-${week}`
-
-export const createDataSlice: StoreSlice<DataSlice> = (set) => ({
+export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
   school: null,
   classes: [],
   classMarks: {},
@@ -127,7 +126,16 @@ export const createDataSlice: StoreSlice<DataSlice> = (set) => ({
 
   importClasses: (data, parser) => {
     const classes = parser(data)
-    set({ classes })
+    const { currentWeek, firstWeekStartDate } = get()
+    const pastClassMarks = createPastClassMarks(classes, firstWeekStartDate, currentWeek)
+
+    set((state) => {
+      state.classes = classes
+      state.classMarks = {
+        ...pastClassMarks,
+        ...state.classMarks,
+      }
+    })
     return classes
   },
 
