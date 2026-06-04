@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { format } from 'date-fns'
+import { zhCN } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
 
 import { cn } from '~/lib/utils'
@@ -22,11 +23,11 @@ export function DatePicker({ date, onSelect, placeholder, showIcon = true }: Dat
       <PopoverTrigger asChild>
         <Button variant={'outline'} className={cn('w-[280px] justify-start text-left font-normal', !date && 'text-muted-foreground')}>
           {showIcon && <CalendarIcon className="mr-2 h-4 w-4" />}
-          {date ? format(date, 'yyyy年MM月dd日') : <span>{placeholder || '选择日期'}</span>}
+          {date ? format(date, 'yyyy年MM月dd日', { locale: zhCN }) : <span>{placeholder || '选择日期'}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar mode="single" selected={date} onSelect={onSelect} autoFocus />
+        <Calendar mode="single" selected={date} onSelect={onSelect} locale={zhCN} autoFocus />
       </PopoverContent>
     </Popover>
   )
