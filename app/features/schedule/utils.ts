@@ -62,6 +62,21 @@ export function getMaxWeek(classes: Class[]) {
 }
 
 /**
+ * 根据课程数据和学期起始日期计算“返回本周”应跳转到的周次。
+ *
+ * 课程表页面右上角的“返回本周”按钮依赖这个结果；导入完成后也应该跳转到
+ * 同一周次，因此把最大周次计算和当前教学周计算封装在这里，保证按钮点击
+ * 与导入后的自动跳转使用完全一致的逻辑。
+ *
+ * @param classes 已导入的课程列表，用于确定当前课表允许展示的最大周次。
+ * @param firstWeekStartDate 第一周第一天的 ISO 日期字符串；为空时沿用 `getCurrentWeek` 的兜底逻辑。
+ * @returns 应跳转到的现实当前教学周。
+ */
+export function getCurrentRealWeek(classes: Class[], firstWeekStartDate: string | null) {
+  return getCurrentWeek(firstWeekStartDate, getMaxWeek(classes))
+}
+
+/**
  * 根据第一周第一天计算今天所在的教学周。
  *
  * 当用户设置了学期开始日期后，应用可以自动推算现实中的当前周次。

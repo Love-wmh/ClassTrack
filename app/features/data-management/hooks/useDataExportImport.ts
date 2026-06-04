@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useClassStore } from '~/store'
 import type { AppData } from '~/lib/types'
+import { getCurrentRealWeek } from '~/features/schedule/utils'
 
 export function useDataExportImport() {
   const { setSchool, setClasses, setClassMarks, setCurrentWeek, setIsInitialized, setFirstWeekStartDate } = useClassStore()
@@ -41,12 +42,14 @@ export function useDataExportImport() {
               return
             }
 
+            const firstWeekStartDate = data.firstWeekStartDate || null
+
             setSchool(data.school || null)
             setClasses(data.classes)
             setClassMarks(data.classMarks || {})
-            setCurrentWeek(data.currentWeek || 1)
+            setCurrentWeek(getCurrentRealWeek(data.classes, firstWeekStartDate))
             setIsInitialized(data.isInitialized ?? true)
-            setFirstWeekStartDate(data.firstWeekStartDate || null)
+            setFirstWeekStartDate(firstWeekStartDate)
 
             resolve({ success: true })
           } catch {

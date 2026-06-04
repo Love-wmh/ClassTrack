@@ -4,7 +4,7 @@ import { useClassStore } from '~/store'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
-import { getCurrentWeek, getMaxWeek } from './utils'
+import { getCurrentRealWeek, getMaxWeek } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
 
 type EditingNote = {
@@ -42,7 +42,7 @@ export default function SchedulePage() {
   const weekClasses = useMemo(() => classes.filter((classItem) => classItem.weeks.includes(currentWeek)), [classes, currentWeek])
 
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
-  const currentRealWeek = useMemo(() => getCurrentWeek(firstWeekStartDate, maxWeek), [firstWeekStartDate, maxWeek])
+  const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
 
   const { markAllAsAttended, markAllAsUnattended } = useWeekAttendance()
 

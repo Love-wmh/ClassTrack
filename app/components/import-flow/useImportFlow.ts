@@ -6,6 +6,7 @@ import { getParserById } from '~/lib/parsers'
 import { useClassStore } from '~/store'
 import type { ImportMethod } from '~/store/slices/uiSlice'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
+import { getCurrentRealWeek } from '~/features/schedule/utils'
 import { useStepper } from '~/components/stepper'
 
 const backupImportSteps = [
@@ -33,6 +34,7 @@ export function useImportFlow() {
     setSelectedParserId,
     setSchool,
     importClasses,
+    setCurrentWeek,
     setIsInitialized,
     firstWeekStartDate,
     setFirstWeekStartDate,
@@ -159,6 +161,7 @@ export function useImportFlow() {
       if (classes.length === 0) {
         throw new Error('未解析到课程数据')
       }
+      setCurrentWeek(getCurrentRealWeek(classes, parserFirstWeekStartDate))
 
       if (activeSchool) {
         setSchool(activeSchool)
