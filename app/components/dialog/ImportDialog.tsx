@@ -53,8 +53,10 @@ export default function ImportDialog() {
         inputRef={importFlow.parserFileInputRef}
         fileName={importFlow.parserFile?.name}
         selectedParserId={importFlow.selectedParserId}
+        firstWeekStartDate={importFlow.parserFirstWeekStartDate}
         onFileChange={importFlow.handleParserFileChange}
         onParserChange={importFlow.setSelectedParserId}
+        onFirstWeekStartDateChange={importFlow.handleParserFirstWeekStartDateChange}
       />
     )
   }

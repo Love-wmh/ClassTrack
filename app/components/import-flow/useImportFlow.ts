@@ -34,6 +34,8 @@ export function useImportFlow() {
     setSchool,
     importClasses,
     setIsInitialized,
+    firstWeekStartDate,
+    setFirstWeekStartDate,
   } = useClassStore()
   const { handleFileSelect } = useDataExportImport()
   const isBackupImport = selectedImportMethod === 'backup'
@@ -43,6 +45,7 @@ export function useImportFlow() {
   const backupFileInputRef = useRef<HTMLInputElement>(null)
   const [parserFile, setParserFile] = useState<File | null>(null)
   const [backupFile, setBackupFile] = useState<File | null>(null)
+  const [parserFirstWeekStartDate, setParserFirstWeekStartDate] = useState<string | null>(null)
   const [term, setTerm] = useState('')
   const [isImporting, setIsImporting] = useState(false)
 
@@ -56,6 +59,7 @@ export function useImportFlow() {
       stepper.reset()
       setParserFile(null)
       setBackupFile(null)
+      setParserFirstWeekStartDate(firstWeekStartDate)
       setIsImporting(false)
       if (!selectedSchool && school) {
         setSelectedSchool(school)
@@ -63,7 +67,7 @@ export function useImportFlow() {
       parserFileInputRef.current && (parserFileInputRef.current.value = '')
       backupFileInputRef.current && (backupFileInputRef.current.value = '')
     }
-  }, [showImportDialog, school, selectedSchool, setSelectedSchool, stepper.reset])
+  }, [showImportDialog, school, selectedSchool, firstWeekStartDate, setSelectedSchool, stepper.reset])
 
   useEffect(() => {
     if (showImportDialog) {
@@ -135,8 +139,8 @@ export function useImportFlow() {
   }
 
   const handleParserImport = async () => {
-    if (!parserFile || !selectedParserId) {
-      toast.error('请选择文件和解析器')
+    if (!parserFile || !selectedParserId || !parserFirstWeekStartDate) {
+      toast.error('请选择文件、解析器和第一周第一天')
       return
     }
 
@@ -150,6 +154,7 @@ export function useImportFlow() {
         throw new Error('解析器未找到')
       }
 
+      setFirstWeekStartDate(parserFirstWeekStartDate)
       const classes = importClasses(data, parser.parse)
       if (classes.length === 0) {
         throw new Error('未解析到课程数据')
@@ -209,7 +214,7 @@ export function useImportFlow() {
     isImporting ||
     (stepper.currentStep === 0 && !activeSchool) ||
     (!isBackupImport && stepper.currentStep === 1 && !canUseBookmarklet) ||
-    (!isBackupImport && stepper.currentStep === 3 && (!parserFile || !selectedParserId)) ||
+    (!isBackupImport && stepper.currentStep === 3 && (!parserFile || !selectedParserId || !parserFirstWeekStartDate)) ||
     (isBackupImport && stepper.currentStep === 1 && !backupFile)
 
   return {
@@ -221,6 +226,7 @@ export function useImportFlow() {
     selectedParserId,
     parserFile,
     backupFile,
+    parserFirstWeekStartDate,
     parserFileInputRef,
     backupFileInputRef,
     bookmarkletAdapter,
@@ -234,6 +240,7 @@ export function useImportFlow() {
     setSelectedSchool,
     setSelectedImportMethod,
     setSelectedParserId,
+    handleParserFirstWeekStartDateChange: setParserFirstWeekStartDate,
     handleOpenChange,
     handleCopyBookmarklet,
     handleOpenEducationalSystem,
