@@ -43,6 +43,7 @@ export function useImportFlow() {
   const isBackupImport = selectedImportMethod === 'backup'
   const steps = isBackupImport ? backupImportSteps : parserImportSteps
   const stepper = useStepper({ stepCount: steps.length })
+  const wasImportDialogOpenRef = useRef(false)
   const parserFileInputRef = useRef<HTMLInputElement>(null)
   const backupFileInputRef = useRef<HTMLInputElement>(null)
   const [parserFile, setParserFile] = useState<File | null>(null)
@@ -57,18 +58,26 @@ export function useImportFlow() {
   const canUseBookmarklet = Boolean(bookmarkletAdapter && term)
 
   useEffect(() => {
-    if (showImportDialog) {
-      stepper.reset()
-      setParserFile(null)
-      setBackupFile(null)
-      setParserFirstWeekStartDate(firstWeekStartDate)
-      setIsImporting(false)
-      if (!selectedSchool && school) {
-        setSelectedSchool(school)
-      }
-      parserFileInputRef.current && (parserFileInputRef.current.value = '')
-      backupFileInputRef.current && (backupFileInputRef.current.value = '')
+    if (!showImportDialog) {
+      wasImportDialogOpenRef.current = false
+      return
     }
+
+    if (wasImportDialogOpenRef.current) {
+      return
+    }
+
+    wasImportDialogOpenRef.current = true
+    stepper.reset()
+    setParserFile(null)
+    setBackupFile(null)
+    setParserFirstWeekStartDate(firstWeekStartDate)
+    setIsImporting(false)
+    if (!selectedSchool && school) {
+      setSelectedSchool(school)
+    }
+    parserFileInputRef.current && (parserFileInputRef.current.value = '')
+    backupFileInputRef.current && (backupFileInputRef.current.value = '')
   }, [showImportDialog, school, selectedSchool, firstWeekStartDate, setSelectedSchool, stepper.reset])
 
   useEffect(() => {
