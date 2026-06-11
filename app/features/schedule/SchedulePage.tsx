@@ -6,6 +6,7 @@ import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import { getCurrentRealWeek, getMaxWeek } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
+import { useWeekKeyboardNavigation } from './hooks/useWeekKeyboardNavigation'
 
 type EditingNote = {
   id: string
@@ -43,6 +44,8 @@ export default function SchedulePage() {
 
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
+
+  useWeekKeyboardNavigation({ currentWeek, maxWeek, onWeekChange: setCurrentWeek })
 
   const { markAllAsAttended, markAllAsUnattended } = useWeekAttendance()
 
