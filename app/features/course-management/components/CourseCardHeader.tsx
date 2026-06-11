@@ -21,7 +21,7 @@ export function CourseCardHeader({ course, isExpanded }: CourseCardHeaderProps) 
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex size-11 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+              className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
               aria-label={isExpanded ? '收起课程详情' : '展开课程详情'}
             >
               <ChevronDown className={`size-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
