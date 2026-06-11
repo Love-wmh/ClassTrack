@@ -83,9 +83,7 @@ export default function ScheduleHeader({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="flex h-10 items-center rounded-md bg-card px-3.5 text-foreground shadow-xs">
-            第 {currentWeek} 周
-          </span>
+          <span className="flex h-10 items-center rounded-md bg-card px-3.5 text-foreground shadow-xs">第 {currentWeek} 周</span>
           <Button
             variant="ghost"
             onClick={() => onWeekChange(currentRealWeek)}
