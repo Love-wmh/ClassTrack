@@ -82,13 +82,18 @@ export default function ScheduleHeader({
           </Button>
         </div>
 
-        <Button
-          variant="ghost"
-          onClick={() => onWeekChange(currentRealWeek)}
-          className="h-10 bg-card px-3.5 font-medium text-foreground shadow-xs hover:bg-muted"
-        >
-          返回本周
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="flex h-10 items-center rounded-md bg-card px-3.5 text-foreground shadow-xs">
+            第 {currentWeek} 周
+          </span>
+          <Button
+            variant="ghost"
+            onClick={() => onWeekChange(currentRealWeek)}
+            className="h-10 bg-card px-3.5 font-medium text-foreground shadow-xs hover:bg-muted"
+          >
+            返回本周
+          </Button>
+        </div>
       </div>
 
       <ConfirmDialog
