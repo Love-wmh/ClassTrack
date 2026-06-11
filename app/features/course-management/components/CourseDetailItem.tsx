@@ -1,19 +1,17 @@
 import type { ReactNode } from 'react'
 
 type CourseDetailItemProps = {
-  icon: ReactNode
   label: string
   value: string
+  icon?: ReactNode
 }
 
 export function CourseDetailItem({ icon, label, value }: CourseDetailItemProps) {
   return (
-    <div className="flex items-start gap-3 rounded-md bg-muted/30 p-3">
-      <div className="mt-0.5 text-muted-foreground">{icon}</div>
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-1 truncate text-sm font-medium">{value}</p>
-      </div>
+    <div className="flex h-11 min-w-0 items-center gap-2 rounded-md bg-muted px-4 text-sm text-muted-foreground">
+      {icon && <div className="shrink-0">{icon}</div>}
+      <span className="shrink-0">{label}</span>
+      <span className="min-w-0 truncate font-medium text-foreground">{value}</span>
     </div>
   )
 }
