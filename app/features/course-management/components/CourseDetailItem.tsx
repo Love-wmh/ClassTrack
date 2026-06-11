@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
 
-type CourseMetaItemProps = {
+type CourseDetailItemProps = {
   icon: ReactNode
   label: string
   value: string
 }
 
-export function CourseMetaItem({ icon, label, value }: CourseMetaItemProps) {
+export function CourseDetailItem({ icon, label, value }: CourseDetailItemProps) {
   return (
     <div className="flex items-start gap-3 rounded-md bg-muted/30 p-3">
       <div className="mt-0.5 text-muted-foreground">{icon}</div>
