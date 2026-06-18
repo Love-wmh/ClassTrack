@@ -24,6 +24,7 @@ export default function ProfilePage() {
   const totalClasses = classes.length
   const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
   const totalWithNote = Object.values(classMarks).filter((mark) => mark.note).length
+  const currentSemester = semesters.find((semester) => semester.id === currentSemesterId)
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-5 md:p-6">
@@ -82,7 +83,15 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-      <CreateSemesterDialog open={showCreateSemesterDialog} onOpenChange={setShowCreateSemesterDialog} onCreate={createSemester} />
+      {showCreateSemesterDialog && (
+        <CreateSemesterDialog
+          open={showCreateSemesterDialog}
+          onOpenChange={setShowCreateSemesterDialog}
+          onCreate={createSemester}
+          defaultName={currentSemester?.name}
+          defaultCode={currentSemester?.code}
+        />
+      )}
     </div>
   )
 }

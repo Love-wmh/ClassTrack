@@ -9,11 +9,19 @@ type CreateSemesterDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreate: (input: { name: string; code?: string; firstWeekStartDate?: string | null }) => void
+  defaultName?: string
+  defaultCode?: string
 }
 
-export default function CreateSemesterDialog({ open, onOpenChange, onCreate }: CreateSemesterDialogProps) {
-  const [name, setName] = useState('')
-  const [code, setCode] = useState('')
+export default function CreateSemesterDialog({
+  open,
+  onOpenChange,
+  onCreate,
+  defaultName = '',
+  defaultCode = '',
+}: CreateSemesterDialogProps) {
+  const [name, setName] = useState(defaultName)
+  const [code, setCode] = useState(defaultCode)
   const [firstWeekStartDate, setFirstWeekStartDate] = useState<string | null>(null)
 
   const resetForm = () => {
