@@ -15,13 +15,17 @@ interface DatePickerProps {
   onSelect: (date: Date | undefined) => void
   placeholder?: string
   showIcon?: boolean
+  className?: string
 }
 
-export function DatePicker({ date, onSelect, placeholder, showIcon = true }: DatePickerProps) {
+export function DatePicker({ date, onSelect, placeholder, showIcon = true, className }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant={'outline'} className={cn('w-[280px] justify-start text-left font-normal', !date && 'text-muted-foreground')}>
+        <Button
+          variant={'outline'}
+          className={cn('w-[280px] justify-start text-left font-normal', !date && 'text-muted-foreground', className)}
+        >
           {showIcon && <CalendarIcon className="mr-2 h-4 w-4" />}
           {date ? format(date, 'yyyy年MM月dd日', { locale: zhCN }) : <span>{placeholder || '选择日期'}</span>}
         </Button>

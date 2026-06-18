@@ -3,8 +3,10 @@ import DataDisplayButton from '~/components/common/DataDisplayButton'
 import FirstWeekStartDatePicker from '~/components/common/FirstWeekStartDatePicker'
 import SemesterSelect from '~/components/common/SemesterSelect'
 import CreateSemesterDialog from '~/components/dialog/CreateSemesterDialog'
+import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
+import { Plus } from 'lucide-react'
 
 export default function ProfilePage() {
   const {
@@ -58,16 +60,24 @@ export default function ProfilePage() {
               <CardContent className="space-y-6">
                 <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">当前学期</div>
-                  <SemesterSelect
-                    semesters={semesters}
-                    currentSemesterId={currentSemesterId}
-                    onSemesterChange={setCurrentSemester}
-                    onCreateClick={() => setShowCreateSemesterDialog(true)}
-                  />
+                  <SemesterSelect semesters={semesters} currentSemesterId={currentSemesterId} onSemesterChange={setCurrentSemester} />
+                </div>
+                <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
+                  <div className="text-sm font-medium">新建学期</div>
+                  <Button type="button" onClick={() => setShowCreateSemesterDialog(true)}>
+                    <Plus className="mr-1.5 size-4" />
+                    新建
+                  </Button>
                 </div>
                 <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">第一周第一天</div>
-                  <FirstWeekStartDatePicker value={firstWeekStartDate} onChange={setFirstWeekStartDate} placeholder="选择日期" showIcon />
+                  <FirstWeekStartDatePicker
+                    value={firstWeekStartDate}
+                    onChange={setFirstWeekStartDate}
+                    placeholder="选择日期"
+                    showIcon
+                    className="h-9 w-[220px] max-w-full"
+                  />
                 </div>
               </CardContent>
             </Card>
