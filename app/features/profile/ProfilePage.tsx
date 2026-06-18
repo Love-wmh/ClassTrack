@@ -6,7 +6,6 @@ import CreateSemesterDialog from '~/components/dialog/CreateSemesterDialog'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
-import { Plus } from 'lucide-react'
 
 export default function ProfilePage() {
   const {
@@ -64,8 +63,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">新建学期</div>
-                  <Button type="button" onClick={() => setShowCreateSemesterDialog(true)}>
-                    <Plus className="mr-1.5 size-4" />
+                  <Button type="button" variant="outline" onClick={() => setShowCreateSemesterDialog(true)}>
                     新建
                   </Button>
                 </div>
