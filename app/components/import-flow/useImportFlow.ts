@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { getBookmarkletAdapterBySchoolId } from '~/lib/bookmarklets'
 import { getParserById } from '~/lib/parsers'
 import { useClassStore } from '~/store'
-import type { ImportMethod } from '~/store/slices/uiSlice'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 import { getCurrentRealWeek } from '~/features/schedule/utils'
 import { useStepper } from '~/components/stepper'
@@ -38,6 +37,8 @@ export function useImportFlow() {
     setIsInitialized,
     firstWeekStartDate,
     setFirstWeekStartDate,
+    semesters,
+    currentSemesterId,
   } = useClassStore()
   const { handleFileSelect } = useDataExportImport()
   const isBackupImport = selectedImportMethod === 'backup'
@@ -53,7 +54,9 @@ export function useImportFlow() {
   const [isImporting, setIsImporting] = useState(false)
 
   const activeSchool = selectedSchool || school
+  const currentSemester = semesters.find((semester) => semester.id === currentSemesterId)
   const bookmarkletAdapter = getBookmarkletAdapterBySchoolId(activeSchool?.id)
+  const defaultTerm = currentSemester?.code || bookmarkletAdapter?.defaultTerm || ''
   const bookmarkletHref = useMemo(() => bookmarkletAdapter?.createScript({ term }) || '', [bookmarkletAdapter, term])
   const canUseBookmarklet = Boolean(bookmarkletAdapter && term)
 
@@ -72,19 +75,18 @@ export function useImportFlow() {
     setParserFile(null)
     setBackupFile(null)
     setParserFirstWeekStartDate(firstWeekStartDate)
+    setTerm(defaultTerm)
     setIsImporting(false)
     if (!selectedSchool && school) {
       setSelectedSchool(school)
     }
-    parserFileInputRef.current && (parserFileInputRef.current.value = '')
-    backupFileInputRef.current && (backupFileInputRef.current.value = '')
-  }, [showImportDialog, school, selectedSchool, firstWeekStartDate, setSelectedSchool, stepper.reset])
-
-  useEffect(() => {
-    if (showImportDialog) {
-      setTerm(bookmarkletAdapter?.defaultTerm || '')
+    if (parserFileInputRef.current) {
+      parserFileInputRef.current.value = ''
     }
-  }, [showImportDialog, bookmarkletAdapter])
+    if (backupFileInputRef.current) {
+      backupFileInputRef.current.value = ''
+    }
+  }, [showImportDialog, school, selectedSchool, firstWeekStartDate, defaultTerm, setSelectedSchool, stepper])
 
   useEffect(() => {
     if (showImportDialog && activeSchool && !selectedParserId) {
@@ -165,11 +167,11 @@ export function useImportFlow() {
         throw new Error('解析器未找到')
       }
 
-      setFirstWeekStartDate(parserFirstWeekStartDate)
-      const classes = importClasses(data, parser.parse)
+      const classes = importClasses(data, parser.parse, { firstWeekStartDate: parserFirstWeekStartDate })
       if (classes.length === 0) {
         throw new Error('未解析到课程数据')
       }
+      setFirstWeekStartDate(parserFirstWeekStartDate)
       setCurrentWeek(getCurrentRealWeek(classes, parserFirstWeekStartDate))
 
       if (activeSchool) {

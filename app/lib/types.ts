@@ -31,12 +31,26 @@ export interface School {
   name: string
 }
 
+// 学期类型
+export interface Semester {
+  id: string
+  name: string
+  code: string
+  schoolId?: string
+  classes: Class[]
+  classMarks: Record<string, ClassMark>
+  currentWeek: number
+  firstWeekStartDate: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 // 解析器类型
 export interface ClassParser {
   id: string
   name: string
   description: string
-  parse: (data: any) => Class[]
+  parse: (data: unknown) => Class[]
 }
 
 // 书签脚本适配器类型
@@ -58,4 +72,7 @@ export interface AppData {
   currentWeek: number
   isInitialized: boolean
   firstWeekStartDate: string | null // 第一周第一天的日期 (ISO 日期字符串)
+  semesters: Semester[]
+  currentSemesterId: string | null
+  schemaVersion: 2
 }

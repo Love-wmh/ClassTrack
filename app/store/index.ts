@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { createDataSlice } from './slices/dataSlice'
 import { createUiSlice } from './slices/uiSlice'
 import type { ClassStore } from './types'
+import { CLASS_TRACK_SCHEMA_VERSION, migrateClassTrackState } from './migrations'
 
 export const useClassStore = create<ClassStore>()(
   persist(
@@ -13,7 +14,9 @@ export const useClassStore = create<ClassStore>()(
     })),
     {
       name: 'class-track-storage',
+      version: CLASS_TRACK_SCHEMA_VERSION,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persistedState) => migrateClassTrackState(persistedState),
       partialize: (state) => ({
         school: state.school,
         classes: state.classes,
@@ -21,6 +24,9 @@ export const useClassStore = create<ClassStore>()(
         currentWeek: state.currentWeek,
         isInitialized: state.isInitialized,
         firstWeekStartDate: state.firstWeekStartDate,
+        semesters: state.semesters,
+        currentSemesterId: state.currentSemesterId,
+        schemaVersion: state.schemaVersion,
       }),
     }
   )

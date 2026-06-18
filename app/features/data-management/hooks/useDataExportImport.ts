@@ -1,11 +1,9 @@
 import { useCallback } from 'react'
 import { useClassStore } from '~/store'
 import type { AppData } from '~/lib/types'
-import { getCurrentRealWeek } from '~/features/schedule/utils'
+import { normalizeImportedData } from '~/store/migrations'
 
 export function useDataExportImport() {
-  const { setSchool, setClasses, setClassMarks, setCurrentWeek, setIsInitialized, setFirstWeekStartDate } = useClassStore()
-
   const exportData = useCallback(() => {
     const state = useClassStore.getState()
     const exportData: AppData = {
@@ -15,6 +13,9 @@ export function useDataExportImport() {
       currentWeek: state.currentWeek,
       isInitialized: state.isInitialized,
       firstWeekStartDate: state.firstWeekStartDate,
+      semesters: state.semesters,
+      currentSemesterId: state.currentSemesterId,
+      schemaVersion: state.schemaVersion,
     }
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
@@ -28,42 +29,47 @@ export function useDataExportImport() {
     URL.revokeObjectURL(url)
   }, [])
 
-  const handleFileSelect = useCallback(
-    (file: File): Promise<{ success: boolean; error?: string }> => {
-      return new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          try {
-            const text = event.target?.result as string
-            const data = JSON.parse(text) as AppData
+  const handleFileSelect = useCallback((file: File): Promise<{ success: boolean; error?: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const text = event.target?.result as string
+          const data = normalizeImportedData(JSON.parse(text))
 
-            if (!data.classes || !Array.isArray(data.classes)) {
-              resolve({ success: false, error: '无效的数据格式：缺少课程数据' })
-              return
-            }
-
-            const firstWeekStartDate = data.firstWeekStartDate || null
-
-            setSchool(data.school || null)
-            setClasses(data.classes)
-            setClassMarks(data.classMarks || {})
-            setCurrentWeek(getCurrentRealWeek(data.classes, firstWeekStartDate))
-            setIsInitialized(data.isInitialized ?? true)
-            setFirstWeekStartDate(firstWeekStartDate)
-
-            resolve({ success: true })
-          } catch {
-            resolve({ success: false, error: 'JSON 解析失败，请检查文件格式' })
+          if (!data) {
+            resolve({ success: false, error: '无效的数据格式' })
+            return
           }
+
+          if (!Array.isArray(data.classes)) {
+            resolve({ success: false, error: '无效的数据格式：缺少课程数据' })
+            return
+          }
+
+          useClassStore.setState({
+            school: data.school,
+            classes: data.classes,
+            classMarks: data.classMarks,
+            currentWeek: data.currentWeek,
+            isInitialized: data.isInitialized,
+            firstWeekStartDate: data.firstWeekStartDate,
+            semesters: data.semesters,
+            currentSemesterId: data.currentSemesterId,
+            schemaVersion: data.schemaVersion,
+          })
+
+          resolve({ success: true })
+        } catch {
+          resolve({ success: false, error: 'JSON 解析失败，请检查文件格式' })
         }
-        reader.onerror = () => {
-          resolve({ success: false, error: '文件读取失败' })
-        }
-        reader.readAsText(file)
-      })
-    },
-    [setSchool, setClasses, setClassMarks, setCurrentWeek, setIsInitialized, setFirstWeekStartDate]
-  )
+      }
+      reader.onerror = () => {
+        resolve({ success: false, error: '文件读取失败' })
+      }
+      reader.readAsText(file)
+    })
+  }, [])
 
   return {
     exportData,

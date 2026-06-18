@@ -1,10 +1,24 @@
+import { useState } from 'react'
 import DataDisplayButton from '~/components/common/DataDisplayButton'
 import FirstWeekStartDatePicker from '~/components/common/FirstWeekStartDatePicker'
+import SemesterSelect from '~/components/common/SemesterSelect'
+import CreateSemesterDialog from '~/components/dialog/CreateSemesterDialog'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
 
 export default function ProfilePage() {
-  const { school, classes, classMarks, firstWeekStartDate, setFirstWeekStartDate } = useClassStore()
+  const {
+    school,
+    classes,
+    classMarks,
+    firstWeekStartDate,
+    semesters,
+    currentSemesterId,
+    setFirstWeekStartDate,
+    createSemester,
+    setCurrentSemester,
+  } = useClassStore()
+  const [showCreateSemesterDialog, setShowCreateSemesterDialog] = useState(false)
 
   const totalClasses = classes.length
   const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
@@ -42,7 +56,16 @@ export default function ProfilePage() {
                 <CardTitle>学期设置</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between py-2">
+                <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
+                  <div className="text-sm font-medium">当前学期</div>
+                  <SemesterSelect
+                    semesters={semesters}
+                    currentSemesterId={currentSemesterId}
+                    onSemesterChange={setCurrentSemester}
+                    onCreateClick={() => setShowCreateSemesterDialog(true)}
+                  />
+                </div>
+                <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">第一周第一天</div>
                   <FirstWeekStartDatePicker value={firstWeekStartDate} onChange={setFirstWeekStartDate} placeholder="选择日期" showIcon />
                 </div>
@@ -51,6 +74,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      <CreateSemesterDialog open={showCreateSemesterDialog} onOpenChange={setShowCreateSemesterDialog} onCreate={createSemester} />
     </div>
   )
 }
