@@ -32,7 +32,7 @@ export default function CourseManagementPage() {
           ) : (
             <div className="grid gap-4">
               {courses.map((course) => (
-                <CourseCard key={course.key} course={course} />
+                <CourseCard key={`${course.semesterId || 'none'}-${course.key}`} course={course} />
               ))}
             </div>
           )}

@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
 import { useClassStore } from '~/store'
+import { getCourseKey } from '~/store/utils'
 import { toChineseWeekday } from '~/features/dashboard/utils'
-import type { Class } from '~/lib/types'
+import type { Class, CourseField, CourseMetadataMap } from '~/lib/types'
 
 export type CourseInfo = {
   key: string
+  semesterId: string | null
   name: string
   teacher: string
   classrooms: string[]
@@ -16,6 +18,7 @@ export type CourseInfo = {
   schedules: CourseSchedule[]
   totalSessions: number
   weekRange: string
+  fields: CourseField[]
 }
 
 export type CourseSchedule = {
@@ -29,10 +32,12 @@ export type CourseSchedule = {
 
 export function useCourseManagement() {
   const classes = useClassStore((state) => state.classes)
+  const courseMetadata = useClassStore((state) => state.courseMetadata)
+  const currentSemesterId = useClassStore((state) => state.currentSemesterId)
 
   return useMemo(() => {
     const courses = Array.from(groupClassesByCourse(classes).values())
-      .map(toCourseInfo)
+      .map((courseClasses) => toCourseInfo(courseClasses, courseMetadata, currentSemesterId))
       .sort((left, right) => left.name.localeCompare(right.name, 'zh-Hans-CN'))
 
     return {
@@ -41,12 +46,12 @@ export function useCourseManagement() {
       totalCourseInstances: classes.length,
       hasCourses: courses.length > 0,
     }
-  }, [classes])
+  }, [classes, courseMetadata, currentSemesterId])
 }
 
 function groupClassesByCourse(classes: Class[]) {
   return classes.reduce((groups, classItem) => {
-    const key = [classItem.courseId || classItem.name, classItem.name, classItem.teacher].join('-')
+    const key = getCourseKey(classItem)
     const current = groups.get(key) ?? []
     current.push(classItem)
     groups.set(key, current)
@@ -54,12 +59,14 @@ function groupClassesByCourse(classes: Class[]) {
   }, new Map<string, Class[]>())
 }
 
-function toCourseInfo(classes: Class[]): CourseInfo {
+function toCourseInfo(classes: Class[], courseMetadata: CourseMetadataMap, semesterId: string | null): CourseInfo {
   const [firstClass] = classes
   const allWeeks = classes.flatMap((classItem) => classItem.weeks)
+  const key = getCourseKey(firstClass)
 
   return {
-    key: [firstClass.courseId || firstClass.id, firstClass.name, firstClass.teacher].join('-'),
+    key,
+    semesterId,
     name: firstClass.name,
     teacher: firstClass.teacher || '未记录教师',
     classrooms: unique(classes.map((classItem) => classItem.classroom).filter(Boolean)),
@@ -71,7 +78,46 @@ function toCourseInfo(classes: Class[]): CourseInfo {
     schedules: classes.map(toCourseSchedule),
     totalSessions: allWeeks.length,
     weekRange: formatWeekRange(allWeeks),
+    fields: getCourseFields(key, firstClass, courseMetadata),
   }
+}
+
+function getCourseFields(courseKey: string, firstClass: Class, courseMetadata: CourseMetadataMap) {
+  const existingFields = courseMetadata[courseKey]?.fields || []
+  const defaultFields: CourseField[] = [
+    {
+      id: 'builtin-teacher',
+      label: '上课教师',
+      content: firstClass.teacher || '未记录教师',
+      contentType: 'text',
+      canDelete: false,
+    },
+    {
+      id: 'builtin-course-id',
+      label: '课程号',
+      content: firstClass.courseId || '未记录课程号',
+      contentType: 'text',
+      canDelete: false,
+    },
+    {
+      id: 'builtin-note',
+      label: '备注',
+      content: '',
+      contentType: 'markdown',
+      canDelete: false,
+    },
+  ]
+
+  const fieldsById = new Map(existingFields.map((field) => [field.id, field]))
+  const fixedFields = defaultFields.map((field) => ({
+    ...field,
+    ...(fieldsById.get(field.id) || {}),
+    canDelete: false,
+    contentType: field.contentType,
+  }))
+  const customFields = existingFields.filter((field) => !defaultFields.some((defaultField) => defaultField.id === field.id))
+
+  return [...fixedFields, ...customFields]
 }
 
 function toCourseSchedule(classItem: Class): CourseSchedule {

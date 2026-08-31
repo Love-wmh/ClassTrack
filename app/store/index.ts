@@ -26,6 +26,7 @@ export const useClassStore = create<ClassStore>()(
         firstWeekStartDate: state.firstWeekStartDate,
         semesters: state.semesters,
         currentSemesterId: state.currentSemesterId,
+        courseMetadata: state.courseMetadata,
         schemaVersion: state.schemaVersion,
       }),
     }

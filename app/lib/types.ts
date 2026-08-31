@@ -25,6 +25,22 @@ export interface ClassMark {
   note: string // 备注
 }
 
+export type CourseFieldContentType = 'text' | 'markdown'
+
+export interface CourseField {
+  id: string
+  label: string
+  content: string
+  contentType: CourseFieldContentType
+  canDelete: boolean
+}
+
+export interface CourseMetadata {
+  fields: CourseField[]
+}
+
+export type CourseMetadataMap = Record<string, CourseMetadata>
+
 // 学校类型
 export interface School {
   id: string
@@ -41,6 +57,7 @@ export interface Semester {
   classMarks: Record<string, ClassMark>
   currentWeek: number
   firstWeekStartDate: string | null
+  courseMetadata: CourseMetadataMap
   createdAt: string
   updatedAt: string
 }
@@ -74,5 +91,6 @@ export interface AppData {
   firstWeekStartDate: string | null // 第一周第一天的日期 (ISO 日期字符串)
   semesters: Semester[]
   currentSemesterId: string | null
-  schemaVersion: 2
+  courseMetadata: CourseMetadataMap
+  schemaVersion: 3
 }

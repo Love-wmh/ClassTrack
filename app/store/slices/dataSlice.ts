@@ -1,7 +1,7 @@
-import type { Class, School, AppData, ClassMark, Semester } from '~/lib/types'
+import type { Class, School, AppData, ClassMark, CourseField, Semester } from '~/lib/types'
 import type { StoreSlice } from '../types'
 import { createSemester as createSemesterModel, ensureUniqueSemesterId, inferSemesterCode, formatSemesterName } from '../migrations'
-import { createPastClassMarks, getMarkKey } from '../utils'
+import { createPastClassMarks, getCourseKey, getMarkKey } from '../utils'
 
 export type CreateSemesterInput = {
   name: string
@@ -24,6 +24,9 @@ export interface DataSlice extends AppData {
   setFirstWeekStartDate: (date: string | null) => void
   createSemester: (input: CreateSemesterInput) => Semester
   deleteSemester: (semesterId: string) => void
+  updateCourseField: (courseKey: string, fieldId: string, patch: Partial<Pick<CourseField, 'label' | 'content'>>) => void
+  addCourseField: (courseKey: string) => string
+  deleteCourseField: (courseKey: string, fieldId: string) => void
   setCurrentSemester: (semesterId: string) => void
 }
 
@@ -36,7 +39,8 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
   firstWeekStartDate: null,
   semesters: [],
   currentSemesterId: null,
-  schemaVersion: 2,
+  courseMetadata: {},
+  schemaVersion: 3,
 
   setSchool: (school) => {
     set((state) => {
@@ -156,7 +160,8 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
       firstWeekStartDate: null,
       semesters: [],
       currentSemesterId: null,
-      schemaVersion: 2,
+      courseMetadata: {},
+      schemaVersion: 3,
     })
   },
 
@@ -197,6 +202,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
         state.classMarks = semester.classMarks
         state.currentWeek = semester.currentWeek
         state.firstWeekStartDate = semester.firstWeekStartDate
+        state.courseMetadata = semester.courseMetadata
         state.isInitialized = true
         return
       }
@@ -243,6 +249,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
       draft.classMarks = semester.classMarks
       draft.currentWeek = semester.currentWeek
       draft.firstWeekStartDate = semester.firstWeekStartDate
+      draft.courseMetadata = semester.courseMetadata
       draft.isInitialized = semester.classes.length > 0
     })
 
@@ -265,6 +272,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
         state.classMarks = {}
         state.currentWeek = 1
         state.firstWeekStartDate = null
+        state.courseMetadata = {}
         state.isInitialized = false
         return
       }
@@ -274,6 +282,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
       state.classMarks = nextSemester.classMarks
       state.currentWeek = nextSemester.currentWeek
       state.firstWeekStartDate = nextSemester.firstWeekStartDate
+      state.courseMetadata = nextSemester.courseMetadata
       state.isInitialized = nextSemester.classes.length > 0
     })
   },
@@ -288,7 +297,49 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
       state.classMarks = semester.classMarks
       state.currentWeek = semester.currentWeek
       state.firstWeekStartDate = semester.firstWeekStartDate
+      state.courseMetadata = semester.courseMetadata
       state.isInitialized = semester.classes.length > 0 || state.isInitialized
+    })
+  },
+
+  updateCourseField: (courseKey, fieldId, patch) => {
+    set((state) => {
+      const metadata = ensureCourseMetadata(state, courseKey)
+      const field = metadata.fields.find((item) => item.id === fieldId)
+      if (!field) return
+
+      if (patch.label !== undefined) field.label = patch.label
+      if (patch.content !== undefined) field.content = patch.content
+      syncCurrentSemester(state, { courseMetadata: state.courseMetadata })
+    })
+  },
+
+  addCourseField: (courseKey) => {
+    const fieldId = createCourseFieldId()
+
+    set((state) => {
+      const metadata = ensureCourseMetadata(state, courseKey)
+      metadata.fields.push({
+        id: fieldId,
+        label: '新字段',
+        content: '',
+        contentType: 'text',
+        canDelete: true,
+      })
+      syncCurrentSemester(state, { courseMetadata: state.courseMetadata })
+    })
+
+    return fieldId
+  },
+
+  deleteCourseField: (courseKey, fieldId) => {
+    set((state) => {
+      const metadata = ensureCourseMetadata(state, courseKey)
+      const fieldIndex = metadata.fields.findIndex((item) => item.id === fieldId)
+      if (fieldIndex === -1 || !metadata.fields[fieldIndex].canDelete) return
+
+      metadata.fields.splice(fieldIndex, 1)
+      syncCurrentSemester(state, { courseMetadata: state.courseMetadata })
     })
   },
 })
@@ -302,4 +353,46 @@ function syncCurrentSemester(state: DataSlice, patch: Partial<Semester>) {
   if (!semester) return
 
   Object.assign(semester, patch, { updatedAt: new Date().toISOString() })
+}
+
+function ensureCourseMetadata(state: DataSlice, courseKey: string) {
+  const metadata = state.courseMetadata[courseKey]
+  if (metadata) return metadata
+
+  const nextMetadata = {
+    fields: [
+      {
+        id: 'builtin-teacher',
+        label: '上课教师',
+        content: findCourseClass(state.classes, courseKey)?.teacher || '未记录教师',
+        contentType: 'text' as const,
+        canDelete: false,
+      },
+      {
+        id: 'builtin-course-id',
+        label: '课程号',
+        content: findCourseClass(state.classes, courseKey)?.courseId || '未记录课程号',
+        contentType: 'text' as const,
+        canDelete: false,
+      },
+      {
+        id: 'builtin-note',
+        label: '备注',
+        content: '',
+        contentType: 'markdown' as const,
+        canDelete: false,
+      },
+    ],
+  }
+
+  state.courseMetadata[courseKey] = nextMetadata
+  return nextMetadata
+}
+
+function findCourseClass(classes: Class[], courseKey: string) {
+  return classes.find((classItem) => getCourseKey(classItem) === courseKey)
+}
+
+function createCourseFieldId() {
+  return `field-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }

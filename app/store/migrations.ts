@@ -1,10 +1,11 @@
-import type { AppData, Class, ClassMark, School, Semester } from '~/lib/types'
+import type { AppData, Class, ClassMark, CourseField, CourseMetadataMap, School, Semester } from '~/lib/types'
 
-export const CLASS_TRACK_SCHEMA_VERSION = 2
+export const CLASS_TRACK_SCHEMA_VERSION = 3
 
-type LegacyAppData = Partial<Omit<AppData, 'semesters' | 'currentSemesterId' | 'schemaVersion'>> & {
+type LegacyAppData = Partial<Omit<AppData, 'semesters' | 'currentSemesterId' | 'courseMetadata' | 'schemaVersion'>> & {
   semesters?: unknown
   currentSemesterId?: unknown
+  courseMetadata?: unknown
   schemaVersion?: unknown
 }
 
@@ -16,6 +17,7 @@ type CreateSemesterInput = {
   classMarks?: Record<string, ClassMark>
   currentWeek?: number
   firstWeekStartDate?: string | null
+  courseMetadata?: CourseMetadataMap
 }
 
 export function createEmptyAppData(): AppData {
@@ -28,6 +30,7 @@ export function createEmptyAppData(): AppData {
     firstWeekStartDate: null,
     semesters: [],
     currentSemesterId: null,
+    courseMetadata: {},
     schemaVersion: CLASS_TRACK_SCHEMA_VERSION,
   }
 }
@@ -46,6 +49,7 @@ export function createSemester(input: CreateSemesterInput = {}, now = new Date()
     classMarks: input.classMarks || {},
     currentWeek: input.currentWeek || 1,
     firstWeekStartDate: input.firstWeekStartDate ?? null,
+    courseMetadata: input.courseMetadata || {},
     createdAt: now,
     updatedAt: now,
   }
@@ -69,6 +73,7 @@ export function migrateClassTrackState(persistedState: unknown): AppData {
       currentWeek: activeSemester.currentWeek,
       isInitialized: Boolean(rawState.isInitialized || activeSemester.classes.length > 0),
       firstWeekStartDate: activeSemester.firstWeekStartDate,
+      courseMetadata: activeSemester.courseMetadata,
       semesters,
       currentSemesterId: activeSemester.id,
       schemaVersion: CLASS_TRACK_SCHEMA_VERSION,
@@ -85,6 +90,7 @@ export function migrateClassTrackState(persistedState: unknown): AppData {
       ...createEmptyAppData(),
       school: normalizeSchool(rawState.school),
       isInitialized: Boolean(rawState.isInitialized),
+      courseMetadata: normalizeCourseMetadata(rawState.courseMetadata),
     }
   }
 
@@ -96,6 +102,7 @@ export function migrateClassTrackState(persistedState: unknown): AppData {
     classMarks,
     currentWeek,
     firstWeekStartDate,
+    courseMetadata: normalizeCourseMetadata(rawState.courseMetadata),
   })
 
   return {
@@ -105,6 +112,7 @@ export function migrateClassTrackState(persistedState: unknown): AppData {
     currentWeek: migratedSemester.currentWeek,
     isInitialized: Boolean(rawState.isInitialized || classes.length > 0),
     firstWeekStartDate: migratedSemester.firstWeekStartDate,
+    courseMetadata: migratedSemester.courseMetadata,
     semesters: [migratedSemester],
     currentSemesterId: migratedSemester.id,
     schemaVersion: CLASS_TRACK_SCHEMA_VERSION,
@@ -178,6 +186,7 @@ function normalizeSemesters(value: unknown): Semester[] {
       classMarks: normalizeClassMarks(item.classMarks),
       currentWeek: normalizeWeek(item.currentWeek),
       firstWeekStartDate: normalizeNullableString(item.firstWeekStartDate),
+      courseMetadata: normalizeCourseMetadata(item.courseMetadata),
       createdAt: normalizeString(item.createdAt) || now,
       updatedAt: normalizeString(item.updatedAt) || now,
     }
@@ -190,6 +199,32 @@ function normalizeClasses(value: unknown): Class[] {
 
 function normalizeClassMarks(value: unknown): Record<string, ClassMark> {
   return isRecord(value) ? (value as Record<string, ClassMark>) : {}
+}
+
+function normalizeCourseMetadata(value: unknown): CourseMetadataMap {
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<CourseMetadataMap>((result, [courseKey, metadata]) => {
+    if (!isRecord(metadata) || !Array.isArray(metadata.fields)) return result
+
+    const fields = metadata.fields.filter(isRecord).map(
+      (field) =>
+        ({
+          id: normalizeString(field.id) || createCourseFieldId(),
+          label: normalizeString(field.label) || '新字段',
+          content: typeof field.content === 'string' ? field.content : '',
+          contentType: field.contentType === 'markdown' ? 'markdown' : 'text',
+          canDelete: Boolean(field.canDelete),
+        }) satisfies CourseField
+    )
+
+    result[courseKey] = { fields }
+    return result
+  }, {})
+}
+
+function createCourseFieldId() {
+  return `field-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 function normalizeSchool(value: unknown): School | null {

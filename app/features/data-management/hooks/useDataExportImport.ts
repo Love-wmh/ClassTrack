@@ -15,6 +15,7 @@ export function useDataExportImport() {
       firstWeekStartDate: state.firstWeekStartDate,
       semesters: state.semesters,
       currentSemesterId: state.currentSemesterId,
+      courseMetadata: state.courseMetadata,
       schemaVersion: state.schemaVersion,
     }
 
@@ -56,6 +57,7 @@ export function useDataExportImport() {
             firstWeekStartDate: data.firstWeekStartDate,
             semesters: data.semesters,
             currentSemesterId: data.currentSemesterId,
+            courseMetadata: data.courseMetadata,
             schemaVersion: data.schemaVersion,
           })
 

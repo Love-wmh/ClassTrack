@@ -60,6 +60,10 @@ export function getMarkKey(classId: string, week: number) {
   return `${classId}-${week}`
 }
 
+export function getCourseKey(classItem: Class) {
+  return [classItem.courseId || classItem.id, classItem.name, classItem.teacher].join('-')
+}
+
 /**
  * 在已知学期起始日期时，判断某个课次是否早于导入时刻结束。
  *

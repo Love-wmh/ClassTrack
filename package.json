@@ -23,6 +23,9 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
+    "@milkdown/kit": "^7.22.1",
+    "@milkdown/react": "^7.22.1",
+    "@milkdown/theme-nord": "^7.22.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@react-router/node": "7.15.1",
     "@react-router/serve": "7.15.1",
