@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import DataDisplayButton from '~/components/common/DataDisplayButton'
+import ConfirmDialog from '~/components/dialog/ConfirmDialog'
 import FirstWeekStartDatePicker from '~/components/common/FirstWeekStartDatePicker'
 import SemesterSelect from '~/components/common/SemesterSelect'
 import CreateSemesterDialog from '~/components/dialog/CreateSemesterDialog'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
+import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 
 export default function ProfilePage() {
   const {
@@ -17,9 +20,12 @@ export default function ProfilePage() {
     currentSemesterId,
     setFirstWeekStartDate,
     createSemester,
+    deleteSemester,
     setCurrentSemester,
   } = useClassStore()
   const [showCreateSemesterDialog, setShowCreateSemesterDialog] = useState(false)
+  const [showDeleteSemesterDialog, setShowDeleteSemesterDialog] = useState(false)
+  const { exportData } = useDataExportImport()
 
   const totalClasses = classes.length
   const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
@@ -69,6 +75,13 @@ export default function ProfilePage() {
                   </Button>
                 </div>
                 <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
+                  <div className="text-sm font-medium">删除学期</div>
+                  <Button type="button" variant="destructive" onClick={() => setShowDeleteSemesterDialog(true)} disabled={!currentSemester}>
+                    <Trash2 className="mr-1.5 size-4" />
+                    删除
+                  </Button>
+                </div>
+                <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">第一周第一天</div>
                   <FirstWeekStartDatePicker
                     value={firstWeekStartDate}
@@ -92,6 +105,20 @@ export default function ProfilePage() {
           defaultCode={currentSemester?.code}
         />
       )}
+      <ConfirmDialog
+        open={showDeleteSemesterDialog}
+        title={`是否删除 ${currentSemester?.name || ''}`}
+        description="删除前将会自动导出完整数据作为备份"
+        confirmText="备份并删除"
+        confirmVariant="destructive"
+        onOpenChange={setShowDeleteSemesterDialog}
+        onConfirm={() => {
+          if (!currentSemester) return
+          exportData()
+          deleteSemester(currentSemester.id)
+          setShowDeleteSemesterDialog(false)
+        }}
+      />
     </div>
   )
 }

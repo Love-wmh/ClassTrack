@@ -23,6 +23,7 @@ export interface DataSlice extends AppData {
   importClasses: (data: unknown, parser: (data: unknown) => Class[], options?: { firstWeekStartDate?: string | null }) => Class[]
   setFirstWeekStartDate: (date: string | null) => void
   createSemester: (input: CreateSemesterInput) => Semester
+  deleteSemester: (semesterId: string) => void
   setCurrentSemester: (semesterId: string) => void
 }
 
@@ -246,6 +247,35 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
     })
 
     return semester
+  },
+
+  deleteSemester: (semesterId) => {
+    set((state) => {
+      const deletedIndex = state.semesters.findIndex((semester) => semester.id === semesterId)
+      if (deletedIndex === -1) return
+
+      state.semesters.splice(deletedIndex, 1)
+
+      if (state.currentSemesterId !== semesterId) return
+
+      const nextSemester = state.semesters[deletedIndex] || state.semesters[deletedIndex - 1]
+      if (!nextSemester) {
+        state.currentSemesterId = null
+        state.classes = []
+        state.classMarks = {}
+        state.currentWeek = 1
+        state.firstWeekStartDate = null
+        state.isInitialized = false
+        return
+      }
+
+      state.currentSemesterId = nextSemester.id
+      state.classes = nextSemester.classes
+      state.classMarks = nextSemester.classMarks
+      state.currentWeek = nextSemester.currentWeek
+      state.firstWeekStartDate = nextSemester.firstWeekStartDate
+      state.isInitialized = nextSemester.classes.length > 0
+    })
   },
 
   setCurrentSemester: (semesterId) => {
