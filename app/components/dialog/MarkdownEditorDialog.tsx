@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Download, FileUp, Save } from 'lucide-react'
 import { useEditor, Milkdown, MilkdownProvider } from '@milkdown/react'
 import { Editor, defaultValueCtx, rootCtx } from '@milkdown/kit/core'
 import { commonmark } from '@milkdown/kit/preset/commonmark'
@@ -95,11 +94,9 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
         <DialogFooter className="flex items-center justify-between gap-2 border-t px-6 py-4 sm:space-x-0">
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-              <FileUp className="size-4" />
               导入
             </Button>
             <Button type="button" variant="outline" onClick={handleExport}>
-              <Download className="size-4" />
               导出
             </Button>
           </div>
@@ -108,7 +105,6 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
               取消
             </Button>
             <Button type="button" onClick={handleConfirm}>
-              <Save className="size-4" />
               {dialog.confirmText}
             </Button>
           </div>

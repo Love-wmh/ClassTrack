@@ -26,11 +26,12 @@ export function CourseFieldList({ course }: CourseFieldListProps) {
     <div className="grid gap-3 sm:grid-cols-2">
       {teacherField && <CourseFieldItem key={teacherField.id} courseKey={course.key} field={teacherField} />}
       {courseIdField && <CourseFieldItem key={courseIdField.id} courseKey={course.key} field={courseIdField} />}
-      {noteField && <CourseMarkdownField key={noteField.id} courseKey={course.key} field={noteField} />}
 
       {customFields.map((field) => (
         <CourseFieldItem key={field.id} courseKey={course.key} field={field} autoEdit={field.id === newFieldId} />
       ))}
+
+      {noteField && <CourseMarkdownField key={noteField.id} courseKey={course.key} field={noteField} />}
 
       <AddCourseFieldItem onClick={handleAddField} />
     </div>

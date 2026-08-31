@@ -15,10 +15,10 @@ export function CourseMarkdownField({ courseKey, field }: CourseMarkdownFieldPro
 
   const handleOpenEditor = () => {
     openMarkdownEditorDialog({
-      title: '备注 · Markdown',
-      description: '编辑、导入或导出 Markdown 内容，确认后会回传并保存。',
+      title: '编辑备注',
+      description: '',
       value: field.content,
-      confirmText: '保存备注',
+      confirmText: '保存',
       onConfirm: (content) => {
         updateCourseField(courseKey, field.id, { content })
       },
@@ -26,9 +26,8 @@ export function CourseMarkdownField({ courseKey, field }: CourseMarkdownFieldPro
   }
 
   return (
-    <div className="flex min-h-11 min-w-0 items-center gap-2 rounded-md bg-muted px-4 text-sm text-muted-foreground sm:col-span-2">
-      <span className="shrink-0 font-medium text-foreground">备注</span>
-      <span className="rounded-sm bg-background px-2 py-1 text-xs text-muted-foreground">Markdown</span>
+    <div className="flex min-h-11 min-w-0 items-center gap-2 rounded-md bg-muted px-4 text-sm text-muted-foreground">
+      <span className="shrink-0">备注</span>
       <Button
         type="button"
         variant="ghost"

@@ -79,7 +79,7 @@ export const createUiSlice: StoreSlice<UiSlice> = (set) => ({
         open: true,
         sessionId: Date.now(),
         title: options.title,
-        description: options.description || '编辑 Markdown 内容',
+        description: options.description || '',
         value: options.value,
         confirmText: options.confirmText || '确认',
         onConfirm: options.onConfirm,
