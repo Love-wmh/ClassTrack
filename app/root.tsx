@@ -2,6 +2,8 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration }
 
 import type { Route } from './+types/root'
 import { Toaster } from '~/components/ui/sonner'
+import '@milkdown/theme-nord/style.css'
+import MarkdownEditorDialog from '~/components/dialog/MarkdownEditorDialog'
 import './app.css'
 import React from 'react'
 
@@ -19,6 +21,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Toaster position="top-center" />
+        <MarkdownEditorDialog />
         <ScrollRestoration />
         <Scripts />
       </body>

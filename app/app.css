@@ -160,33 +160,33 @@ body {
   .animate-stepper-flow-reverse {
     animation: stepper-flow-reverse 500ms ease-out forwards;
   }
-  .course-markdown-editor .milkdown {
-    min-height: 6rem;
+  .markdown-editor-shell .milkdown {
+    min-height: 20rem;
   }
-  .course-markdown-editor .milkdown .editor {
-    min-height: 6rem;
+  .markdown-editor-shell .milkdown .editor {
+    min-height: 20rem;
     outline: none;
   }
-  .course-markdown-editor .milkdown p {
+  .markdown-editor-shell .milkdown p {
     margin: 0.25rem 0;
   }
-  .course-markdown-editor .milkdown p:first-child {
+  .markdown-editor-shell .milkdown p:first-child {
     margin-top: 0;
   }
-  .course-markdown-editor .milkdown p:last-child {
+  .markdown-editor-shell .milkdown p:last-child {
     margin-bottom: 0;
   }
-  .course-markdown-editor .milkdown h1,
-  .course-markdown-editor .milkdown h2,
-  .course-markdown-editor .milkdown h3 {
+  .markdown-editor-shell .milkdown h1,
+  .markdown-editor-shell .milkdown h2,
+  .markdown-editor-shell .milkdown h3 {
     margin: 0.5rem 0 0.25rem;
     font-weight: 600;
   }
-  .course-markdown-editor .milkdown ul,
-  .course-markdown-editor .milkdown ol {
+  .markdown-editor-shell .milkdown ul,
+  .markdown-editor-shell .milkdown ol {
     padding-left: 1.25rem;
   }
-  .course-markdown-editor .milkdown blockquote {
+  .markdown-editor-shell .milkdown blockquote {
     border-left: 3px solid var(--border);
     padding-left: 0.75rem;
     color: var(--muted-foreground);
