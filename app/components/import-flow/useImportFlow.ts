@@ -121,8 +121,37 @@ export function useImportFlow() {
   }
 
   const handleOpenEducationalSystem = () => {
-    if (!bookmarkletAdapter) return
-    window.open(bookmarkletAdapter.educationalSystemUrl, '_blank', 'noopener,noreferrer')
+    if (!bookmarkletAdapter) {
+      toast.error('未找到该学校的教务系统地址，请重新选择学校')
+      return
+    }
+
+    const url = bookmarkletAdapter.educationalSystemUrl
+
+    // 不传 windowFeatures，浏览器才会按新标签页而非弹窗处理，避免被弹窗拦截器静默拦掉
+    const opened = window.open(url, '_blank')
+    if (opened) {
+      opened.opener = null
+      return
+    }
+
+    // 被弹窗拦截或处于沙箱 iframe / 内置浏览器时，退化为模拟点击链接
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+
+    toast.info('浏览器可能拦截了新标签页，请允许弹窗或手动复制地址', {
+      action: {
+        label: '复制地址',
+        onClick: () => {
+          navigator.clipboard.writeText(url).catch(() => undefined)
+        },
+      },
+    })
   }
 
   const handleParserFileChange = (event: ChangeEvent<HTMLInputElement>) => {
