@@ -56,7 +56,7 @@ export function useImportFlow() {
   const activeSchool = selectedSchool || school
   const currentSemester = semesters.find((semester) => semester.id === currentSemesterId)
   const bookmarkletAdapter = getBookmarkletAdapterBySchoolId(activeSchool?.id)
-  const defaultTerm = currentSemester?.code || bookmarkletAdapter?.defaultTerm || ''
+  const defaultTerm = currentSemester?.code || bookmarkletAdapter?.resolveTerm({ now: new Date() }) || bookmarkletAdapter?.defaultTerm || ''
   const bookmarkletHref = useMemo(() => bookmarkletAdapter?.createScript({ term }) || '', [bookmarkletAdapter, term])
   const canUseBookmarklet = Boolean(bookmarkletAdapter && term)
 
@@ -103,6 +103,12 @@ export function useImportFlow() {
       setSelectedParserId(matchedParser?.id || selectedParserId)
     }
   }, [activeSchool, selectedParserId, setSelectedParserId])
+
+  const handleSchoolChange = (nextSchool: typeof selectedSchool) => {
+    setSelectedSchool(nextSchool)
+    const adapter = getBookmarkletAdapterBySchoolId(nextSchool?.id)
+    setTerm(currentSemester?.code || adapter?.resolveTerm({ now: new Date() }) || adapter?.defaultTerm || '')
+  }
 
   const handleOpenChange = (open: boolean) => {
     setShowImportDialog(open)
@@ -246,11 +252,11 @@ export function useImportFlow() {
     primaryLabel,
     primaryDisabled,
     setTerm,
-    setSelectedSchool,
     setSelectedImportMethod,
     setSelectedParserId,
     handleParserFirstWeekStartDateChange: setParserFirstWeekStartDate,
     handleOpenChange,
+    handleSchoolChange,
     handleCopyBookmarklet,
     handleParserFileChange,
     handleBackupFileChange,

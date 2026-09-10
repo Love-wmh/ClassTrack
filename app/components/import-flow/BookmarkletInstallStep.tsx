@@ -39,7 +39,9 @@ export function BookmarkletInstallStep({ adapter, term, bookmarkletHref, onTermC
             <TooltipTrigger asChild>
               <Input id="term" value={term} placeholder={adapter.defaultTerm} onChange={(event) => onTermChange(event.target.value)} />
             </TooltipTrigger>
-            <TooltipContent side="top">该参数会写入书签脚本，重新修改后需要重新拖拽安装脚本或复制脚本代码。</TooltipContent>
+            <TooltipContent side="top">
+              已按当前日期自动填入，如不正确请手动修改。该参数会写入书签脚本，修改后需要重新拖拽安装或复制脚本。
+            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>

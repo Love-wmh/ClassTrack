@@ -71,6 +71,11 @@ export interface ClassParser {
 }
 
 // 书签脚本适配器类型
+export type TermContext = {
+  now?: Date
+  currentSemesterCode?: string | null
+}
+
 export interface BookmarkletAdapter {
   id: string
   schoolId: string
@@ -78,6 +83,7 @@ export interface BookmarkletAdapter {
   description: string
   educationalSystemUrl: string
   defaultTerm: string
+  resolveTerm: (context?: TermContext) => string
   createScript: (params: { term: string }) => string
 }
 

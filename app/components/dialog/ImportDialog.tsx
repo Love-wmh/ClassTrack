@@ -16,7 +16,7 @@ export default function ImportDialog() {
         <ImportSchoolStep
           selectedSchool={importFlow.activeSchool}
           selectedImportMethod={importFlow.selectedImportMethod}
-          onSchoolChange={importFlow.setSelectedSchool}
+          onSchoolChange={importFlow.handleSchoolChange}
           onImportMethodChange={importFlow.setSelectedImportMethod}
         />
       )

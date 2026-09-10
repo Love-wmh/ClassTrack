@@ -8,3 +8,5 @@ export function getBookmarkletAdapterBySchoolId(schoolId?: string | null): Bookm
   if (!schoolId) return undefined
   return bookmarkletAdapters.find((adapter) => adapter.schoolId === schoolId)
 }
+
+export { resolveChineseAcademicTerm, type AcademicTermRule } from './term'
