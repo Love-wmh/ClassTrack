@@ -53,8 +53,8 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
   }
 
   return (
-    <DialogContent className="max-w-5xl overflow-visible p-0 sm:max-w-5xl">
-      <div className="flex max-h-[85vh] flex-col overflow-hidden">
+    <DialogContent className="h-[90%] max-w-5xl overflow-visible p-0 sm:max-w-5xl">
+      <div className="flex h-full flex-col overflow-hidden">
         <DialogHeader className="gap-2 border-b px-6 pb-4 pr-12 pt-6 text-left">
           <DialogTitle>{dialog.title || '编辑 Markdown'}</DialogTitle>
           <DialogDescription>{dialog.description}</DialogDescription>
@@ -71,7 +71,7 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
               event.target.value = ''
             }}
           />
-          <div className="markdown-editor-shell min-h-[50vh] flex-1 overflow-auto rounded-md border border-border/70 bg-background">
+          <div className="markdown-editor-shell min-h-0 flex-1 overflow-auto rounded-md border border-border/70 bg-background">
             <MilkdownProvider>
               <MarkdownEditorCanvas key={editorNonce} initialValue={draft} onMarkdownChange={setDraft} />
             </MilkdownProvider>
