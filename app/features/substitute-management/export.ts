@@ -1,10 +1,54 @@
 import { Document, Packer, Paragraph, TextRun } from 'docx'
 import { saveAs } from 'file-saver'
+import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
+import { marked } from 'marked'
 import type { SubstituteLesson } from './utils'
 import { formatExportFileName } from './utils'
 
 export type SubstituteExportFormat = 'html' | 'markdown' | 'txt' | 'pdf' | 'docx'
+
+const markdownBodyStyle = `
+  :root { color-scheme: light; }
+  body {
+    margin: 0;
+    padding: 48px 56px;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #171717;
+    background: #ffffff;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    margin: 1.4em 0 0.6em;
+    line-height: 1.35;
+    font-weight: 650;
+  }
+  h1 { font-size: 28px; }
+  h2 { font-size: 22px; padding-bottom: 8px; border-bottom: 1px solid #e5e5e5; }
+  h3 { font-size: 18px; }
+  p, ul, ol, blockquote, pre, table { margin: 0 0 1em; }
+  ul, ol { padding-left: 1.5em; }
+  li { margin: 0.25em 0; }
+  strong { font-weight: 650; }
+  img { max-width: 100%; height: auto; display: block; margin: 12px 0; }
+  blockquote {
+    margin-left: 0;
+    padding: 8px 16px;
+    color: #525252;
+    border-left: 3px solid #d4d4d4;
+    background: #fafafa;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre {
+    padding: 12px 16px;
+    overflow: auto;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #e5e5e5; padding: 8px 10px; text-align: left; }
+`
 
 function markdownToPlainText(markdown: string) {
   return markdown
@@ -15,91 +59,119 @@ function markdownToPlainText(markdown: string) {
     .trim()
 }
 
-function markdownToHtml(markdown: string) {
-  const escaped = markdown.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-
-  const htmlBody = escaped
-    .split(/\n{2,}/)
-    .map((block) => {
-      const lines = block.split('\n').map((line) =>
-        line
-          .replace(/^##\s+(.*)$/, '<h2>$1</h2>')
-          .replace(/^\s*-\s+(.*)$/, '<li>$1</li>')
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      )
-
-      if (lines.every((line) => line.startsWith('<li>'))) {
-        return `<ul>${lines.join('')}</ul>`
-      }
-
-      return lines.map((line) => (line.startsWith('<h2>') ? line : `<p>${line}</p>`)).join('')
-    })
-    .join('')
-
-  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>课程信息</title></head><body>${htmlBody}</body></html>`
+function markdownToHtmlDocument(markdown: string, title = '课程信息') {
+  const body = marked.parse(markdown || '暂无课程信息', { async: false, gfm: true, breaks: true })
+  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>${title}</title><style>${markdownBodyStyle}</style></head><body>${body}</body></html>`
 }
 
 function downloadBlob(content: BlobPart, fileName: string, type: string) {
   saveAs(new Blob([content], { type }), fileName)
 }
 
-function wrapPlainText(text: string, maxChars: number) {
-  return text.split('\n').flatMap((line) => {
-    if (!line) return ['']
-    const chunks: string[] = []
-    for (let index = 0; index < line.length; index += maxChars) {
-      chunks.push(line.slice(index, index + maxChars))
-    }
-    return chunks
-  })
+function waitForImages(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll('img'))
+  return Promise.all(
+    images.map(
+      (image) =>
+        new Promise<void>((resolve) => {
+          if (image.complete) {
+            resolve()
+            return
+          }
+          image.addEventListener('load', () => resolve(), { once: true })
+          image.addEventListener('error', () => resolve(), { once: true })
+        })
+    )
+  )
 }
 
-function createTextCanvas(lines: string[]) {
-  const fontSize = 28
-  const lineHeight = 42
-  const padding = 48
-  const canvas = document.createElement('canvas')
-  const context = canvas.getContext('2d')
-  if (!context) {
-    throw new Error('无法创建 PDF 画布')
+async function renderMarkdownFrame(markdown: string) {
+  const frame = document.createElement('iframe')
+  frame.setAttribute('aria-hidden', 'true')
+  frame.style.position = 'fixed'
+  frame.style.left = '-10000px'
+  frame.style.top = '0'
+  frame.style.width = '794px'
+  frame.style.height = '1123px'
+  frame.style.border = '0'
+  frame.style.opacity = '0'
+  frame.style.pointerEvents = 'none'
+  document.body.appendChild(frame)
+
+  const frameDocument = frame.contentDocument
+  if (!frameDocument) {
+    frame.remove()
+    throw new Error('无法创建 PDF 渲染容器')
   }
 
-  canvas.width = 1240
-  canvas.height = Math.max(1754, padding * 2 + lines.length * lineHeight)
-  context.fillStyle = '#ffffff'
-  context.fillRect(0, 0, canvas.width, canvas.height)
-  context.fillStyle = '#111111'
-  context.font = `${fontSize}px "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif`
-  context.textBaseline = 'top'
-  lines.forEach((line, index) => {
-    context.fillText(line, padding, padding + index * lineHeight)
-  })
-
-  return canvas
+  frameDocument.open()
+  frameDocument.write(markdownToHtmlDocument(markdown))
+  frameDocument.close()
+  await waitForImages(frameDocument.body)
+  return frame
 }
 
 async function exportPdf(markdown: string, fileName: string) {
-  const text = markdownToPlainText(markdown) || '暂无课程信息'
-  const lines = wrapPlainText(text, 36)
-  const canvas = createTextCanvas(lines)
-  const image = canvas.toDataURL('image/jpeg', 0.92)
-  const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
-  const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const imageHeight = (canvas.height / canvas.width) * pageWidth
-  let remainingHeight = imageHeight
-  let position = 0
-
-  pdf.addImage(image, 'JPEG', 0, position, pageWidth, imageHeight)
-  remainingHeight -= pageHeight
-  while (remainingHeight > 0) {
-    position -= pageHeight
-    pdf.addPage()
-    pdf.addImage(image, 'JPEG', 0, position, pageWidth, imageHeight)
-    remainingHeight -= pageHeight
+  const frame = await renderMarkdownFrame(markdown)
+  const frameDocument = frame.contentDocument
+  const root = frameDocument?.body
+  if (!root) {
+    frame.remove()
+    throw new Error('无法创建 PDF 渲染容器')
   }
 
-  pdf.save(`${fileName}.pdf`)
+  try {
+    const canvas = await html2canvas(root, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: 794,
+      onclone: (clonedDocument, clonedElement) => {
+        clonedDocument.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => node.remove())
+        const style = clonedDocument.createElement('style')
+        style.textContent = markdownBodyStyle
+        clonedDocument.head.appendChild(style)
+        clonedDocument.documentElement.style.background = '#ffffff'
+        clonedDocument.body.style.background = '#ffffff'
+        clonedDocument.body.style.color = '#171717'
+        clonedElement.style.background = '#ffffff'
+        clonedElement.style.color = '#171717'
+      },
+      ignoreElements: (element) => element.tagName === 'SCRIPT',
+    })
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const imageWidth = pageWidth
+    const pageCanvas = document.createElement('canvas')
+    const pageContext = pageCanvas.getContext('2d')
+    if (!pageContext) {
+      throw new Error('无法创建 PDF 分页画布')
+    }
+
+    const pageHeightPx = Math.floor((pageHeight / imageWidth) * canvas.width)
+    let loadedHeight = 0
+    let pageIndex = 0
+
+    while (loadedHeight < canvas.height) {
+      const sliceHeight = Math.min(pageHeightPx, canvas.height - loadedHeight)
+      pageCanvas.width = canvas.width
+      pageCanvas.height = sliceHeight
+      pageContext.fillStyle = '#ffffff'
+      pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
+      pageContext.drawImage(canvas, 0, loadedHeight, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight)
+      const pageImage = pageCanvas.toDataURL('image/jpeg', 0.95)
+      if (pageIndex > 0) pdf.addPage()
+      pdf.addImage(pageImage, 'JPEG', 0, 0, imageWidth, (sliceHeight / canvas.width) * imageWidth)
+      loadedHeight += sliceHeight
+      pageIndex += 1
+    }
+
+    pdf.save(`${fileName}.pdf`)
+  } finally {
+    frame.remove()
+  }
 }
 
 async function exportDocx(markdown: string, fileName: string) {
@@ -133,7 +205,7 @@ export async function exportSubstituteMarkdown(markdown: string, format: Substit
   }
 
   if (format === 'html') {
-    downloadBlob(markdownToHtml(markdown), `${fileName}.html`, 'text/html;charset=utf-8')
+    downloadBlob(markdownToHtmlDocument(markdown, fileName), `${fileName}.html`, 'text/html;charset=utf-8')
     return
   }
 
