@@ -2,7 +2,7 @@ import { Button } from '~/components/ui/button'
 import { ImportStepDescription } from './ImportStepDescription'
 
 type BookmarkletRunStepProps = {
-  onOpenEducationalSystem: () => void
+  educationalSystemUrl?: string
 }
 
 const runDescriptionSteps = [
@@ -14,13 +14,28 @@ const runDescriptionSteps = [
   '下载完成后回到 ClassTrack，点击下一步上传该 JSON 文件。',
 ]
 
-export function BookmarkletRunStep({ onOpenEducationalSystem }: BookmarkletRunStepProps) {
+export function BookmarkletRunStep({ educationalSystemUrl }: BookmarkletRunStepProps) {
   return (
     <div className="space-y-4">
       <ImportStepDescription steps={runDescriptionSteps} />
-      <Button type="button" className="w-full" variant="outline" onClick={onOpenEducationalSystem}>
-        打开教务系统
-      </Button>
+      {educationalSystemUrl ? (
+        <Button asChild className="w-full" variant="outline">
+          <a
+            href={educationalSystemUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => {
+              console.log('[ClassTrack] 打开教务系统', educationalSystemUrl)
+            }}
+          >
+            打开教务系统
+          </a>
+        </Button>
+      ) : (
+        <Button type="button" className="w-full" variant="outline" disabled>
+          未找到教务系统地址
+        </Button>
+      )}
     </div>
   )
 }

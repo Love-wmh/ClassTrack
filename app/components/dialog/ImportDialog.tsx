@@ -45,7 +45,7 @@ export default function ImportDialog() {
     }
 
     if (importFlow.currentStep === 2) {
-      return <BookmarkletRunStep onOpenEducationalSystem={importFlow.handleOpenEducationalSystem} />
+      return <BookmarkletRunStep educationalSystemUrl={importFlow.bookmarkletAdapter?.educationalSystemUrl} />
     }
 
     return (
