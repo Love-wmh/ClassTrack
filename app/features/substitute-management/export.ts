@@ -43,12 +43,62 @@ function downloadBlob(content: BlobPart, fileName: string, type: string) {
   saveAs(new Blob([content], { type }), fileName)
 }
 
+function wrapPlainText(text: string, maxChars: number) {
+  return text.split('\n').flatMap((line) => {
+    if (!line) return ['']
+    const chunks: string[] = []
+    for (let index = 0; index < line.length; index += maxChars) {
+      chunks.push(line.slice(index, index + maxChars))
+    }
+    return chunks
+  })
+}
+
+function createTextCanvas(lines: string[]) {
+  const fontSize = 28
+  const lineHeight = 42
+  const padding = 48
+  const canvas = document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (!context) {
+    throw new Error('无法创建 PDF 画布')
+  }
+
+  canvas.width = 1240
+  canvas.height = Math.max(1754, padding * 2 + lines.length * lineHeight)
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.fillStyle = '#111111'
+  context.font = `${fontSize}px "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif`
+  context.textBaseline = 'top'
+  lines.forEach((line, index) => {
+    context.fillText(line, padding, padding + index * lineHeight)
+  })
+
+  return canvas
+}
+
 async function exportPdf(markdown: string, fileName: string) {
+  const text = markdownToPlainText(markdown) || '暂无课程信息'
+  const lines = wrapPlainText(text, 36)
+  const canvas = createTextCanvas(lines)
+  const image = canvas.toDataURL('image/jpeg', 0.92)
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
-  const text = markdownToPlainText(markdown)
-  const lines = pdf.splitTextToSize(text || '暂无课程信息', 515)
-  pdf.setFontSize(12)
-  pdf.text(lines, 40, 48)
+  const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const imageHeight = (canvas.height / canvas.width) * pageWidth
+  let remainingHeight = imageHeight
+  let position = 0
+
+  pdf.addImage(image, 'JPEG', 0, position, pageWidth, imageHeight)
+  remainingHeight -= pageHeight
+  while (remainingHeight > 0) {
+    position -= pageHeight
+    pdf.addPage()
+    pdf.addImage(image, 'JPEG', 0, position, pageWidth, imageHeight)
+    remainingHeight -= pageHeight
+  }
+
   pdf.save(`${fileName}.pdf`)
 }
 
