@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { Outlet } from 'react-router'
-import { BarChart3, Calendar, Database, NotebookTabs, User } from 'lucide-react'
+import { BarChart3, Calendar, ClipboardPen, Database, NotebookTabs, User } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,11 @@ const navItems = [
     to: '/course-management',
     icon: <NotebookTabs className="h-5 w-5" />,
     label: '课程管理',
+  },
+  {
+    to: '/substitute-management',
+    icon: <ClipboardPen className="h-5 w-5" />,
+    label: '代课管理',
   },
   {
     to: '/data-management',

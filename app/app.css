@@ -161,14 +161,14 @@ body {
     animation: stepper-flow-reverse 500ms ease-out forwards;
   }
   .markdown-editor-shell {
-    min-height: 20rem;
+    min-height: 0;
   }
   .markdown-editor-shell .milkdown {
-    min-height: 20rem;
+    min-height: 100%;
     overflow: visible;
   }
   .markdown-editor-shell .milkdown .editor {
-    min-height: 20rem;
+    min-height: 100%;
     outline: none;
   }
   .dark .markdown-editor-shell .milkdown {

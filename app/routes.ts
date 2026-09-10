@@ -5,6 +5,7 @@ export default [
     index('routes/schedule.tsx'),
     route('dashboard', 'routes/dashboard.tsx'),
     route('course-management', 'routes/course-management.tsx'),
+    route('substitute-management', 'routes/substitute-management.tsx'),
     route('data-management', 'routes/data-management.tsx'),
     route('profile', 'routes/profile.tsx'),
   ]),

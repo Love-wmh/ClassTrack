@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { Crepe } from '@milkdown/crepe'
-import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
+import { useRef, useState } from 'react'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
+import { MarkdownEditor } from '~/components/markdown/MarkdownEditor'
 import { useClassStore } from '~/store'
 
 type MarkdownEditorDialogState = ReturnType<typeof useClassStore.getState>['markdownEditorDialog']
@@ -71,11 +70,12 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
               event.target.value = ''
             }}
           />
-          <div className="markdown-editor-shell min-h-0 flex-1 overflow-auto rounded-md border border-border/70 bg-background">
-            <MilkdownProvider>
-              <MarkdownEditorCanvas key={editorNonce} initialValue={draft} onMarkdownChange={setDraft} />
-            </MilkdownProvider>
-          </div>
+          <MarkdownEditor
+            key={editorNonce}
+            value={draft}
+            onChange={setDraft}
+            className="flex-1 rounded-md border border-border/70 bg-background"
+          />
         </div>
 
         <DialogFooter className="flex items-center justify-between gap-2 border-t px-6 py-4 sm:space-x-0">
@@ -99,51 +99,4 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
       </div>
     </DialogContent>
   )
-}
-
-type MarkdownEditorCanvasProps = {
-  initialValue: string
-  onMarkdownChange: (markdown: string) => void
-}
-
-function toLocalImageUrl(file: File): Promise<string> {
-  return Promise.resolve(URL.createObjectURL(file))
-}
-
-function MarkdownEditorCanvas({ initialValue, onMarkdownChange }: MarkdownEditorCanvasProps) {
-  const markdownChangeRef = useRef(onMarkdownChange)
-
-  useEffect(() => {
-    markdownChangeRef.current = onMarkdownChange
-  }, [onMarkdownChange])
-
-  useEditor((root) => {
-    const crepe = new Crepe({
-      root,
-      defaultValue: initialValue,
-      features: {
-        [Crepe.Feature.TopBar]: true,
-      },
-      featureConfigs: {
-        [Crepe.Feature.Placeholder]: {
-          text: '输入 / 插入图片、表格、代码块…',
-        },
-        [Crepe.Feature.ImageBlock]: {
-          onUpload: toLocalImageUrl,
-          inlineOnUpload: toLocalImageUrl,
-          blockOnUpload: toLocalImageUrl,
-        },
-      },
-    })
-
-    crepe.on((listener) => {
-      listener.markdownUpdated((_ctx, markdown) => {
-        markdownChangeRef.current(markdown)
-      })
-    })
-
-    return crepe
-  }, [])
-
-  return <Milkdown />
 }
