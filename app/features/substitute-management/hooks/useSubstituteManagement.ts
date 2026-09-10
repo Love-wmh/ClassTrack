@@ -15,7 +15,7 @@ export function useSubstituteManagement() {
   const [editorNonce, setEditorNonce] = useState(0)
   const [importedLessons, setImportedLessons] = useState<SubstituteLesson[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
-  const [exportFormat, setExportFormat] = useState<SubstituteExportFormat>('markdown')
+  const [exportFormat, setExportFormat] = useState<SubstituteExportFormat>('pdf')
   const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
