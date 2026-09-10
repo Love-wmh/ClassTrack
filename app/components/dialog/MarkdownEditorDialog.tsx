@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useEditor, Milkdown, MilkdownProvider } from '@milkdown/react'
-import { Editor, defaultValueCtx, rootCtx } from '@milkdown/kit/core'
-import { commonmark } from '@milkdown/kit/preset/commonmark'
-import { listener, listenerCtx } from '@milkdown/kit/plugin/listener'
-import { upload, uploadConfig } from '@milkdown/kit/plugin/upload'
-import { nord } from '@milkdown/theme-nord'
-import { Decoration } from '@milkdown/kit/prose/view'
+import { Crepe } from '@milkdown/crepe'
+import { Milkdown, MilkdownProvider, useEditor } from '@milkdown/react'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { useClassStore } from '~/store'
@@ -58,8 +53,8 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
   }
 
   return (
-    <DialogContent className="max-w-5xl overflow-hidden p-0 sm:max-w-5xl">
-      <div className="flex max-h-[85vh] flex-col">
+    <DialogContent className="max-w-5xl overflow-visible p-0 sm:max-w-5xl">
+      <div className="flex max-h-[85vh] flex-col overflow-hidden">
         <DialogHeader className="gap-2 border-b px-6 pb-4 pr-12 pt-6 text-left">
           <DialogTitle>{dialog.title || '编辑 Markdown'}</DialogTitle>
           <DialogDescription>{dialog.description}</DialogDescription>
@@ -76,17 +71,9 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
               event.target.value = ''
             }}
           />
-          <div className="min-h-[50vh] flex-1 overflow-hidden rounded-md border border-border/70 bg-background">
+          <div className="markdown-editor-shell min-h-[50vh] flex-1 overflow-auto rounded-md border border-border/70 bg-background">
             <MilkdownProvider>
-              <MarkdownEditorCanvas
-                key={editorNonce}
-                initialValue={draft}
-                onMarkdownChange={setDraft}
-                onImageUpload={async (files) => {
-                  console.log('[MarkdownEditorDialog] image upload placeholder', files)
-                  return []
-                }}
-              />
+              <MarkdownEditorCanvas key={editorNonce} initialValue={draft} onMarkdownChange={setDraft} />
             </MilkdownProvider>
           </div>
         </div>
@@ -117,48 +104,46 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
 type MarkdownEditorCanvasProps = {
   initialValue: string
   onMarkdownChange: (markdown: string) => void
-  onImageUpload: (files: File[]) => Promise<string[]>
 }
 
-function MarkdownEditorCanvas({ initialValue, onMarkdownChange, onImageUpload }: MarkdownEditorCanvasProps) {
+function toLocalImageUrl(file: File): Promise<string> {
+  return Promise.resolve(URL.createObjectURL(file))
+}
+
+function MarkdownEditorCanvas({ initialValue, onMarkdownChange }: MarkdownEditorCanvasProps) {
   const markdownChangeRef = useRef(onMarkdownChange)
-  const imageUploadRef = useRef(onImageUpload)
 
   useEffect(() => {
     markdownChangeRef.current = onMarkdownChange
-    imageUploadRef.current = onImageUpload
-  }, [onImageUpload, onMarkdownChange])
+  }, [onMarkdownChange])
 
-  useEditor(
-    (root) =>
-      Editor.make()
-        .config((ctx) => {
-          ctx.set(rootCtx, root)
-          ctx.set(defaultValueCtx, initialValue)
-          ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => markdownChangeRef.current(markdown))
-          ctx.set(uploadConfig.key, {
-            uploader: async (files) => {
-              await imageUploadRef.current(Array.from(files))
-              return []
-            },
-            enableHtmlFileUploader: true,
-            uploadWidgetFactory: (pos, spec) => {
-              const element = document.createElement('span')
-              element.textContent = '上传中...'
-              return Decoration.widget(pos, element, spec)
-            },
-          })
-        })
-        .config(nord)
-        .use(commonmark)
-        .use(listener)
-        .use(upload),
-    []
-  )
+  useEditor((root) => {
+    const crepe = new Crepe({
+      root,
+      defaultValue: initialValue,
+      features: {
+        [Crepe.Feature.TopBar]: true,
+      },
+      featureConfigs: {
+        [Crepe.Feature.Placeholder]: {
+          text: '输入 / 插入图片、表格、代码块…',
+        },
+        [Crepe.Feature.ImageBlock]: {
+          onUpload: toLocalImageUrl,
+          inlineOnUpload: toLocalImageUrl,
+          blockOnUpload: toLocalImageUrl,
+        },
+      },
+    })
 
-  return (
-    <div className="markdown-editor-shell h-full min-h-[50vh] overflow-auto px-4 py-3 text-foreground">
-      <Milkdown />
-    </div>
-  )
+    crepe.on((listener) => {
+      listener.markdownUpdated((_ctx, markdown) => {
+        markdownChangeRef.current(markdown)
+      })
+    })
+
+    return crepe
+  }, [])
+
+  return <Milkdown />
 }

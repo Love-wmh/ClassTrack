@@ -2,7 +2,8 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration }
 
 import type { Route } from './+types/root'
 import { Toaster } from '~/components/ui/sonner'
-import '@milkdown/theme-nord/style.css'
+import '@milkdown/crepe/theme/common/style.css'
+import '@milkdown/crepe/theme/nord.css'
 import MarkdownEditorDialog from '~/components/dialog/MarkdownEditorDialog'
 import './app.css'
 import React from 'react'

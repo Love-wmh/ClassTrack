@@ -160,36 +160,35 @@ body {
   .animate-stepper-flow-reverse {
     animation: stepper-flow-reverse 500ms ease-out forwards;
   }
+  .markdown-editor-shell {
+    min-height: 20rem;
+  }
   .markdown-editor-shell .milkdown {
     min-height: 20rem;
+    overflow: visible;
   }
   .markdown-editor-shell .milkdown .editor {
     min-height: 20rem;
     outline: none;
   }
-  .markdown-editor-shell .milkdown p {
-    margin: 0.25rem 0;
-  }
-  .markdown-editor-shell .milkdown p:first-child {
-    margin-top: 0;
-  }
-  .markdown-editor-shell .milkdown p:last-child {
-    margin-bottom: 0;
-  }
-  .markdown-editor-shell .milkdown h1,
-  .markdown-editor-shell .milkdown h2,
-  .markdown-editor-shell .milkdown h3 {
-    margin: 0.5rem 0 0.25rem;
-    font-weight: 600;
-  }
-  .markdown-editor-shell .milkdown ul,
-  .markdown-editor-shell .milkdown ol {
-    padding-left: 1.25rem;
-  }
-  .markdown-editor-shell .milkdown blockquote {
-    border-left: 3px solid var(--border);
-    padding-left: 0.75rem;
-    color: var(--muted-foreground);
+  .dark .markdown-editor-shell .milkdown {
+    --crepe-color-background: #1b1c1d;
+    --crepe-color-on-background: #f8f9ff;
+    --crepe-color-surface: #111418;
+    --crepe-color-surface-low: #191c20;
+    --crepe-color-on-surface: #e1e2e8;
+    --crepe-color-on-surface-variant: #c3c6cf;
+    --crepe-color-outline: #8d9199;
+    --crepe-color-primary: #a1c9fd;
+    --crepe-color-secondary: #3c4858;
+    --crepe-color-on-secondary: #d7e3f8;
+    --crepe-color-inverse: #e1e2e8;
+    --crepe-color-on-inverse: #2e3135;
+    --crepe-color-inline-code: #ffb4ab;
+    --crepe-color-error: #ffb4ab;
+    --crepe-color-hover: #1d2024;
+    --crepe-color-selected: #32353a;
+    --crepe-color-inline-area: #111418;
   }
   .animate-collapsible-down {
     animation: collapsible-down 220ms ease-out;
