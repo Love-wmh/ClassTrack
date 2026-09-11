@@ -266,9 +266,18 @@ pnpm lint
 pnpm build
 pnpm cap:sync:android
 pnpm cap:build:android
+pnpm cap:install:android
 ```
 
 预期 APK：`android/app/build/outputs/apk/debug/app-debug.apk`。
+
+改完代码后如果只要验证真机效果，直接执行：
+
+```bash
+pnpm cap:install:android
+```
+
+该命令会构建 Debug APK、覆盖安装到已连接的 Android 手机，并重新打开 ClassTrack。需要本机配置完整 JDK 21、Android SDK，以及已授权 USB 调试的设备。
 
 ### 8.3 上线前检查
 

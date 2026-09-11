@@ -5,6 +5,7 @@
   "scripts": {
     "build": "react-router build",
     "cap:build:android": "pnpm cap:sync:android && ./android/gradlew -p android assembleDebug",
+    "cap:install:android": "bash scripts/install-android.sh",
     "cap:open:android": "cap open android",
     "cap:sync:android": "pnpm build && cap sync android",
     "dev": "react-router dev",

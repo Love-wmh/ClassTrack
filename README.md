@@ -99,6 +99,16 @@ pnpm format
 pnpm build
 ```
 
+### 安装到 Android 手机
+
+代码改完后，连接已开启 USB 调试的 Android 手机，执行：
+
+```bash
+pnpm cap:install:android
+```
+
+该命令会构建 Debug APK、覆盖安装到手机，并重新打开 ClassTrack。需要本机有完整 JDK 21 和 Android SDK。
+
 ### 启动生产服务
 
 ```bash
