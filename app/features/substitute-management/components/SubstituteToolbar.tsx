@@ -38,16 +38,21 @@ export function SubstituteToolbar({
   onExport,
 }: SubstituteToolbarProps) {
   return (
-    <div className="flex flex-col items-stretch gap-3 rounded-md border bg-card p-3 shadow-xs sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 sm:py-4">
+    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
-        <Button type="button" variant="outline" className="min-h-11 sm:min-h-9" onClick={onImportTomorrow}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-10 min-h-11 bg-card font-medium text-foreground shadow-xs hover:bg-muted sm:min-h-10"
+          onClick={onImportTomorrow}
+        >
           导入明日课程
         </Button>
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_2.75rem] sm:flex sm:w-auto">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_2.5rem] sm:flex sm:w-auto">
           <Button
             type="button"
-            variant="outline"
-            className="min-h-11 min-w-0 rounded-r-none border-r-0 px-2 sm:min-h-9 sm:px-4"
+            variant="ghost"
+            className="h-10 min-h-11 min-w-0 rounded-r-none bg-card px-2 font-medium text-foreground shadow-xs hover:bg-muted sm:min-h-10 sm:px-3.5"
             onClick={onImportSelectedDates}
           >
             导入多日课程
@@ -56,9 +61,9 @@ export function SubstituteToolbar({
             <PopoverTrigger asChild>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="size-11 rounded-l-none sm:size-9"
+                className="h-10 w-10 min-h-11 rounded-l-none bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground sm:min-h-10 sm:w-10"
                 aria-label="选择多个日期"
                 title="选择多个日期"
               >
@@ -83,7 +88,7 @@ export function SubstituteToolbar({
 
       <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
         <Select value={exportFormat} onValueChange={(value) => onExportFormatChange(value as SubstituteExportFormat)}>
-          <SelectTrigger className="h-11 w-full min-w-0 sm:h-9 sm:w-auto">
+          <SelectTrigger className="h-10 min-h-11 w-full min-w-0 border-0 bg-card shadow-xs sm:min-h-10 sm:w-auto">
             <SelectValue placeholder="导出格式" />
           </SelectTrigger>
           <SelectContent>
@@ -94,7 +99,13 @@ export function SubstituteToolbar({
             ))}
           </SelectContent>
         </Select>
-        <Button type="button" className="min-h-11 min-w-0 px-2 sm:min-h-9 sm:px-4" onClick={onExport} disabled={isExporting}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-10 min-h-11 min-w-0 bg-card px-2 font-medium text-foreground shadow-xs hover:bg-muted sm:min-h-10 sm:px-3.5"
+          onClick={onExport}
+          disabled={isExporting}
+        >
           {isExporting ? '导出中...' : '导出当前记录'}
         </Button>
       </div>
