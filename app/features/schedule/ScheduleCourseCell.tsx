@@ -18,7 +18,7 @@ export default function ScheduleCourseCell({ course, mark, onClick }: ScheduleCo
     <button
       type="button"
       className={cn(
-        'group relative flex h-full min-h-[74px] w-full cursor-pointer flex-col overflow-hidden px-2 py-1.5 text-left transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden px-2 py-1.5 text-left transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         courseColor,
         isAttended ? 'ring-1 ring-inset ring-emerald-300/70' : 'ring-1 ring-inset ring-rose-300/70'
       )}
@@ -36,7 +36,7 @@ export default function ScheduleCourseCell({ course, mark, onClick }: ScheduleCo
         </div>
       </div>
 
-      <div className="mt-auto min-h-[18px] truncate pl-1 text-xs leading-[18px] text-slate-600/90">
+      <div className="mt-auto min-h-0 truncate pl-1 text-xs leading-[18px] text-slate-600/90">
         {note || <span className="text-slate-400 opacity-0 transition-opacity group-hover:opacity-100">点击查看详情</span>}
       </div>
     </button>
