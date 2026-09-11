@@ -8,7 +8,18 @@ import globals from 'globals'
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**', 'build/**', '.vite/**', '.idea/**', '.react-router/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      '.vite/**',
+      '.idea/**',
+      '.vscode/**',
+      '.react-router/**',
+      'coverage/**',
+      'android/**',
+      'ios/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

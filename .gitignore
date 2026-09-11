@@ -1,6 +1,12 @@
 .DS_Store
 .env
+.env.*
+*.log
+
 /node_modules/
+/coverage/
+/dist/
+/.vite/
 
 # React Router
 /.react-router/
@@ -9,3 +15,19 @@
 # IDE files
 .idea/
 .vscode/
+
+# Capacitor / Android 构建产物
+# 工程源码在 android/，具体忽略规则见 android/.gitignore
+*.apk
+*.aab
+*.ap_
+android/.gradle/
+android/local.properties
+android/app/build/
+android/build/
+android/captures/
+android/app/src/main/assets/public
+android/capacitor-cordova-android-plugins/
+
+# iOS 尚未接入，预留生成目录
+ios/

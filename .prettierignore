@@ -3,7 +3,15 @@ dist
 build
 .vite
 .idea
+.vscode
+.react-router
+coverage
 app/components/ui
 *.md
 **/*.md
 
+# Capacitor / Android 原生工程与生成资源
+android
+ios
+*.apk
+*.aab
