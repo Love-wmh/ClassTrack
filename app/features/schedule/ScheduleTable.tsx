@@ -28,7 +28,7 @@ export default function ScheduleTable({ weekClasses, classMarks, currentWeek, fi
   return (
     <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden overscroll-contain rounded-md border border-border bg-card shadow-xs">
       <div className="grid h-full min-w-[760px] grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(0,1fr))] sm:grid-cols-[4rem_repeat(7,minmax(0,1fr))]">
-        <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted text-sm font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)]">
+        <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted text-xs font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] sm:text-sm">
           节
         </div>
         {weekDays.map((day) => {
@@ -37,12 +37,12 @@ export default function ScheduleTable({ weekClasses, classMarks, currentWeek, fi
             <div
               key={day}
               className={cn(
-                'flex items-center justify-center border-b border-border bg-muted/60 text-sm font-medium text-muted-foreground',
+                'flex items-center justify-center border-b border-border bg-muted/60 text-xs font-medium text-muted-foreground sm:text-sm',
                 day !== 7 && 'border-r'
               )}
             >
               <span>{dayNames[day]}</span>
-              {date && <span className="ml-1.5 text-xs font-normal">{format(date, 'MM.dd')}</span>}
+              {date && <span className="ml-1.5 text-[10px] font-normal sm:text-xs">{format(date, 'MM.dd')}</span>}
             </div>
           )
         })}
@@ -51,7 +51,7 @@ export default function ScheduleTable({ weekClasses, classMarks, currentWeek, fi
           <div
             key={`section-${section}`}
             className={cn(
-              'sticky left-0 z-20 flex items-center justify-center border-r border-border bg-card text-base font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)]',
+              'sticky left-0 z-20 flex items-center justify-center border-r border-border bg-card text-sm font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] sm:text-base',
               section !== 12 && 'border-b'
             )}
             style={{ gridColumn: 1, gridRow: section + 1 }}

@@ -100,7 +100,7 @@ export default function ScheduleCourseDialog({
             取消
           </Button>
           <Button type="button" className="min-h-11 sm:min-h-9" onClick={handleSave}>
-            保存备注
+            保存
           </Button>
         </DialogFooter>
       </DialogContent>
