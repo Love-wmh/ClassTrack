@@ -19,7 +19,7 @@ const toneClassName = {
 export function DashboardMetricCard({ title, value, description, icon, tone = 'default' }: DashboardMetricCardProps) {
   return (
     <Card>
-      <CardContent className="flex items-start justify-between gap-4 p-5">
+      <CardContent className="flex min-w-0 items-start justify-between gap-4 p-5">
         <div className="min-w-0 space-y-2">
           <p className="text-sm text-muted-foreground">{title}</p>
           <p className="text-2xl font-semibold tracking-tight text-foreground">{value}</p>

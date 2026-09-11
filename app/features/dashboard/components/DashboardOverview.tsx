@@ -21,7 +21,7 @@ type DashboardOverviewProps = {
 
 export function DashboardOverview({ overview, formatPercent }: DashboardOverviewProps) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
       <DashboardMetricCard
         title="截止今日完成度"
         value={formatPercent(overview.currentCompletionRate)}

@@ -16,7 +16,7 @@ type RiskCourseListProps = {
 
 export function RiskCourseList({ data, formatPercent }: RiskCourseListProps) {
   return (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardHeader>
         <CardTitle>风险课程</CardTitle>
         <CardDescription>优先关注缺勤或未记录较多的课程。</CardDescription>
@@ -34,7 +34,7 @@ export function RiskCourseList({ data, formatPercent }: RiskCourseListProps) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
                     <p className="truncate text-sm font-medium">{item.name}</p>
-                    <span className="text-xs font-medium text-red-600">缺勤率 {formatPercent(item.absenceRate)}</span>
+                    <span className="shrink-0 text-xs font-medium text-red-600">缺勤率 {formatPercent(item.absenceRate)}</span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     已发生 {item.pastTotal} 次，缺勤 {item.absent} 次，未标记 {item.unmarked} 次

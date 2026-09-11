@@ -9,12 +9,12 @@ type ChartFrameProps = {
 
 export function ChartFrame({ title, description, children }: ChartFrameProps) {
   return (
-    <Card>
+    <Card className="min-w-0 overflow-hidden">
       <CardHeader className="px-4 sm:px-5">
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="px-3 sm:px-5">{children}</CardContent>
+      <CardContent className="min-w-0 overflow-hidden px-3 sm:px-5">{children}</CardContent>
     </Card>
   )
 }

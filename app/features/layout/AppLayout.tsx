@@ -46,7 +46,7 @@ export default function AppLayout() {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="min-h-0 flex-1 overflow-hidden">
+        <SidebarInset className="min-h-0 min-w-0 flex-1 overflow-hidden">
           <Outlet />
         </SidebarInset>
         <MobileBottomNav />

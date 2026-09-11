@@ -14,9 +14,9 @@ export default function DashboardPage() {
   const stats = useDashboardStats()
 
   return (
-    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-3 sm:p-5 md:p-6">
-      <div className="no-scrollbar flex-1 overflow-y-auto md:pr-2">
-        <div className="mx-auto w-full max-w-7xl space-y-4">
+    <div className="relative flex h-full min-w-0 w-full flex-1 flex-col overflow-hidden bg-background p-3 sm:p-5 md:p-6">
+      <div className="no-scrollbar min-w-0 flex-1 overflow-x-hidden overflow-y-auto md:pr-2">
+        <div className="mx-auto w-full min-w-0 max-w-7xl space-y-4">
           <div className="flex flex-col justify-between gap-3 rounded-md border bg-card px-4 py-4 shadow-xs sm:px-5 md:flex-row md:items-center">
             <div className="min-w-0">
               <h1 className="text-xl font-semibold tracking-tight">数据看板</h1>
@@ -42,17 +42,17 @@ export default function DashboardPage() {
 
               <DashboardOverview overview={stats.overview} formatPercent={stats.formatPercent} />
 
-              <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+              <div className="grid min-w-0 gap-4 xl:grid-cols-[1.6fr_1fr]">
                 <WeeklyTrendChart data={stats.weeklyTrend} />
                 <RiskCourseList data={stats.riskCourses} formatPercent={stats.formatPercent} />
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                 <CourseRanking data={stats.courseRanking} formatPercent={stats.formatPercent} />
                 <WeekdayDistributionChart data={stats.weekdayDistribution} />
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid min-w-0 gap-4 xl:grid-cols-2">
                 <CategoryBreakdownChart data={stats.categoryBreakdown} title="课程类别分析" description="按课程类别统计总课次占比。" />
                 <CategoryBreakdownChart data={stats.typeBreakdown} title="课程性质分析" description="按课程性质统计总课次占比。" />
               </div>

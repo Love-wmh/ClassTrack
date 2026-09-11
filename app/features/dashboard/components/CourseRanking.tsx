@@ -29,7 +29,7 @@ export function CourseRanking({ data, formatPercent }: CourseRankingProps) {
                   已上 {item.attended} / 应上 {item.total}，缺勤 {item.absent}，未标记 {item.unmarked}
                 </p>
               </div>
-              <div className="text-right text-sm font-semibold">{formatPercent(item.completionRate)}</div>
+              <div className="shrink-0 text-right text-sm font-semibold">{formatPercent(item.completionRate)}</div>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-gray-900" style={{ width: `${Math.min(item.completionRate, 100)}%` }} />

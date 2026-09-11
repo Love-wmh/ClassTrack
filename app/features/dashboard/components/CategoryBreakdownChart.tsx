@@ -17,8 +17,8 @@ const colors = ['#111827', '#6b7280', '#9ca3af', '#d1d5db', '#10b981', '#f59e0b'
 export function CategoryBreakdownChart({ data, title, description }: CategoryBreakdownChartProps) {
   return (
     <ChartFrame title={title} description={description}>
-      <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
-        <div className="h-52 sm:h-64">
+      <div className="grid min-w-0 gap-4 md:grid-cols-[1fr_1.2fr]">
+        <div className="h-52 min-w-0 overflow-hidden sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={data} dataKey="total" nameKey="name" innerRadius={54} outerRadius={86} paddingAngle={2}>
