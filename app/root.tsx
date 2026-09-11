@@ -5,6 +5,7 @@ import { Toaster } from '~/components/ui/sonner'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/nord.css'
 import MarkdownEditorDialog from '~/components/dialog/MarkdownEditorDialog'
+import PwaUpdatePrompt from '~/components/pwa/PwaUpdatePrompt'
 import './app.css'
 import React from 'react'
 
@@ -14,7 +15,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="zh-CN">
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#1c1c1e" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="ClassTrack" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <title>ClassTrack</title>
         <Meta />
         <Links />
@@ -23,6 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <Toaster position="top-center" />
         <MarkdownEditorDialog />
+        <PwaUpdatePrompt />
         <ScrollRestoration />
         <Scripts />
       </body>

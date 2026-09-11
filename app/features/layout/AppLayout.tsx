@@ -52,7 +52,7 @@ const navItems = [
 export default function AppLayout() {
   return (
     <TooltipProvider>
-      <SidebarProvider className="h-screen min-h-0 bg-background" style={{ '--sidebar-width-icon': '4rem' } as CSSProperties}>
+      <SidebarProvider className="app-viewport min-h-0 bg-background" style={{ '--sidebar-width-icon': '4rem' } as CSSProperties}>
         <Sidebar collapsible="icon" className="border-sidebar-border bg-sidebar">
           <SidebarHeader className="px-4 py-5 group-data-[collapsible=icon]:px-3">
             <SidebarLogo />
