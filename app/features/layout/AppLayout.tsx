@@ -20,7 +20,10 @@ import SidebarLogo from './SidebarLogo'
 export default function AppLayout() {
   return (
     <TooltipProvider>
-      <SidebarProvider className="app-viewport min-h-0 bg-background" style={{ '--sidebar-width-icon': '4rem' } as CSSProperties}>
+      <SidebarProvider
+        className="app-viewport flex-col overflow-hidden bg-background md:flex-row"
+        style={{ '--sidebar-width-icon': '4rem' } as CSSProperties}
+      >
         <Sidebar collapsible="icon" className="border-sidebar-border bg-sidebar">
           <SidebarHeader className="px-4 py-5 group-data-[collapsible=icon]:px-3">
             <SidebarLogo />
@@ -43,7 +46,7 @@ export default function AppLayout() {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <SidebarInset className="min-h-0 flex-1 overflow-hidden">
           <Outlet />
         </SidebarInset>
         <MobileBottomNav />

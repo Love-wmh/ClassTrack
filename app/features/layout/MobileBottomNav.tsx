@@ -10,7 +10,7 @@ export default function MobileBottomNav() {
   return (
     <nav
       aria-label="移动端主导航"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-sidebar-border bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className="relative z-40 w-full shrink-0 border-t border-sidebar-border bg-sidebar/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
     >
       <div className="no-scrollbar flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain">
         {items.map(({ id, to, icon: Icon, label }) => (

@@ -52,7 +52,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background px-3 pb-5 pt-3 sm:px-5 sm:py-6 md:pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background px-3 pb-3 pt-3 sm:px-5 sm:py-6 md:pb-6">
       <ImportDialog />
 
       <div className="mx-auto flex min-h-0 w-full max-w-[1410px] flex-1 flex-col">
