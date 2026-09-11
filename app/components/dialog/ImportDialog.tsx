@@ -63,7 +63,7 @@ export default function ImportDialog() {
 
   return (
     <Dialog open={importFlow.showImportDialog} onOpenChange={importFlow.handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>导入课程数据</DialogTitle>
         </DialogHeader>

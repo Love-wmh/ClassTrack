@@ -14,17 +14,17 @@ export default function DashboardPage() {
   const stats = useDashboardStats()
 
   return (
-    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-5 md:p-6">
-      <div className="no-scrollbar flex-1 overflow-y-auto pr-2">
+    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-3 sm:p-5 md:p-6">
+      <div className="no-scrollbar flex-1 overflow-y-auto md:pr-2">
         <div className="mx-auto w-full max-w-7xl space-y-4">
-          <div className="flex flex-col justify-between gap-3 rounded-md border bg-card px-5 py-4 shadow-xs md:flex-row md:items-center">
-            <div>
+          <div className="flex flex-col justify-between gap-3 rounded-md border bg-card px-4 py-4 shadow-xs sm:px-5 md:flex-row md:items-center">
+            <div className="min-w-0">
               <h1 className="text-xl font-semibold tracking-tight">数据看板</h1>
               <p className="mt-1 text-sm text-muted-foreground">展示课程完成度、缺勤率、课程分布和风险课程分析。</p>
             </div>
-            <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <CalendarClock className="size-4" />
-              <span>{stats.range.label}</span>
+            <div className="flex max-w-full min-w-0 items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+              <CalendarClock className="size-4 shrink-0" />
+              <span className="truncate">{stats.range.label}</span>
             </div>
           </div>
 

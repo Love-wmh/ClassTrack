@@ -8,9 +8,9 @@ type WeekdayDistributionChartProps = {
 export function WeekdayDistributionChart({ data }: WeekdayDistributionChartProps) {
   return (
     <ChartFrame title="星期分布" description="观察一周内课程负担和缺勤分布。">
-      <div className="h-72">
+      <div className="h-60 sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
             <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />

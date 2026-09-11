@@ -34,30 +34,30 @@ export default function DataManagementPage() {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-5 md:p-6">
+    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-3 sm:p-5 md:p-6">
       <div className="relative mx-auto flex w-full max-w-4xl flex-1 overflow-hidden">
-        <div className="no-scrollbar flex-1 overflow-y-auto pr-2">
+        <div className="no-scrollbar flex-1 overflow-y-auto md:pr-2">
           <div className="space-y-4">
             <Card id="card-course-data">
               <CardHeader>
                 <CardTitle>课程数据</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between gap-3 py-2">
                   <div className="text-sm font-medium">课程总数</div>
                   <DataDisplayButton>{totalClasses}</DataDisplayButton>
                 </div>
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between gap-3 py-2">
                   <div className="text-sm font-medium">当前周次</div>
                   <DataDisplayButton>第 {currentWeek} 周</DataDisplayButton>
                 </div>
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between gap-3 py-2">
                   <div className="text-sm font-medium">已标记课程</div>
                   <DataDisplayButton>
                     {totalAttended} / {totalClasses}
                   </DataDisplayButton>
                 </div>
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between gap-3 py-2">
                   <div className="text-sm font-medium">备注数量</div>
                   <DataDisplayButton>{totalWithNote}</DataDisplayButton>
                 </div>
@@ -69,16 +69,16 @@ export default function DataManagementPage() {
                 <CardTitle>数据导入导出</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between py-2">
+                <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm font-medium">导出数据</div>
-                  <Button onClick={exportData}>
+                  <Button className="min-h-11 w-full sm:min-h-9 sm:w-auto" onClick={exportData}>
                     <Download className="mr-1.5 size-4" />
                     导出
                   </Button>
                 </div>
-                <div className="flex items-center justify-between py-2">
+                <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm font-medium">导入数据</div>
-                  <Button onClick={handleImportClick} variant="outline">
+                  <Button className="min-h-11 w-full sm:min-h-9 sm:w-auto" onClick={handleImportClick} variant="outline">
                     <Upload className="mr-1.5 size-4" />
                     导入
                   </Button>

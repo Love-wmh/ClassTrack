@@ -52,14 +52,14 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
   }
 
   return (
-    <DialogContent className="h-[90%] max-w-5xl overflow-visible p-0 sm:max-w-5xl">
+    <DialogContent className="h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl overflow-hidden p-0 sm:h-[90%] sm:max-w-5xl">
       <div className="flex h-full flex-col overflow-hidden">
-        <DialogHeader className="gap-2 border-b px-6 pb-4 pr-12 pt-6 text-left">
+        <DialogHeader className="gap-2 border-b px-4 pb-3 pr-12 pt-4 text-left sm:px-6 sm:pb-4 sm:pt-6">
           <DialogTitle>{dialog.title || '编辑 Markdown'}</DialogTitle>
           <DialogDescription>{dialog.description}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3 px-6 py-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 px-3 py-3 sm:px-6 sm:py-4">
           <input
             ref={fileInputRef}
             type="file"
@@ -78,8 +78,8 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
           />
         </div>
 
-        <DialogFooter className="flex items-center justify-between gap-2 border-t px-6 py-4 sm:space-x-0">
-          <div className="flex items-center gap-2">
+        <DialogFooter className="grid grid-cols-2 gap-2 border-t px-3 py-3 sm:flex sm:items-center sm:justify-between sm:px-6 sm:py-4 sm:space-x-0">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
               导入
             </Button>
@@ -87,7 +87,7 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
               导出
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <Button type="button" variant="outline" onClick={onClose}>
               取消
             </Button>

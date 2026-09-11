@@ -18,7 +18,7 @@ export function CategoryBreakdownChart({ data, title, description }: CategoryBre
   return (
     <ChartFrame title={title} description={description}>
       <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
-        <div className="h-64">
+        <div className="h-52 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie data={data} dataKey="total" nameKey="name" innerRadius={54} outerRadius={86} paddingAngle={2}>
@@ -32,12 +32,12 @@ export function CategoryBreakdownChart({ data, title, description }: CategoryBre
         </div>
         <div className="space-y-2 self-center">
           {data.map((item, index) => (
-            <div key={item.name} className="flex items-center justify-between gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm">
+            <div key={item.name} className="flex min-w-0 items-center justify-between gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
                 <span className="truncate">{item.name}</span>
               </div>
-              <span className="font-medium">{item.total}</span>
+              <span className="shrink-0 font-medium">{item.total}</span>
             </div>
           ))}
         </div>

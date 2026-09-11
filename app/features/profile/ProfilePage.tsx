@@ -34,9 +34,9 @@ export default function ProfilePage() {
   const currentSemester = semesters.find((semester) => semester.id === currentSemesterId)
 
   return (
-    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-5 md:p-6">
+    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-3 sm:p-5 md:p-6">
       <div className="relative mx-auto flex w-full max-w-4xl flex-1 overflow-hidden">
-        <div className="no-scrollbar flex-1 overflow-y-auto pr-2">
+        <div className="no-scrollbar flex-1 overflow-y-auto md:pr-2">
           <div className="space-y-4">
             <Card id="card-overview">
               <CardHeader>
@@ -71,13 +71,24 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">新建学期</div>
-                  <Button type="button" variant="outline" onClick={() => setShowCreateSemesterDialog(true)}>
+                  <Button
+                    className="min-h-11 w-full sm:min-h-9 sm:w-auto"
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateSemesterDialog(true)}
+                  >
                     新建
                   </Button>
                 </div>
                 <div className="flex flex-col justify-between gap-3 py-2 sm:flex-row sm:items-center">
                   <div className="text-sm font-medium">删除学期</div>
-                  <Button type="button" variant="destructive" onClick={() => setShowDeleteSemesterDialog(true)} disabled={!currentSemester}>
+                  <Button
+                    className="min-h-11 w-full sm:min-h-9 sm:w-auto"
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setShowDeleteSemesterDialog(true)}
+                    disabled={!currentSemester}
+                  >
                     <Trash2 className="mr-1.5 size-4" />
                     删除
                   </Button>
@@ -89,7 +100,7 @@ export default function ProfilePage() {
                     onChange={setFirstWeekStartDate}
                     placeholder="选择日期"
                     showIcon
-                    className="h-9 w-[220px] max-w-full"
+                    className="h-11 w-full sm:h-9 sm:w-[220px] sm:max-w-full"
                   />
                 </div>
               </CardContent>

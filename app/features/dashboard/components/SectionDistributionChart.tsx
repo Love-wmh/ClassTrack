@@ -8,9 +8,9 @@ type SectionDistributionChartProps = {
 export function SectionDistributionChart({ data }: SectionDistributionChartProps) {
   return (
     <ChartFrame title="节次分布" description="按上课节次统计课程密度和完成情况。">
-      <div className="h-72">
+      <div className="h-60 sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
             <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />

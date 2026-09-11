@@ -174,14 +174,38 @@ body {
   }
   .markdown-editor-shell {
     min-height: 0;
+    min-width: 0;
   }
   .markdown-editor-shell .milkdown {
     min-height: 100%;
+    min-width: 0;
+    max-width: 100%;
     overflow: visible;
   }
   .markdown-editor-shell .milkdown .editor {
     min-height: 100%;
     outline: none;
+  }
+  .markdown-editor-shell .ProseMirror {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .markdown-editor-shell .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+  }
+  .markdown-editor-shell .ProseMirror pre,
+  .markdown-editor-shell .ProseMirror table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  @media (max-width: 767px) {
+    .markdown-editor-shell .milkdown .milkdown-toolbar,
+    .markdown-editor-shell .milkdown [role='toolbar'] {
+      max-width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
   }
   .dark .markdown-editor-shell .milkdown {
     --crepe-color-background: #1b1c1d;

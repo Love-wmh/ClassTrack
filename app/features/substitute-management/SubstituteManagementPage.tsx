@@ -21,8 +21,8 @@ export default function SubstituteManagementPage() {
   } = useSubstituteManagement()
 
   return (
-    <div className="relative flex h-full w-full flex-1 flex-col overflow-hidden bg-background p-5 md:p-6">
-      <div className="mx-auto flex h-full w-full max-w-7xl min-h-0 flex-col gap-4">
+    <div className="relative flex h-full w-full flex-1 flex-col overflow-y-auto bg-background p-3 sm:p-5 md:p-6 lg:overflow-hidden">
+      <div className="mx-auto flex w-full max-w-7xl min-h-0 flex-col gap-3 sm:gap-4 lg:h-full">
         <SubstituteToolbar
           selectedDates={selectedDates}
           exportFormat={exportFormat}
@@ -35,8 +35,8 @@ export default function SubstituteManagementPage() {
           onExport={handleExport}
         />
 
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-md border bg-card shadow-xs">
+        <div className="grid min-h-0 gap-3 sm:gap-4 lg:flex-1 lg:grid-cols-2">
+          <div className="flex min-h-[30rem] min-w-0 flex-col overflow-hidden rounded-md border bg-card shadow-xs lg:min-h-0">
             <div className="border-b px-4 py-3 text-sm font-medium">编辑</div>
             <MarkdownEditor
               key={`editor-${editorNonce}`}
@@ -46,7 +46,7 @@ export default function SubstituteManagementPage() {
               placeholder="导入课程后会在这里生成代课记录，也可以继续手动编辑。"
             />
           </div>
-          <div className="flex min-h-0 flex-col overflow-hidden rounded-md border bg-card shadow-xs">
+          <div className="flex min-h-[24rem] min-w-0 flex-col overflow-hidden rounded-md border bg-card shadow-xs lg:min-h-0">
             <div className="border-b px-4 py-3 text-sm font-medium">预览</div>
             <MarkdownEditor key={`preview-${previewNonce}`} value={previewMarkdown} readonly className="flex-1" placeholder="暂无内容" />
           </div>

@@ -37,10 +37,10 @@ export default function ScheduleTable({
   const getClassMark = (classId: string, week: number) => classMarks[`${classId}-${week}`]
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-card shadow-xs">
-      <table className="w-full table-fixed border-collapse overflow-hidden">
+    <div className="overscroll-x-contain overflow-x-auto rounded-md border border-border bg-card shadow-xs">
+      <table className="w-full min-w-[760px] table-fixed border-collapse overflow-hidden">
         <colgroup>
-          <col className="w-16" />
+          <col className="w-14 sm:w-16" />
           {weekDays.map((day) => (
             <col key={day} style={{ width: `${100 / 7}%` }} />
           ))}
@@ -56,7 +56,7 @@ export default function ScheduleTable({
                   className="h-9 border-b border-r border-border text-center text-sm font-medium text-muted-foreground last:border-r-0"
                 >
                   <span>{dayNames[day]}</span>
-                  {date && <span className="ml-2">{format(date, 'MM.dd')}</span>}
+                  {date && <span className="ml-1.5 text-xs font-normal">{format(date, 'MM.dd')}</span>}
                 </th>
               )
             })}

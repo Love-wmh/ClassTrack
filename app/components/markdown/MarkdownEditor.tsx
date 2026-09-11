@@ -63,7 +63,7 @@ function MarkdownEditorCanvas({ value, onChange, readonly = false, placeholder }
 
 export function MarkdownEditor({ value, onChange, readonly = false, placeholder, className }: MarkdownEditorProps) {
   return (
-    <div className={cn('markdown-editor-shell min-h-0 overflow-auto', className)}>
+    <div className={cn('markdown-editor-shell min-h-0 min-w-0 overflow-auto', className)}>
       <MilkdownProvider>
         <MarkdownEditorCanvas value={value} onChange={onChange} readonly={readonly} placeholder={placeholder} />
       </MilkdownProvider>

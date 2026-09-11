@@ -30,11 +30,11 @@ export default function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="grid grid-cols-2 gap-2 sm:flex">
+          <Button className="min-h-11 sm:min-h-9" variant="outline" onClick={() => onOpenChange(false)}>
             {cancelText}
           </Button>
-          <Button variant={confirmVariant} onClick={onConfirm}>
+          <Button className="min-h-11 sm:min-h-9" variant={confirmVariant} onClick={onConfirm}>
             {confirmText}
           </Button>
         </DialogFooter>

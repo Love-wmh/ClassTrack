@@ -12,12 +12,14 @@ type CourseCardHeaderProps = {
 export function CourseCardHeader({ course, isExpanded }: CourseCardHeaderProps) {
   return (
     <CardHeader className={isExpanded ? 'border-b bg-muted/20' : 'bg-muted/20'}>
-      <div className="flex items-center justify-between gap-4">
-        <CardTitle className="min-w-0 truncate text-lg">{course.name}</CardTitle>
-        <div className="flex shrink-0 items-center gap-3">
-          {course.courseTypes.map((type) => (
-            <CourseBadge key={type} label={type} />
-          ))}
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <CardTitle className="min-w-0 truncate text-base sm:text-lg">{course.name}</CardTitle>
+        <div className="flex min-w-0 items-center justify-between gap-2 sm:shrink-0 sm:justify-end sm:gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {course.courseTypes.map((type) => (
+              <CourseBadge key={type} label={type} />
+            ))}
+          </div>
           <CollapsibleTrigger asChild>
             <button
               type="button"

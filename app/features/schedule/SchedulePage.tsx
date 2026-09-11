@@ -67,7 +67,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="h-full overflow-auto bg-background px-5 py-6">
+    <div className="h-full overflow-auto bg-background px-3 py-4 sm:px-5 sm:py-6">
       <ImportDialog />
 
       <div className="mx-auto max-w-[1410px]">
