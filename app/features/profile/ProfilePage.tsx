@@ -9,6 +9,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
+import MobileNavigationSettings from './MobileNavigationSettings'
 
 export default function ProfilePage() {
   const {
@@ -93,6 +94,7 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+            <MobileNavigationSettings />
           </div>
         </div>
       </div>

@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react'
 import { Outlet } from 'react-router'
-import { BarChart3, Calendar, ClipboardPen, Database, NotebookTabs, User } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -12,42 +11,11 @@ import {
   SidebarProvider,
 } from '~/components/ui/sidebar'
 import { TooltipProvider } from '~/components/ui/tooltip'
+import MobileBottomNav from './MobileBottomNav'
 import NavItem from './NavItem'
+import { navigationItems } from './navigation'
 import SidebarCollapseButton from './SidebarCollapseButton'
 import SidebarLogo from './SidebarLogo'
-
-const navItems = [
-  {
-    to: '/',
-    icon: <Calendar className="h-5 w-5" />,
-    label: '课程表',
-  },
-  {
-    to: '/dashboard',
-    icon: <BarChart3 className="h-5 w-5" />,
-    label: '数据看板',
-  },
-  {
-    to: '/course-management',
-    icon: <NotebookTabs className="h-5 w-5" />,
-    label: '课程管理',
-  },
-  {
-    to: '/substitute-management',
-    icon: <ClipboardPen className="h-5 w-5" />,
-    label: '代课管理',
-  },
-  {
-    to: '/data-management',
-    icon: <Database className="h-5 w-5" />,
-    label: '数据管理',
-  },
-  {
-    to: '/profile',
-    icon: <User className="h-5 w-5" />,
-    label: '个人中心',
-  },
-]
 
 export default function AppLayout() {
   return (
@@ -60,9 +28,9 @@ export default function AppLayout() {
 
           <SidebarContent className="px-3 py-4 group-data-[collapsible=icon]:px-2">
             <SidebarMenu className="space-y-1">
-              {navItems.map((item) => (
+              {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.to}>
-                  <NavItem to={item.to} icon={item.icon} label={item.label} />
+                  <NavItem to={item.to} icon={<item.icon className="h-5 w-5" />} label={item.label} />
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -75,9 +43,10 @@ export default function AppLayout() {
           </SidebarFooter>
         </Sidebar>
 
-        <SidebarInset className="overflow-hidden">
+        <SidebarInset className="overflow-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           <Outlet />
         </SidebarInset>
+        <MobileBottomNav />
       </SidebarProvider>
     </TooltipProvider>
   )
