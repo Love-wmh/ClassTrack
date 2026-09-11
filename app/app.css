@@ -192,6 +192,13 @@ body {
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .markdown-editor-shell-compact .ProseMirror {
+    padding: 12px 16px;
+  }
+  .markdown-editor-shell-compact .milkdown-top-bar,
+  .markdown-editor-shell-compact .milkdown-block-handle {
+    display: none !important;
+  }
   .markdown-editor-shell .ProseMirror img {
     max-width: 100%;
     height: auto;
@@ -202,6 +209,13 @@ body {
     overflow-x: auto;
   }
   @media (max-width: 767px) {
+    .substitute-management-page .markdown-editor-shell .ProseMirror {
+      padding: 12px 16px;
+    }
+    .substitute-management-page .markdown-editor-shell .milkdown-top-bar,
+    .substitute-management-page .markdown-editor-shell .milkdown-block-handle {
+      display: none !important;
+    }
     .markdown-editor-shell .milkdown .milkdown-toolbar,
     .markdown-editor-shell .milkdown [role='toolbar'] {
       max-width: 100%;

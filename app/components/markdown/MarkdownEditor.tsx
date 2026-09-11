@@ -7,6 +7,7 @@ type MarkdownEditorProps = {
   value: string
   onChange?: (markdown: string) => void
   readonly?: boolean
+  compact?: boolean
   placeholder?: string
   className?: string
 }
@@ -15,7 +16,7 @@ function toLocalImageUrl(file: File): Promise<string> {
   return Promise.resolve(URL.createObjectURL(file))
 }
 
-function MarkdownEditorCanvas({ value, onChange, readonly = false, placeholder }: Omit<MarkdownEditorProps, 'className'>) {
+function MarkdownEditorCanvas({ value, onChange, readonly = false, compact = false, placeholder }: Omit<MarkdownEditorProps, 'className'>) {
   const markdownChangeRef = useRef(onChange)
 
   useEffect(() => {
@@ -27,8 +28,8 @@ function MarkdownEditorCanvas({ value, onChange, readonly = false, placeholder }
       root,
       defaultValue: value,
       features: {
-        [Crepe.Feature.TopBar]: !readonly,
-        [Crepe.Feature.BlockEdit]: !readonly,
+        [Crepe.Feature.TopBar]: !readonly && !compact,
+        [Crepe.Feature.BlockEdit]: !readonly && !compact,
         [Crepe.Feature.Toolbar]: !readonly,
       },
       featureConfigs: {
@@ -61,11 +62,11 @@ function MarkdownEditorCanvas({ value, onChange, readonly = false, placeholder }
   return <Milkdown />
 }
 
-export function MarkdownEditor({ value, onChange, readonly = false, placeholder, className }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onChange, readonly = false, compact = false, placeholder, className }: MarkdownEditorProps) {
   return (
-    <div className={cn('markdown-editor-shell min-h-0 min-w-0 overflow-auto', className)}>
+    <div className={cn('markdown-editor-shell min-h-0 min-w-0 overflow-auto', compact && 'markdown-editor-shell-compact', className)}>
       <MilkdownProvider>
-        <MarkdownEditorCanvas value={value} onChange={onChange} readonly={readonly} placeholder={placeholder} />
+        <MarkdownEditorCanvas value={value} onChange={onChange} readonly={readonly} compact={compact} placeholder={placeholder} />
       </MilkdownProvider>
     </div>
   )

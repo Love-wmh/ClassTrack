@@ -37,6 +37,18 @@ export function SubstituteToolbar({
   onImportSelectedDates,
   onExport,
 }: SubstituteToolbarProps) {
+  const exportButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      className="h-10 min-h-11 min-w-0 bg-card px-2 font-medium text-foreground shadow-xs hover:bg-muted sm:min-h-10 sm:px-3.5"
+      onClick={onExport}
+      disabled={isExporting}
+    >
+      {isExporting ? '导出中...' : '导出当前记录'}
+    </Button>
+  )
+
   return (
     <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
@@ -86,9 +98,9 @@ export function SubstituteToolbar({
         ) : null}
       </div>
 
-      <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
+      <div className="grid w-full grid-cols-1 items-center gap-2 md:flex md:w-auto md:flex-wrap">
         <Select value={exportFormat} onValueChange={(value) => onExportFormatChange(value as SubstituteExportFormat)}>
-          <SelectTrigger className="h-10 min-h-11 w-full min-w-0 border-0 bg-card shadow-xs sm:min-h-10 sm:w-auto">
+          <SelectTrigger className="h-10 min-h-11 w-full min-w-0 border-0 bg-card shadow-xs md:min-h-10 md:w-auto">
             <SelectValue placeholder="导出格式" />
           </SelectTrigger>
           <SelectContent>
@@ -99,15 +111,7 @@ export function SubstituteToolbar({
             ))}
           </SelectContent>
         </Select>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-10 min-h-11 min-w-0 bg-card px-2 font-medium text-foreground shadow-xs hover:bg-muted sm:min-h-10 sm:px-3.5"
-          onClick={onExport}
-          disabled={isExporting}
-        >
-          {isExporting ? '导出中...' : '导出当前记录'}
-        </Button>
+        <span className="hidden md:inline-flex">{exportButton}</span>
       </div>
     </div>
   )
