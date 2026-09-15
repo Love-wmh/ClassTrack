@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import DataDisplayButton from '~/components/common/DataDisplayButton'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
+import { getExportSuccessMessage } from '~/lib/exportFile'
 import { useClassStore } from '~/store'
 import { useDataExportImport } from './hooks/useDataExportImport'
 
@@ -15,6 +16,17 @@ export default function DataManagementPage() {
   const totalClasses = classes.length
   const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
   const totalWithNote = Object.values(classMarks).filter((mark) => mark.note).length
+
+  const handleExportClick = async () => {
+    try {
+      const result = await exportData()
+      const message = getExportSuccessMessage(result)
+      if (message) toast.success(message)
+    } catch (error) {
+      console.error(error)
+      toast.error('导出失败，请稍后重试')
+    }
+  }
 
   const handleImportClick = () => {
     fileInputRef.current?.click()
@@ -71,7 +83,7 @@ export default function DataManagementPage() {
               <CardContent className="space-y-6">
                 <div className="flex flex-col gap-2 py-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm font-medium">导出数据</div>
-                  <Button className="min-h-11 w-full sm:min-h-9 sm:w-auto" onClick={exportData}>
+                  <Button className="min-h-11 w-full sm:min-h-9 sm:w-auto" onClick={handleExportClick}>
                     <Download className="mr-1.5 size-4" />
                     导出
                   </Button>

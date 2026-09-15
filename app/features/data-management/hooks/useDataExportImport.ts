@@ -1,12 +1,13 @@
 import { useCallback } from 'react'
+import { exportFile } from '~/lib/exportFile'
 import { useClassStore } from '~/store'
 import type { AppData } from '~/lib/types'
 import { normalizeImportedData } from '~/store/migrations'
 
 export function useDataExportImport() {
-  const exportData = useCallback(() => {
+  const exportData = useCallback(async () => {
     const state = useClassStore.getState()
-    const exportData: AppData = {
+    const payload: AppData = {
       school: state.school,
       classes: state.classes,
       classMarks: state.classMarks,
@@ -19,15 +20,11 @@ export function useDataExportImport() {
       schemaVersion: state.schemaVersion,
     }
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `classtrack-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    return exportFile({
+      fileName: `classtrack-backup-${new Date().toISOString().split('T')[0]}.json`,
+      mimeType: 'application/json',
+      data: JSON.stringify(payload, null, 2),
+    })
   }, [])
 
   const handleFileSelect = useCallback((file: File): Promise<{ success: boolean; error?: string }> => {

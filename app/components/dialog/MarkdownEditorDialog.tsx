@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { MarkdownEditor } from '~/components/markdown/MarkdownEditor'
+import { exportFile, getExportSuccessMessage } from '~/lib/exportFile'
 import { useClassStore } from '~/store'
 
 type MarkdownEditorDialogState = ReturnType<typeof useClassStore.getState>['markdownEditorDialog']
@@ -32,16 +34,19 @@ function MarkdownEditorDialogBody({ dialog, onClose }: MarkdownEditorDialogBodyP
     onClose()
   }
 
-  const handleExport = () => {
-    const blob = new Blob([draft], { type: 'text/markdown;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'markdown-notes.md'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+  const handleExport = async () => {
+    try {
+      const result = await exportFile({
+        fileName: 'markdown-notes.md',
+        mimeType: 'text/markdown;charset=utf-8',
+        data: draft,
+      })
+      const message = getExportSuccessMessage(result)
+      if (message) toast.success(message)
+    } catch (error) {
+      console.error(error)
+      toast.error('导出失败，请稍后重试')
+    }
   }
 
   const handleImport = async (file: File | null) => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { getExportSuccessMessage } from '~/lib/exportFile'
 import { useClassStore } from '~/store'
 import { exportSubstituteMarkdown, type SubstituteExportFormat } from '../export'
 import { formatLessonMarkdown, getLessonsForDates, getTomorrowDate, mergeImportedMarkdown, type SubstituteLesson } from '../utils'
@@ -72,8 +73,9 @@ export function useSubstituteManagement() {
 
     try {
       setIsExporting(true)
-      await exportSubstituteMarkdown(markdown, exportFormat, importedLessons)
-      toast.success('已开始下载')
+      const result = await exportSubstituteMarkdown(markdown, exportFormat, importedLessons)
+      const message = getExportSuccessMessage(result)
+      if (message) toast.success(message)
     } catch (error) {
       console.error(error)
       toast.error('导出失败，请稍后重试')

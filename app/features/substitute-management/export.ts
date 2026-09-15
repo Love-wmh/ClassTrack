@@ -1,8 +1,8 @@
 import { Document, Packer, Paragraph, TextRun } from 'docx'
-import { saveAs } from 'file-saver'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 import { marked } from 'marked'
+import { exportFile, type ExportFileResult } from '~/lib/exportFile'
 import type { SubstituteLesson } from './utils'
 import { formatExportFileName } from './utils'
 
@@ -64,8 +64,12 @@ function markdownToHtmlDocument(markdown: string, title = '课程信息') {
   return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>${title}</title><style>${markdownBodyStyle}</style></head><body>${body}</body></html>`
 }
 
-function downloadBlob(content: BlobPart, fileName: string, type: string) {
-  saveAs(new Blob([content], { type }), fileName)
+function exportBlob(content: BlobPart, fileName: string, type: string) {
+  return exportFile({
+    fileName,
+    mimeType: type,
+    data: content instanceof Blob ? content : new Blob([content], { type }),
+  })
 }
 
 function waitForImages(root: HTMLElement) {
@@ -168,7 +172,11 @@ async function exportPdf(markdown: string, fileName: string) {
       pageIndex += 1
     }
 
-    pdf.save(`${fileName}.pdf`)
+    return exportFile({
+      fileName: `${fileName}.pdf`,
+      mimeType: 'application/pdf',
+      data: pdf.output('blob'),
+    })
   } finally {
     frame.remove()
   }
@@ -188,31 +196,35 @@ async function exportDocx(markdown: string, fileName: string) {
   })
 
   const blob = await Packer.toBlob(document)
-  saveAs(blob, `${fileName}.docx`)
+  return exportFile({
+    fileName: `${fileName}.docx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    data: blob,
+  })
 }
 
-export async function exportSubstituteMarkdown(markdown: string, format: SubstituteExportFormat, lessons: SubstituteLesson[]) {
+export async function exportSubstituteMarkdown(
+  markdown: string,
+  format: SubstituteExportFormat,
+  lessons: SubstituteLesson[]
+): Promise<ExportFileResult> {
   const fileName = lessons.length > 0 ? formatExportFileName(lessons.map((lesson) => lesson.date)) : '课程信息'
 
   if (format === 'markdown') {
-    downloadBlob(markdown, `${fileName}.md`, 'text/markdown;charset=utf-8')
-    return
+    return exportBlob(markdown, `${fileName}.md`, 'text/markdown;charset=utf-8')
   }
 
   if (format === 'txt') {
-    downloadBlob(markdownToPlainText(markdown), `${fileName}.txt`, 'text/plain;charset=utf-8')
-    return
+    return exportBlob(markdownToPlainText(markdown), `${fileName}.txt`, 'text/plain;charset=utf-8')
   }
 
   if (format === 'html') {
-    downloadBlob(markdownToHtmlDocument(markdown, fileName), `${fileName}.html`, 'text/html;charset=utf-8')
-    return
+    return exportBlob(markdownToHtmlDocument(markdown, fileName), `${fileName}.html`, 'text/html;charset=utf-8')
   }
 
   if (format === 'pdf') {
-    await exportPdf(markdown, fileName)
-    return
+    return exportPdf(markdown, fileName)
   }
 
-  await exportDocx(markdown, fileName)
+  return exportDocx(markdown, fileName)
 }
