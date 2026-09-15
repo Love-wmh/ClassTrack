@@ -9,6 +9,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      offset={{
+        top: 'max(1rem, env(safe-area-inset-top))',
+        right: 'max(1rem, env(safe-area-inset-right))',
+        bottom: 'max(1rem, env(safe-area-inset-bottom))',
+        left: 'max(1rem, env(safe-area-inset-left))',
+      }}
+      mobileOffset={{
+        top: 'max(1rem, env(safe-area-inset-top))',
+        right: 'max(1rem, env(safe-area-inset-right))',
+        bottom: 'max(1rem, env(safe-area-inset-bottom))',
+        left: 'max(1rem, env(safe-area-inset-left))',
+      }}
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />
