@@ -73,7 +73,7 @@ export default function SchedulePage() {
         />
       </div>
       <ScheduleCourseDialog
-        key={`${selectedCourse?.id || 'none'}-${currentWeek}-${selectedMark?.note || ''}`}
+        key={`${selectedCourse?.id || 'none'}-${currentWeek}`}
         course={selectedCourse}
         currentWeek={currentWeek}
         mark={selectedMark}

@@ -24,7 +24,7 @@ export default function ScheduleCourseDialog({
   onToggleAttendance,
   onSaveNote,
 }: ScheduleCourseDialogProps) {
-  const [note, setNote] = useState('')
+  const [note, setNote] = useState(mark?.note || '')
 
   if (!course) return null
 
