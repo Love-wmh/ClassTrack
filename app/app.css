@@ -171,80 +171,102 @@ body {
   .animate-stepper-flow-reverse {
     animation: stepper-flow-reverse 500ms ease-out forwards;
   }
-  .markdown-editor-shell {
-    min-height: 0;
-    min-width: 0;
-  }
-  .markdown-editor-shell .milkdown {
-    min-height: 100%;
-    min-width: 0;
-    max-width: 100%;
-    overflow: visible;
-  }
-  .markdown-editor-shell .milkdown .editor {
-    min-height: 100%;
-    outline: none;
-  }
-  .markdown-editor-shell .ProseMirror {
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .markdown-editor-shell-compact .ProseMirror {
-    padding: 12px 16px;
-  }
-  .markdown-editor-shell-compact .milkdown-top-bar,
-  .markdown-editor-shell-compact .milkdown-block-handle {
-    display: none !important;
-  }
-  .markdown-editor-shell .ProseMirror img {
-    max-width: 100%;
-    height: auto;
-  }
-  .markdown-editor-shell .ProseMirror pre,
-  .markdown-editor-shell .ProseMirror table {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-  @media (max-width: 767px) {
-    .substitute-management-page .markdown-editor-shell .ProseMirror {
-      padding: 12px 16px;
-    }
-    .substitute-management-page .markdown-editor-shell .milkdown-top-bar,
-    .substitute-management-page .markdown-editor-shell .milkdown-block-handle {
-      display: none !important;
-    }
-    .markdown-editor-shell .milkdown .milkdown-toolbar,
-    .markdown-editor-shell .milkdown [role='toolbar'] {
-      max-width: 100%;
-      overflow-x: auto;
-      overscroll-behavior-x: contain;
-    }
-  }
-  .dark .markdown-editor-shell .milkdown {
-    --crepe-color-background: #1b1c1d;
-    --crepe-color-on-background: #f8f9ff;
-    --crepe-color-surface: #111418;
-    --crepe-color-surface-low: #191c20;
-    --crepe-color-on-surface: #e1e2e8;
-    --crepe-color-on-surface-variant: #c3c6cf;
-    --crepe-color-outline: #8d9199;
-    --crepe-color-primary: #a1c9fd;
-    --crepe-color-secondary: #3c4858;
-    --crepe-color-on-secondary: #d7e3f8;
-    --crepe-color-inverse: #e1e2e8;
-    --crepe-color-on-inverse: #2e3135;
-    --crepe-color-inline-code: #ffb4ab;
-    --crepe-color-error: #ffb4ab;
-    --crepe-color-hover: #1d2024;
-    --crepe-color-selected: #32353a;
-    --crepe-color-inline-area: #111418;
-  }
   .animate-collapsible-down {
     animation: collapsible-down 220ms ease-out;
   }
   .animate-collapsible-up {
     animation: collapsible-up 220ms ease-out;
   }
+}
+
+.markdown-editor-shell {
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
+.markdown-editor-shell .milkdown,
+.markdown-editor-shell .milkdown .editor,
+.markdown-editor-shell .milkdown .ProseMirror {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.markdown-editor-shell .milkdown {
+  min-height: 100%;
+  overflow: visible;
+}
+
+.markdown-editor-shell .milkdown .editor {
+  min-height: 100%;
+  outline: none;
+}
+
+.markdown-editor-shell .milkdown .ProseMirror {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.markdown-editor-shell .milkdown .ProseMirror img {
+  height: auto;
+  max-width: 100%;
+}
+
+.markdown-editor-shell .milkdown .ProseMirror pre,
+.markdown-editor-shell .milkdown .ProseMirror table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-editor-shell-compact .milkdown .ProseMirror,
+.markdown-editor-shell-compact .milkdown .editor {
+  padding: 12px 16px;
+}
+
+.markdown-editor-shell-compact .milkdown-top-bar,
+.markdown-editor-shell-compact .milkdown-block-handle {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .markdown-editor-shell .milkdown .ProseMirror,
+  .markdown-editor-shell .milkdown .editor {
+    padding: 12px 16px;
+  }
+
+  .markdown-editor-shell .milkdown-top-bar,
+  .markdown-editor-shell .milkdown-block-handle {
+    display: none !important;
+  }
+
+  .markdown-editor-shell .milkdown .milkdown-toolbar,
+  .markdown-editor-shell .milkdown [role='toolbar'] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+}
+
+.dark .markdown-editor-shell .milkdown {
+  --crepe-color-background: #1b1c1d;
+  --crepe-color-on-background: #f8f9ff;
+  --crepe-color-surface: #111418;
+  --crepe-color-surface-low: #191c20;
+  --crepe-color-on-surface: #e1e2e8;
+  --crepe-color-on-surface-variant: #c3c6cf;
+  --crepe-color-outline: #8d9199;
+  --crepe-color-primary: #a1c9fd;
+  --crepe-color-secondary: #3c4858;
+  --crepe-color-on-secondary: #d7e3f8;
+  --crepe-color-inverse: #e1e2e8;
+  --crepe-color-on-inverse: #2e3135;
+  --crepe-color-inline-code: #ffb4ab;
+  --crepe-color-error: #ffb4ab;
+  --crepe-color-hover: #1d2024;
+  --crepe-color-selected: #32353a;
+  --crepe-color-inline-area: #111418;
 }
 
 @keyframes collapsible-down {
