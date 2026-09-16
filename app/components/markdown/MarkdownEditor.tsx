@@ -29,7 +29,7 @@ function MarkdownEditorCanvas({ value, onChange, readonly = false, compact = fal
       defaultValue: value,
       features: {
         [Crepe.Feature.TopBar]: !readonly && !compact,
-        [Crepe.Feature.BlockEdit]: !readonly && !compact,
+        [Crepe.Feature.BlockEdit]: !readonly,
         [Crepe.Feature.Toolbar]: !readonly,
       },
       featureConfigs: {

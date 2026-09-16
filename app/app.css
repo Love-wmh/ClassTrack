@@ -241,6 +241,22 @@ body {
     display: none !important;
   }
 
+  .markdown-editor-shell .milkdown-slash-menu {
+    max-width: min(100vw - 2rem, 20rem);
+    overflow: auto;
+  }
+
+  .markdown-editor-shell .milkdown .image-edit {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .markdown-editor-shell .milkdown .image-edit .confirm {
+    padding: 0 16px;
+  }
+
   .markdown-editor-shell .milkdown .milkdown-toolbar,
   .markdown-editor-shell .milkdown [role='toolbar'] {
     max-width: 100%;
