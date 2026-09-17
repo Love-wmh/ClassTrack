@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对验收标准是否被满足"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "核对未引入类型逃逸或抑制手段"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对 getMarkKey 已真正收敛且契约未变"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "核对 hook 重构未破坏既有约定"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "核对跨层改动（store/features/components）的一致性"}

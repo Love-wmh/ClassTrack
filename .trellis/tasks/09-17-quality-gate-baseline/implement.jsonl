@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "本次要同步的门禁与测试规范，也是验收标准来源"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "解析器类型化改造与「禁止抑制手段」的依据"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "getMarkKey 键契约与 store 分层约定"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "use-mobile / useStepper 重构需遵循的 hook 约定"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Stepper 改为纯展示组件时的 props 约定"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "getMarkKey 收敛为单一来源的复用判断依据"}
