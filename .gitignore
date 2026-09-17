@@ -31,3 +31,13 @@ android/capacitor-cordova-android-plugins/
 
 # iOS 尚未接入，预留生成目录
 ios/
+
+# 执行环境 bind mount 的 /dev/null（字符设备），不是项目文件
+/.bash_profile
+/.bashrc
+/.gitconfig
+/.mcp.json
+/.profile
+/.ripgreprc
+/.zprofile
+/.zshrc

@@ -24,3 +24,13 @@ ios
 .codex
 .pi
 .trellis
+
+# 执行环境 bind mount 的 /dev/null（字符设备），不是项目文件
+/.bash_profile
+/.bashrc
+/.gitconfig
+/.mcp.json
+/.profile
+/.ripgreprc
+/.zprofile
+/.zshrc
