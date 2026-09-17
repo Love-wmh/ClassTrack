@@ -1,0 +1,6 @@
+{"file": ".trellis/tasks/00-bootstrap-guidelines/research/codebase-findings.md", "reason": "本轮扫描的代码库事实清单；spec 内容必须以此为准"}
+{"file": "app/lib/types.ts", "reason": "共享类型组织与中文行内注释范式"}
+{"file": "app/store/index.ts", "reason": "persist+immer+partialize+migrate 组合范式"}
+{"file": "app/store/slices/dataSlice.ts", "reason": "slice 结构与 syncCurrentSemester 双结构契约"}
+{"file": "app/features/schedule/ScheduleTable.tsx", "reason": "组件结构、props 类型与 cn() 样式范式"}
+{"file": "app/features/dashboard/hooks/useDashboardStats.ts", "reason": "hook 聚合返回对象范式"}
