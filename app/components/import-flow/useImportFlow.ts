@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getBookmarkletAdapterBySchoolId } from '~/lib/bookmarklets'
 import { getParserById } from '~/lib/parsers'
@@ -54,6 +54,14 @@ export function useImportFlow() {
   const [isImporting, setIsImporting] = useState(false)
 
   const activeSchool = selectedSchool || school
+  const handleImportMethodChange = useCallback(
+    (method: typeof selectedImportMethod) => {
+      setSelectedImportMethod(method)
+      const nextStepCount = (method === 'backup' ? backupImportSteps : parserImportSteps).length
+      stepper.goToStep(Math.min(stepper.currentStep, nextStepCount - 1))
+    },
+    [setSelectedImportMethod, stepper]
+  )
   const currentSemester = semesters.find((semester) => semester.id === currentSemesterId)
   const bookmarkletAdapter = getBookmarkletAdapterBySchoolId(activeSchool?.id)
   const defaultTerm = currentSemester?.code || bookmarkletAdapter?.resolveTerm({ now: new Date() }) || bookmarkletAdapter?.defaultTerm || ''
@@ -252,7 +260,7 @@ export function useImportFlow() {
     primaryLabel,
     primaryDisabled,
     setTerm,
-    setSelectedImportMethod,
+    handleImportMethodChange,
     setSelectedParserId,
     handleParserFirstWeekStartDateChange: setParserFirstWeekStartDate,
     handleOpenChange,

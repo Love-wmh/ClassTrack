@@ -17,7 +17,7 @@ export default function ImportDialog() {
           selectedSchool={importFlow.activeSchool}
           selectedImportMethod={importFlow.selectedImportMethod}
           onSchoolChange={importFlow.handleSchoolChange}
-          onImportMethodChange={importFlow.setSelectedImportMethod}
+          onImportMethodChange={importFlow.handleImportMethodChange}
         />
       )
     }
@@ -69,7 +69,7 @@ export default function ImportDialog() {
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          <Stepper steps={importFlow.steps} currentStep={importFlow.currentStep} />
+          <Stepper steps={importFlow.steps} currentStep={importFlow.currentStep} previousStep={importFlow.previousStep} />
           {renderStepContent()}
         </div>
 
