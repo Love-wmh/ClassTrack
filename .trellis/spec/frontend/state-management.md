@@ -65,6 +65,7 @@ const { school, classes, classMarks, currentWeek } = useClassStore()
 
 - 忘记 `syncCurrentSemester` 会让扁平投影和 `semesters` 真相分叉；新增 mutation 要逐一检查同步 patch。
 - 切换、删除或导入学期时只改 `semesters` 不投影到扁平字段，同样会产生错误 UI。
-- 出勤标记键契约是 `getMarkKey(classId, week)`，值为 `` `${classId}-${week}` ``，来源应为 `app/store/utils.ts`。当前 `app/features/dashboard/utils.ts` 重复定义了相关逻辑，`app/features/schedule/ScheduleTable.tsx` 还有手写 `` classMarks[`${classId}-${week}`] `` 和网格位置 `` `${course.dayOfWeek}-${section}` ``；这是已知技术债，不要继续复制。
+- 出勤标记键契约是 `getMarkKey(classId, week)`，值为 `` `${classId}-${week}` ``，唯一来源是 `app/store/utils.ts`。`app/features/dashboard/utils.ts` 与 `app/features/schedule/ScheduleTable.tsx` 均从此处导入（2026-09 已把原先三处重复实现收敛为一处）；新增读取出勤标记的代码必须复用该函数，不要手写字符串拼接。
+- 注意 `` `${course.dayOfWeek}-${section}` `` 是课表网格坐标，与出勤标记键无关，不要与 `getMarkKey` 混用。
 - 新增持久字段却不改 `partialize`、迁移和空数据，会导致刷新或旧版本导入丢数据。
 - 不要把移动导航状态混入业务 store；它已有独立 key 和 `app/store/mobileNavigationStore.ts`。

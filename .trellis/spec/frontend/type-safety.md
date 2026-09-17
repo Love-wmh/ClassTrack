@@ -44,7 +44,11 @@ type ScheduleTableProps = {
 
 项目没有 zod、yup 或 io-ts。localStorage 和备份 JSON 等外部输入通过 `app/store/migrations.ts` 的 `normalizeImportedData()` 及 `normalizeClasses`、`normalizeClassMarks`、`normalizeCourseMetadata`、`normalizeWeek`、`normalizeNullableString` 手写检查和归一化；不符合条件时返回 `null` 或安全默认值。UI 导入流程使用 `resolve({ success: false, error })` 报告失败，不能把 `unknown` 直接当成 `AppData` 使用。
 
-解析器入口是现实中的特殊边界：`app/lib/parsers/tianjin-university-of-technology/parser.ts` 与 `app/lib/parsers/tianjin-polytechnic-university/parser.ts` 当前使用 `parse(data: any)` 接教务原始 JSON，随后映射为强类型 `Class[]`。仓库目前有 3 处该 warning；除这些解析器入口外，不要扩散 `any`。
+解析器入口是现实中的特殊边界：`app/lib/parsers/*/parser.ts` 的签名为 `parse(data: unknown)`，与 `app/lib/types.ts` 中的 `ClassParser.parse` 契约一致。内部通过 `readRawClasses` 做一次 `data as RawClassPayload` 断言，随后**立即**用 `Array.isArray` 校验，再把 `RawClass` 字段原样映射为强类型 `Class`。各校的原始 payload 类型定义在 `app/lib/parsers/<school>/types.ts`。
+
+**不要在映射中引入 `Number()`、`String()` 或默认值兜底**：原实现是把原始值原样透传，加转换会改变畸形数据的运行期行为。
+
+既知残余风险：`RawClass` 的字段类型是从使用处推断的，没有教务系统 schema 佐证；若真实 payload 的类型与之不符，类型注解会与运行时不符。这是 2026-09 之前就存在的状况，不在清理范围内。
 
 ---
 
@@ -58,7 +62,7 @@ type ScheduleTableProps = {
 
 ## Forbidden Patterns
 
-- 不要在普通业务代码使用 `any`、类型逃逸或无依据的类型断言；解析器原始 JSON 入口是已存在的 `any` 例外。组件 props 应遵循所属目录的既有类型形式：feature 组件通常用非导出 `type XxxProps`，而不要把 UI/共享组件中现存的 `interface` 当成需要重构的技术债。
+- 不要在普通业务代码使用 `any`、类型逃逸或无依据的类型断言。解析器边界允许一次 `as RawClassPayload` 断言，但必须紧跟 `Array.isArray` 运行时校验（见 `app/lib/parsers/tianjin-university-of-technology/parser.ts` 的 `readRawClasses`），除此处外不要扩散 `any`。组件 props 应遵循所属目录的既有类型形式：feature 组件通常用非导出 `type XxxProps`，不要把 UI/共享组件中现存的 `interface` 当成需要重构的技术债。
 - 不要违反 `verbatimModuleSyntax`，类型必须用 `import type { X }`。
 - 不要引入未经项目采用的 schema 验证库；遵循现有 normalize 约定，尤其是 localStorage、导入备份和解析器边界。
 - 不要用 `@ts-ignore`、`@ts-expect-error` 或 `eslint-disable` 掩盖错误。

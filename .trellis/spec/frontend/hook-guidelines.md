@@ -44,6 +44,35 @@ export function useCourseManagement() {
 
 以上分别对应 `app/features/course-management/hooks/useCourseManagement.ts` 与 `app/features/substitute-management/hooks/useSubstituteManagement.ts` 中的既有风格。hook 不把数据访问偷偷扩展成独立 service 层，除非已有模块模式明确需要。
 
+订阅浏览器外部系统（`matchMedia`、`resize`、`storage` 等）时使用 `useSyncExternalStore`，不要用 `useState` + `useEffect` 手动同步——后者会在 effect 内同步 setState，被 `react-hooks/set-state-in-effect` 拦下：
+
+```ts
+import { useSyncExternalStore } from 'react'
+
+const MOBILE_BREAKPOINT = 768
+const MOBILE_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
+
+function subscribe(onStoreChange: () => void) {
+  const mediaQueryList = window.matchMedia(MOBILE_QUERY)
+  mediaQueryList.addEventListener('change', onStoreChange)
+  return () => mediaQueryList.removeEventListener('change', onStoreChange)
+}
+
+function getSnapshot() {
+  return window.matchMedia(MOBILE_QUERY).matches
+}
+
+function getServerSnapshot() {
+  return false
+}
+
+export function useIsMobile() {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+}
+```
+
+这是 `app/hooks/use-mobile.ts` 的实际写法。它与旧的 `useState` + `useEffect` 版本有一处行为差异：首帧即返回真实值，旧版本首帧返回 `false`，会让移动端短暂渲染桌面布局。这是修复，不要改回去。
+
 ---
 
 ## Data Fetching
@@ -64,6 +93,6 @@ export function useCourseManagement() {
 
 - 不要返回没有字段名的数组元组；当前 hook API 以具名对象聚合值为主。
 - 派生值要核对 `useMemo` 依赖，回调要核对 `useCallback` 依赖，避免捕获旧 store 数据。
-- `app/hooks/use-mobile.ts:14` 与 `app/components/stepper/useStepper.ts:21` 当前在 effect 内同步 setState，触发 `react-hooks/set-state-in-effect`；这类写法会被 lint 拦截，不应复制。
-- `app/components/stepper/Stepper.tsx:20` 当前在渲染期访问 ref，触发 `react-hooks/refs`；新增代码不要采用该模式。
+- effect 内同步 setState、渲染期调整 state、渲染期访问 ref 会被 `react-hooks` 规则拦下（`set-state-in-effect`、`set-state-in-render`、`refs`）。三者在本仓库都是 error 级别，因此连 React 文档推荐的「渲染期调整 state」写法也不可用。
+- 正确替代：订阅外部系统用 `useSyncExternalStore`（`app/hooks/use-mobile.ts`）；共享的状态转移放在事件处理器内的纯 updater 里（`app/components/stepper/useStepper.ts` 把 `current` 与 `previous` 合并成单个 state 对象，在同一 updater 内原子更新）；展示组件只接收 props，不自己记住「上一步」这类派生状态（`app/components/stepper/Stepper.tsx`）。
 - 不要虚构 server-state cache；本项目没有后端，文件导入边界必须显式处理异常和失败结果。

@@ -1,6 +1,6 @@
 # Quality Guidelines
 
-> 当前可信验证以类型检查和构建为主，质量说明必须反映项目没有测试和 CI 的现实。
+> 类型检查、构建、lint、格式与单元测试都是可信门禁，且由 CI 在 PR 与 master push 上强制。
 
 ---
 
@@ -8,15 +8,19 @@
 
 工具链是 ESLint 10 flat config（typescript-eslint recommended、react、react-hooks、react-refresh、prettier recommended）和 Prettier。格式配置为 `semi: false`、`singleQuote: true`、`printWidth: 140`、`tabWidth: 2`、`trailingComma: es5`。
 
-可信门禁是 `pnpm typecheck`（`react-router typegen && tsc`）和 `pnpm build`（`react-router build`）；二者当前实测通过。`pnpm lint` 从未全绿过：`eslint.config.js` 的 `ignores` 已排除 `.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/` 等 agent 配置目录（不排除时会额外扫出 `.pi/extensions/trellis/index.ts` 的千余条生成物告警），排除后仍剩 11 个既有问题（5 error + 6 warning），其中 2 个 prettier error 可用 `pnpm lint:fix` 自动修复。判断自己的改动是否干净时应按文件过滤，例如 `npx eslint app/...`。
+可信门禁共五项，全部实测通过：`pnpm typecheck`（`react-router typegen && tsc`）、`pnpm build`（`react-router build`）、`pnpm lint`（`eslint . --report-unused-disable-directives --max-warnings 0`）、`pnpm format:check`、`pnpm test`（vitest）。`.github/workflows/ci.yml` 在 PR 与 master push 上运行同一组命令。
+
+`pnpm lint` 当前为 **0 problems**。`eslint.config.js` 的 `ignores` 已排除 `.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/` 等 agent 配置目录，否则会扫出 `.pi/extensions/trellis/index.ts` 的千余条生成物告警；`.prettierignore` 同样排除了这些目录，另外还排除了根目录 8 个由执行环境 bind mount 的 `/dev/null` 设备文件（否则 `format:check` 会因 `EACCES` 以退出码 2 失败）。
 
 ---
 
 ## Forbidden Patterns
 
-不要提交与现有 TypeScript 规则冲突的代码：普通位置不要 `any`，不要使用 `@ts-ignore`/`@ts-expect-error`/`eslint-disable`，不要写 effect 内同步 setState 或渲染期访问 ref。后两类现有问题分别位于 `app/hooks/use-mobile.ts:14`、`app/components/stepper/useStepper.ts:21` 和 `app/components/stepper/Stepper.tsx:20`，并触发 react-hooks lint error；它们是待处理技术债，不是可复制范式。
+不要提交与现有 TypeScript 规则冲突的代码：普通位置不要 `any`，不要使用 `@ts-ignore`/`@ts-expect-error`/`eslint-disable`，不要写 effect 内同步 setState、渲染期调整 state 或渲染期访问 ref。这三类写法曾出现在 `app/hooks/use-mobile.ts`、`app/components/stepper/useStepper.ts`、`app/components/stepper/Stepper.tsx`，已于 2026-09 全部清除，替代写法见 `hook-guidelines.md`；不要改回去。
 
 不要为 agent 配置目录（`.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/`）新增 lint 规则或放宽现有规则 —— 它们已由 `eslint.config.js` 的 `ignores` 排除，规则只应对 `app/` 等源码生效。也不要把刻意注入教务页面的 `app/lib/bookmarklets/*/script.ts` 中的 console 调用误判为普通调试代码。
+
+目前唯一的规则级例外是 `app/components/ui/**` 关闭了 `react-refresh/only-export-components`：这是 shadcn 同文件导出组件与常量/hook 的固有形态，拆文件会在 `shadcn add` 重新生成时被覆盖。该目录的其余规则（含 `react-hooks` 全套）仍然生效，因此不要往这个覆盖块里继续加规则。
 
 ---
 
@@ -53,9 +57,13 @@ toast.success('数据导入成功')
 
 ## Testing Requirements
 
-当前没有 Vitest、Jest、Playwright、测试文件、`test` script 或 GitHub Actions CI，因此不能声称项目要求所有改动必须新增单测。现行验证是 `pnpm typecheck`、`pnpm build`、`pnpm dev` 手测，Android 相关改动还可用真机命令 `pnpm cap:install:android` 验证。
+测试使用 vitest：`pnpm test`（= `vitest run`）与 `pnpm test:watch`，配置在独立的 `vitest.config.ts`（刻意不复用 `vite.config.ts`，以免加载 reactRouter、tailwind、PWA 插件），`environment: 'node'`，`include: ['app/**/*.test.ts']`。测试文件与被测模块**同目录**（co-located），只覆盖纯逻辑，不覆盖组件与 hook。
 
-没有测试保护、最容易回归的纯逻辑区域是 `app/store/migrations.ts`、`app/lib/parsers/*`、`app/store/utils.ts` 和 `app/features/dashboard/utils.ts`。改动这些文件时应重点做类型检查、构建和针对导入/迁移/统计边界的手工验证，并如实报告没有自动化覆盖。
+**注意**：`include` 只匹配 `*.test.ts`。以后若要加 `.test.tsx` 组件测试，必须同步扩展该配置，否则测试会被静默跳过并让门禁产生虚假安全感。
+
+已覆盖的四个纯逻辑模块是 `app/store/migrations.ts`、`app/lib/parsers/*`、`app/store/utils.ts`、`app/features/dashboard/utils.ts`（4 个文件 16 个用例）。它们最容易回归：包含时区敏感的日期推算、schema 迁移和学校 payload 解析，因此改动这些模块时必须同步补测试。
+
+涉及日期的测试必须**显式传入** `importedAt` 与日期字符串，不得依赖 `new Date()` 的当前时刻，否则会在 CI（UTC）与本地（UTC+8）得出不同结果。
 
 ---
 
@@ -64,6 +72,6 @@ toast.success('数据导入成功')
 - 是否只改了任务范围内的目录，路由是否仍只是 re-export 壳？
 - 是否遵循 `import type`、非导出 `type XxxProps`、Tailwind 原子类和 `cn()`？
 - 是否检查 Zustand 的扁平投影与 `semesters` 同步、持久化 `partialize` 和 schema 迁移？
-- 是否运行 `pnpm typecheck` 与 `pnpm build`，并对自己改动的文件运行 ESLint？全仓 `pnpm lint` 仍有 11 个既有问题（`react-hooks/refs` 1 个、`react-hooks/set-state-in-effect` 2 个、`commitlint.config.cjs` 的 prettier 2 个、`react-refresh/only-export-components` 3 个、`no-explicit-any` 3 个），要区分既有问题与本次改动引入的问题。
-- 是否对无测试/无 CI 的区域说明了手工验证和残余风险，而不是编造测试结果？
+- 是否运行 `pnpm typecheck`、`pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build`？五项当前全绿，其中任何一项失败都属于本次改动引入的问题，不得用抑制手段绕过。
+- 是否对测试未覆盖的区域（组件、hook、页面）说明了手工验证方式或残余风险，而不是把「类型检查通过」当成行为验证？
 - 是否保留中文 UI 文案和中文复杂逻辑注释，避免无关的格式或技术债重构？
