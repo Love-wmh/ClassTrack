@@ -10,7 +10,9 @@
 
 可信门禁共五项，全部实测通过：`pnpm typecheck`（`react-router typegen && tsc`）、`pnpm build`（`react-router build`）、`pnpm lint`（`eslint . --report-unused-disable-directives --max-warnings 0`）、`pnpm format:check`、`pnpm test`（vitest）。`.github/workflows/ci.yml` 在 PR 与 master push 上运行同一组命令。
 
-`pnpm lint` 当前为 **0 problems**。`eslint.config.js` 的 `ignores` 已排除 `.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/` 等 agent 配置目录，否则会扫出 `.pi/extensions/trellis/index.ts` 的千余条生成物告警；`.prettierignore` 同样排除了这些目录，另外还排除了根目录 8 个由执行环境 bind mount 的 `/dev/null` 设备文件（否则 `format:check` 会因 `EACCES` 以退出码 2 失败）。
+`pnpm lint` 当前为 **0 problems**。`eslint.config.js` 的 `ignores` 与 `.prettierignore` 都排除了 `.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/`、`.trellis/`（这些目录**已被 git 跟踪**，所以 `.gitignore` 管不到，必须写进各自工具的 ignore 文件；否则会扫出 `.pi/extensions/trellis/index.ts` 的千余条生成物告警）。
+
+根目录那几个由执行环境 bind mount 的 `/dev/null` 设备文件（`.bashrc`、`.mcp.json` 等）**只在 `.gitignore` 里列了一次**，没有重复写进 `.prettierignore`。原因是 prettier 的 `--ignore-path` 默认值就是 `[.gitignore, .prettierignore]`——`.gitignore` 本来就会被读取。实测：两处都没有时 `format:check` 会因 `.mcp.json` 的 `EACCES` 以退出码 2 失败，只保留 `.gitignore` 一处则为退出码 0。
 
 ---
 
