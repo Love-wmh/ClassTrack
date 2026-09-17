@@ -8,7 +8,7 @@
 
 工具链是 ESLint 10 flat config（typescript-eslint recommended、react、react-hooks、react-refresh、prettier recommended）和 Prettier。格式配置为 `semi: false`、`singleQuote: true`、`printWidth: 140`、`tabWidth: 2`、`trailingComma: es5`。
 
-可信门禁是 `pnpm typecheck`（`react-router typegen && tsc`）和 `pnpm build`（`react-router build`）；二者当前实测通过。`pnpm lint` 当前不能视为全绿门禁：agent 目录未被 eslint ignores 排除，会扫描 `.pi/` 等生成文件而必然失败。判断自己的改动是否干净时应按文件过滤，例如 `npx eslint app/...`。
+可信门禁是 `pnpm typecheck`（`react-router typegen && tsc`）和 `pnpm build`（`react-router build`）；二者当前实测通过。`pnpm lint` 从未全绿过：`eslint.config.js` 的 `ignores` 已排除 `.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/` 等 agent 配置目录（不排除时会额外扫出 `.pi/extensions/trellis/index.ts` 的千余条生成物告警），排除后仍剩 11 个既有问题（5 error + 6 warning），其中 2 个 prettier error 可用 `pnpm lint:fix` 自动修复。判断自己的改动是否干净时应按文件过滤，例如 `npx eslint app/...`。
 
 ---
 
@@ -16,7 +16,7 @@
 
 不要提交与现有 TypeScript 规则冲突的代码：普通位置不要 `any`，不要使用 `@ts-ignore`/`@ts-expect-error`/`eslint-disable`，不要写 effect 内同步 setState 或渲染期访问 ref。后两类现有问题分别位于 `app/hooks/use-mobile.ts:14`、`app/components/stepper/useStepper.ts:21` 和 `app/components/stepper/Stepper.tsx:20`，并触发 react-hooks lint error；它们是待处理技术债，不是可复制范式。
 
-不要在无关任务中修改 `eslint.config.js` 来掩盖 `.pi/`、`.claude/`、`.codex/`、`.agents/`、`.codebuddy/` 未忽略导致的全仓 lint 噪音，也不要把刻意注入教务页面的 `app/lib/bookmarklets/*/script.ts` 中的 console 调用误判为普通调试代码。
+不要为 agent 配置目录（`.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/`）新增 lint 规则或放宽现有规则 —— 它们已由 `eslint.config.js` 的 `ignores` 排除，规则只应对 `app/` 等源码生效。也不要把刻意注入教务页面的 `app/lib/bookmarklets/*/script.ts` 中的 console 调用误判为普通调试代码。
 
 ---
 
@@ -64,6 +64,6 @@ toast.success('数据导入成功')
 - 是否只改了任务范围内的目录，路由是否仍只是 re-export 壳？
 - 是否遵循 `import type`、非导出 `type XxxProps`、Tailwind 原子类和 `cn()`？
 - 是否检查 Zustand 的扁平投影与 `semesters` 同步、持久化 `partialize` 和 schema 迁移？
-- 是否运行 `pnpm typecheck` 与 `pnpm build`，并对自己改动的 app 文件单独运行 ESLint？全仓 `pnpm lint` 失败时要区分 agent 生成文件噪音和业务文件问题。
+- 是否运行 `pnpm typecheck` 与 `pnpm build`，并对自己改动的文件运行 ESLint？全仓 `pnpm lint` 仍有 11 个既有问题（`react-hooks/refs` 1 个、`react-hooks/set-state-in-effect` 2 个、`commitlint.config.cjs` 的 prettier 2 个、`react-refresh/only-export-components` 3 个、`no-explicit-any` 3 个），要区分既有问题与本次改动引入的问题。
 - 是否对无测试/无 CI 的区域说明了手工验证和残余风险，而不是编造测试结果？
 - 是否保留中文 UI 文案和中文复杂逻辑注释，避免无关的格式或技术债重构？
