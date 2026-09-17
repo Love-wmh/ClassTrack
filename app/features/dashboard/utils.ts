@@ -1,4 +1,5 @@
 import type { Class, ClassMark } from '~/lib/types'
+import { getMarkKey } from '~/store/utils'
 
 export type CourseSession = {
   id: string
@@ -85,20 +86,6 @@ export function expandCourseSessions(classes: Class[], classMarks: Record<string
       }
     })
   )
-}
-
-/**
- * 生成课程在指定周次的出勤标记存储键。
- *
- * 出勤标记按“课程实例 + 周次”唯一定位，同一门课在不同周次可以有不同的
- * 已上状态和备注。这个 key 需要在课表、看板和状态管理中保持一致。
- *
- * @param classId 解析后的课程唯一 ID。
- * @param week 教学周次。
- * @returns 形如 `classId-week` 的存储键。
- */
-export function getMarkKey(classId: string, week: number) {
-  return `${classId}-${week}`
 }
 
 /**
