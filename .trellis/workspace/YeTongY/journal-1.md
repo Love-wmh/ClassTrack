@@ -99,3 +99,24 @@
 - 补 CI 状态检查到 master 的必需检查（需仓库主授予 Admin 权限启用 branch protection）
 - 为组件与 hook 补测试（当前 vitest 的 include 只匹配 *.test.ts，加 .test.tsx 需同步扩展配置）
 - 清理 .pi/ 等生成目录之外的其余技术债；考虑把 stepper 的交互验证纳入 CI 回归
+
+## 2026-09-18 build-devcontainer 收尾
+
+### 做了什么
+
+- devcontainer 两度实现并验证通过（第二次 `devcontainer up` outcome=success、容器内五项门禁 + APK 全绿），最终按用户决定**彻底放弃、不入库**。
+- 改走本机项目级补全：宿主补 `platforms;android-36`、`android/local.properties`（sdk.dir）、gradle 8.14.3 华为云预置（sha256 校验过）；`install-android.sh` 支持 Linux；新增 `scripts/gradle-mirrors.init.gradle`（可选国内镜像，已装入本机 `~/.gradle/init.d/`）。宿主 `pnpm cap:build:android` 实测成功（APK 7.1MB）。
+- 生产镜像修复并验证：pnpm + Node 22 多阶段 + nginx 托管 `build/client`；首页/深层路由 200、SPA 回退生效、`sw.js`/`index.html` no-cache、哈希资产 immutable。nginx 用本机已有的 1.27-alpine。
+- README 三段修正（`pnpm start` 死路标注、Docker 段、本机 Android 构建环境段）；`.gitignore`/`.dockerignore` 补 `/.pnpm-store/` 与沙箱设备文件条目。
+- 宿主五项门禁全绿。
+
+### 教训（详见任务 research 第 9 节）
+
+- 探测镜像源必须验证响应**内容**（`<?xml`），华为云 `/maven/google/` 返回 HTML 页面，只看 200 会被骗。
+- pnpm 9 在 store 与 node_modules 跨文件系统时自动改用工作区 `.pnpm-store/`，缓存卷方案失效。
+- pnpm 非交互遇重装提示会永久挂起，要 `CI=true`。
+- 宿主当夜大量诡异网络问题（DNS 摇摆、镜像超时、docker pull 卡死）的共同根因是**连错了网络**，换网后全部消失。
+
+### Next Steps
+
+- 提交四笔、发 PR、等 CI、rebase 合并

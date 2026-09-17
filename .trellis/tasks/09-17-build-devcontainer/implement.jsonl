@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁的准确定义、格式检查扫描范围与禁止手段，决定新增文件是否会被门禁拦下"}
+{"file": ".trellis/tasks/09-17-build-devcontainer/research/environment-findings.md", "reason": "宿主与 Android SDK 的实测缺口、根 Dockerfile 逐条硬伤、pnpm start 死路证据，实现时必须对齐这些事实"}

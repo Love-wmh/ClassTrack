@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对改动后仓库五项门禁仍全绿、未引入抑制手段"}
+{"file": ".trellis/tasks/09-17-build-devcontainer/research/environment-findings.md", "reason": "逐条核对验收证据是否与实测一致，防止用推断代替命令输出"}
