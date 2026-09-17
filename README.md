@@ -58,8 +58,10 @@ public/                  # 静态资源
 
 ### 环境要求
 
-- Node.js 20+
+- Node.js 22（CI 使用的版本）
 - pnpm
+
+> 构建 Android 还需要 JDK 21 与 Android SDK，一次性补齐步骤见[本机 Android 构建环境](#本机-android-构建环境)。
 
 ### 安装依赖
 
@@ -109,12 +111,13 @@ pnpm cap:install:android
 
 该命令会构建 Debug APK、覆盖安装到手机，并重新打开 ClassTrack。需要本机有完整 JDK 21 和 Android SDK。
 
+本机还没有 JDK 21 或 Android SDK 时，先按[本机 Android 构建环境](#本机-android-构建环境)补齐。
+
 ### 启动生产服务
 
-```bash
-pnpm start
-```
+本项目是纯 SPA（`react-router.config.ts` 中 `ssr: false`），生产环境由 [Docker 镜像](#docker)托管静态产物。
 
+仓库里的 `pnpm start`（`react-router-serve ./build/server/index.js`）**当前不可用**：该命令需要 SSR 模式的服务端产物 `build/server/index.js`，而本项目的 `pnpm build` 只产出 `build/client`，没有 `build/server`。它属于模板残留脚本，本次保留原样未改动，请勿按它启动服务。
 ## 使用说明
 
 ### 导入课程数据
@@ -157,9 +160,43 @@ ClassTrack 使用浏览器 `localStorage` 保存数据，存储键为 `class-tra
 
 ## Docker
 
-项目包含 `Dockerfile`，可用于构建并运行生产版本。
+`Dockerfile` 用两阶段构建生产镜像：第一阶段用 Node 22 + pnpm 构建 web 产物，第二阶段用 nginx 托管 `build/client`，最终镜像不含 Node 运行期。
 
 ```bash
 docker build -t classtrack .
 docker run --rm -p 3000:3000 classtrack
+```
+
+镜像监听 3000 端口，并且：
+
+- 深层路由回退到 `index.html`，直接访问 `/timetable` 这类地址不会 404；
+- `sw.js` 与 manifest 返回 `Cache-Control: no-cache`，保证 PWA 的“提示更新”机制生效；
+- 带内容哈希的 `/assets/*` 使用长缓存加 `immutable`。
+
+## 本机 Android 构建环境
+
+在 Linux 或 macOS 上构建 Android，需要一次性补齐：
+
+1. **JDK 21**（含 `jlink`）：Linux 用 `sudo apt install openjdk-21-jdk`，macOS 用 `brew install openjdk@21`。
+2. **Android SDK**：需要 `platforms;android-36`、`build-tools;36.0.0`、`platform-tools`（Linux 默认路径 `~/Android/Sdk`，macOS 默认 `~/Library/Android/sdk`）。
+3. **`android/local.properties`**：写入 `sdk.dir=<你的 SDK 绝对路径>`。该文件已被 gitignore，是机器本地配置；有了它 gradle 不需要任何环境变量。
+4. gradle wrapper 首次运行会下载 gradle 8.14.3（约 200MB）。网络慢时可从国内镜像预置：
+
+   ```bash
+   mkdir -p ~/.gradle/wrapper/dists/gradle-8.14.3-all/10utluxaxniiv4wxiphsi49nj
+   curl -fL -o ~/.gradle/wrapper/dists/gradle-8.14.3-all/10utluxaxniiv4wxiphsi49nj/gradle-8.14.3-all.zip \
+     https://repo.huaweicloud.com/gradle/gradle-8.14.3-all.zip
+   ```
+
+5. 依赖下载慢或 `dl.google.com` 不通时，可启用国内镜像（华为云中央仓库优先、阿里云 Google Maven 其次，官方仓库仍保留为兜底）：
+
+   ```bash
+   cp scripts/gradle-mirrors.init.gradle ~/.gradle/init.d/
+   ```
+
+完成后：
+
+```bash
+pnpm cap:build:android    # 产出 android/app/build/outputs/apk/debug/app-debug.apk
+pnpm cap:install:android  # 构建并安装到已连接的手机（脚本同时支持 Linux 与 macOS）
 ```
