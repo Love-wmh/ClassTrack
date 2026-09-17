@@ -15,3 +15,12 @@ android
 ios
 *.apk
 *.aab
+
+# 各 Agent 平台的配置目录与 Trellis 生成物
+# 这些内容由 trellis init / 各 CLI 生成并维护，重新格式化只会与上游产物产生无意义 diff
+.agents
+.claude
+.codebuddy
+.codex
+.pi
+.trellis
