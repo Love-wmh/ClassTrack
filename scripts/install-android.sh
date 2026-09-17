@@ -5,11 +5,24 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_ID="${CLASS_TRACK_ANDROID_APP_ID:-com.classtrack.app}"
 APK_PATH="${CLASS_TRACK_ANDROID_APK_PATH:-$ROOT_DIR/android/app/build/outputs/apk/debug/app-debug.apk}"
 
-DEFAULT_JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
-DEFAULT_ANDROID_SDK="$HOME/Library/Android/sdk"
+# macOS：Homebrew 的 JDK 21 与 ~/Library/Android/sdk；Linux：apt 的 JDK 与 ~/Android/Sdk
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  DEFAULT_JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+  DEFAULT_ANDROID_SDK="$HOME/Library/Android/sdk"
+else
+  DEFAULT_JAVA_HOME=""
+  DEFAULT_ANDROID_SDK="$HOME/Android/Sdk"
+fi
 
 if [[ -z "${JAVA_HOME:-}" || ! -x "${JAVA_HOME}/bin/jlink" ]]; then
-  if [[ -x "${DEFAULT_JAVA_HOME}/bin/jlink" ]]; then
+  # 先从 PATH 里的 javac 反推（Linux 上最常见的安装形态）
+  if command -v javac >/dev/null 2>&1; then
+    derived="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+    if [[ -x "$derived/bin/jlink" ]]; then
+      export JAVA_HOME="$derived"
+    fi
+  fi
+  if [[ -z "${JAVA_HOME:-}" && -n "$DEFAULT_JAVA_HOME" && -x "${DEFAULT_JAVA_HOME}/bin/jlink" ]]; then
     export JAVA_HOME="$DEFAULT_JAVA_HOME"
   fi
 fi

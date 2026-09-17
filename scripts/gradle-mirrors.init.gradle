@@ -1,0 +1,19 @@
+// Gradle init 脚本：国内镜像优先（华为云中央仓库在前，阿里云 Google Maven 其次），
+// android/build.gradle 自己声明的 google() / mavenCentral() 仍然保留在后作为兜底，
+// 镜像缺构件时会自动回落到官方仓库。
+//
+// 启用方式（不进版本库的用户级配置）：cp scripts/gradle-mirrors.init.gradle ~/.gradle/init.d/
+//
+// 实测注意：华为云没有可用的 Google Maven 镜像（/maven/google/ 301 后返回 HTML 页面而非
+// POM），因此 google 构件只能走阿里云；华为云只覆盖中央仓库。
+def addMirrors = { repos ->
+    repos.maven { name = 'huaweiCentral'; url = 'https://repo.huaweicloud.com/repository/maven/' }
+    repos.maven { name = 'aliyunGoogle'; url = 'https://maven.aliyun.com/repository/google/' }
+    repos.maven { name = 'aliyunPublic'; url = 'https://maven.aliyun.com/repository/public/' }
+}
+
+allprojects {
+    // buildscript 的 classpath（AGP 等）与模块依赖都走镜像
+    addMirrors(buildscript.repositories)
+    addMirrors(repositories)
+}
