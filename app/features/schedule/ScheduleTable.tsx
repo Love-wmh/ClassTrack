@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import type { Class, ClassMark } from '~/lib/types'
+import { getMarkKey } from '~/store/utils'
 import { cn } from '~/lib/utils'
 import { dayNames, sections, weekDays } from './constants'
 import ScheduleCourseCell from './ScheduleCourseCell'
@@ -14,7 +15,7 @@ type ScheduleTableProps = {
 }
 
 export default function ScheduleTable({ weekClasses, classMarks, currentWeek, firstWeekStartDate, onCourseClick }: ScheduleTableProps) {
-  const getClassMark = (classId: string, week: number) => classMarks[`${classId}-${week}`]
+  const getClassMark = (classId: string, week: number) => classMarks[getMarkKey(classId, week)]
   const occupiedCells = new Set(
     weekClasses.flatMap((course) => {
       const cells: string[] = []
