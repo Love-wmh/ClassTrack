@@ -77,3 +77,15 @@ toast.success('数据导入成功')
 - 是否运行 `pnpm typecheck`、`pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build`？五项当前全绿，其中任何一项失败都属于本次改动引入的问题，不得用抑制手段绕过。
 - 是否对测试未覆盖的区域（组件、hook、页面）说明了手工验证方式或残余风险，而不是把「类型检查通过」当成行为验证？
 - 是否保留中文 UI 文案和中文复杂逻辑注释，避免无关的格式或技术债重构？
+
+---
+
+## 构建环境
+
+五项门禁在本机直接执行即可（Node 22 + pnpm 9.15.9 是当前对齐版本）。
+
+Android 构建（`pnpm cap:build:android` 产出 debug APK）需要本机一次性补齐：JDK 21（含 `jlink`）、Android SDK（`platforms;android-36` + `build-tools;36.0.0` + `platform-tools`）、以及写入 `sdk.dir` 的 `android/local.properties`（gitignore 的机器本地文件）。步骤与排坑见 README「本机 Android 构建环境」段；`scripts/install-android.sh` 同时支持 Linux 与 macOS。
+
+网络不畅时有两个入库的逃生通道：gradle 发行版可从华为云预置到 wrapper dists 目录；依赖镜像可复制 `scripts/gradle-mirrors.init.gradle` 到 `~/.gradle/init.d/`（华为云中央仓库优先、阿里云 Google Maven 其次、官方仓库兜底）。注意华为云**没有**可用的 Google Maven 镜像（实测返回 HTML）。
+
+生产镜像是两阶段构建（Node 22 + pnpm 构建 → nginx 托管 `build/client`，监听 3000）：`docker build -t classtrack .` 与 `docker run --rm -p 3000:3000 classtrack`。SPA 深层路由回退 `index.html`，`sw.js`/manifest/`index.html` 均为 `no-cache`，哈希资产长缓存。`pnpm start` 是 SSR 模式的模板残留脚本，本项目 `ssr: false` 下必然失败，不要使用。
