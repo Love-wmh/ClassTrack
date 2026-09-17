@@ -1,5 +1,5 @@
 import type { Class } from '../../types'
-import type { RawClass } from './types'
+import type { RawClass, RawClassPayload } from './types'
 
 export function parseWeeks(skzc: string): number[] {
   const weeks: number[] = []
@@ -15,10 +15,16 @@ export function generateClassId(rawClass: RawClass): string {
   return `${rawClass.JXBID}-${rawClass.SKXQ}-${rawClass.KSJC}`
 }
 
-export function parse(data: any): Class[] {
-  const rawClasses: RawClass[] = data?.datas?.cxxszhxqkb?.rows
+function readRawClasses(data: unknown): RawClass[] {
+  const payload = data as RawClassPayload | null | undefined
+  const rows = payload?.datas?.cxxszhxqkb?.rows
+  return Array.isArray(rows) ? rows : []
+}
 
-  if (!Array.isArray(rawClasses) || rawClasses.length === 0) {
+export function parse(data: unknown): Class[] {
+  const rawClasses = readRawClasses(data)
+
+  if (rawClasses.length === 0) {
     throw new Error('未解析到课程数据')
   }
 

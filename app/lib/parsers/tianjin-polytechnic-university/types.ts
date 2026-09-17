@@ -1,12 +1,4 @@
-// 天津理工大学教务系统原始课程数据类型
-export interface RawClassPayload {
-  datas?: {
-    cxxszhxqkb?: {
-      rows?: RawClass[]
-    }
-  }
-}
-
+// 天津工业大学教务系统原始课程数据类型
 export interface RawClass {
   KCM: string // 课程名称
   SKJS: string // 授课教师
@@ -22,4 +14,12 @@ export interface RawClass {
   JXBID: string // 教学班ID
   KCXZDM_DISPLAY: string // 课程性质显示
   KCLBDM_DISPLAY: string // 课程类别显示
+}
+
+export interface RawClassPayload {
+  datas?: {
+    cxxszhxqkb?: {
+      rows?: RawClass[]
+    }
+  }
 }
