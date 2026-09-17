@@ -41,3 +41,6 @@ ios/
 /.ripgreprc
 /.zprofile
 /.zshrc
+
+# 容器内 pnpm 跨文件系统时自动落在工作区的下载缓存（纯缓存，可再生）
+/.pnpm-store/
