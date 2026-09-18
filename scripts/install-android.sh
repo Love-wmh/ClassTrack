@@ -75,6 +75,9 @@ if [[ ! -f "$APK_PATH" ]]; then
   exit 1
 fi
 
+# cap:build:android checks the default output; repeat the check for a custom APK path.
+CLASS_TRACK_ANDROID_APK_PATH="$APK_PATH" pnpm android:check-assets
+
 echo "安装到 Android 设备：$APK_PATH"
 "$ADB" install -r "$APK_PATH"
 "$ADB" shell am force-stop "$APP_ID"

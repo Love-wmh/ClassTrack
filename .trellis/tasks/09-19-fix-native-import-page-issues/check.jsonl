@@ -1,0 +1,6 @@
+{"file":".trellis/spec/frontend/native-course-import.md","reason":"Check allowlists, safe bridge fields, local asset origin, content-slot, lifecycle, fallback, and device verification requirements."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check required frontend and Android verification evidence and reporting of blocked checks."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Check shell rendering remains React/shadcn-owned and accessible."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Check end-to-end asset/UI/error/data flow across frontend and Android layers."}
+{"file":".trellis/tasks/archive/2026-09/09-18-fix-native-import-white-screen-ui/prd.md","reason":"Compare new regression scope with prior acceptance criteria and preserve out-of-scope boundaries."}
+{"file":".trellis/tasks/archive/2026-09/09-18-fix-native-import-white-screen-ui/research/shell-webview-architecture.md","reason":"Check the proposed asset-loader and fixed content-slot architecture against actual emulator evidence."}
