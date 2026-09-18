@@ -164,3 +164,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: Protect Android native import from stale shell assets
+<!-- trellis-session: v=2 fp=3856ff926609a3a2 -->
+
+**Date**: 2026-09-19
+**Task**: Protect Android native import from stale shell assets
+**Branch**: `fix/native-import-white-screen-ui`
+
+### Summary
+
+Fresh cap sync confirmed build/client and Android assets match, while the existing APK was stale and missing current shell assets. Added an APK asset consistency guard to the Android build/install flow, unit coverage for local/inline references and stale APK detection, safe hash evidence, README/spec guidance, and archived task 09-19-fix-native-import-page-issues. Real APK build/install, screenshots, WebView callbacks, and logcat remain blocked by read-only Gradle home/network dependency gaps, no connected device, and missing /dev/kvm; follow-up todo #15 remains pending.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e1a10a3` | fix(android): reject stale native shell assets |
+
+### Status
+
+[OK] **Completed**
