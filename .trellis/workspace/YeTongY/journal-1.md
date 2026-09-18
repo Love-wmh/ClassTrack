@@ -142,3 +142,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: 修复应用内导入白屏与 UI 风格
+<!-- trellis-session: v=2 fp=2a25616b077b0c47 -->
+
+**Date**: 2026-09-18
+**Task**: 修复应用内导入白屏与 UI 风格
+**Branch**: `fix/native-import-white-screen-ui`
+
+### Summary
+
+完成天津理工大学金智课表双 WebView 导入架构：本地 React/shadcn shell 与受限 academic WebView 隔离，加入显式导航/capture allowlist、脱敏诊断、bridge state/nonce gating、payload 限制、私有文件 handoff、retry/back/cancel 恢复和 detach-before-destroy 生命周期清理；保留 parser/importClasses 与 Web/PWA fallback。前端测试、typecheck、本地 ESLint、format、build、Capacitor Android 资产同步、差异检查和 Trellis 校验通过；Android Gradle/真机验收因 Gradle home/网络/离线依赖与无 adb 设备仍待环境恢复后执行。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dd7e2e3` | fix(import): stabilize native JinZhi import UI |
+
+### Status
+
+[OK] **Completed**
