@@ -29,6 +29,8 @@
             android:exported="false"
             android:label="应用内导入课程表"
             android:screenOrientation="unspecified"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density" />
 
         <provider
@@ -43,6 +45,5 @@
     </application>
 
     <!-- Permissions -->
-
     <uses-permission android:name="android.permission.INTERNET" />
 </manifest>

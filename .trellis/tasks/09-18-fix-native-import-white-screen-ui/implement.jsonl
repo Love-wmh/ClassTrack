@@ -1,0 +1,16 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend spec index and pre-development checklist."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"React component, shadcn reuse, and Tailwind conventions for the shared import shell."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Hook lifecycle and external platform subscription constraints."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Zustand, semester, first-week date, and import synchronization rules."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Strict TypeScript contracts and validation at the native bridge boundary."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Placement rules for shared import components, shell entry, and tests."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required frontend lint, typecheck, test, format, and build gates."}
+{"file":".trellis/spec/frontend/native-course-import.md","reason":"Existing CourseImport Activity Result, WebView capture, validation, security, and fallback contract."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Cross-layer Android/Capacitor/React state and data-flow checklist."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Avoid duplicate parser, import, and shadcn UI contracts."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/prd.md","reason":"Approved requirements, resolved two-WebView UI boundary, security constraints, and acceptance criteria."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/design.md","reason":"Technical design for the React shell asset origin, dual WebViews, bridge protocol, navigation policy, lifecycle, and rollback."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/white-screen-root-cause.md","reason":"Logcat evidence, ranked white-screen hypotheses, diagnostic fields, and lifecycle findings."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/shell-webview-architecture.md","reason":"Evaluation of shell/academic WebView architectures and security/data-boundary tradeoffs."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/architecture-decision.md","reason":"Research recommendation for persistent React chrome and restricted academic content slot."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/implementation-scope-and-tests.md","reason":"Implementation file boundaries, test layers, quality gates, and resolved planning decisions."}
