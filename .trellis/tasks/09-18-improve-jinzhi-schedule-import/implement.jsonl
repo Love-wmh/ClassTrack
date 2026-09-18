@@ -1,0 +1,10 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend spec index and pre-development checklist."}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Existing React component and Tailwind conventions for import-flow UI."}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "Existing hook patterns and external platform subscription constraints."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Zustand import and semester synchronization rules."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Strict TypeScript and external payload validation rules."}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Frontend module placement and route/component boundaries."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Cross-layer contract and data-flow checklist for Web/Android bridge."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Avoid duplicate parser/import contracts and reuse existing logic."}
+{"file": ".trellis/tasks/09-18-improve-jinzhi-schedule-import/research/open-source-in-app-import.md", "reason": "Open-source WebView and 金智 response capture research."}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "Executable CourseImport bridge, WebView capture, validation, error, and fallback contract."}

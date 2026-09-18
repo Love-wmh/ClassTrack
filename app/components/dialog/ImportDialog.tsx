@@ -3,6 +3,7 @@ import { BackupImportStep } from '~/components/import-flow/BackupImportStep'
 import { BookmarkletInstallStep } from '~/components/import-flow/BookmarkletInstallStep'
 import { BookmarkletRunStep } from '~/components/import-flow/BookmarkletRunStep'
 import { ImportSchoolStep } from '~/components/import-flow/ImportSchoolStep'
+import { InAppImportStep } from '~/components/import-flow/InAppImportStep'
 import { ParserImportStep } from '~/components/import-flow/ParserImportStep'
 import { Stepper, StepperActions } from '~/components/stepper'
 import { useImportFlow } from '~/components/import-flow/useImportFlow'
@@ -18,6 +19,7 @@ export default function ImportDialog() {
           selectedImportMethod={importFlow.selectedImportMethod}
           onSchoolChange={importFlow.handleSchoolChange}
           onImportMethodChange={importFlow.handleImportMethodChange}
+          nativeImportAvailable={importFlow.nativeImportAvailable}
         />
       )
     }
@@ -28,6 +30,19 @@ export default function ImportDialog() {
           inputRef={importFlow.backupFileInputRef}
           fileName={importFlow.backupFile?.name}
           onChange={importFlow.handleBackupFileChange}
+        />
+      )
+    }
+
+    if (importFlow.isNativeImport && importFlow.currentStep === 1) {
+      return (
+        <InAppImportStep
+          term={importFlow.term}
+          onTermChange={importFlow.setTerm}
+          firstWeekStartDate={importFlow.parserFirstWeekStartDate}
+          onFirstWeekStartDateChange={importFlow.handleParserFirstWeekStartDateChange}
+          status={importFlow.nativeImportStatus}
+          error={importFlow.nativeImportError}
         />
       )
     }

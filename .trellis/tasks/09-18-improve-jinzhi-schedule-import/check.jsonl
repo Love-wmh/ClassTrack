@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend quality scope and checklist."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Required lint, typecheck, test, format, and build gates."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Type boundary and external payload validation review."}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Review Zustand/semester persistence synchronization."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Review Web/Android bridge data flow and error contracts."}
+{"file": ".trellis/tasks/09-18-improve-jinzhi-schedule-import/research/open-source-in-app-import.md", "reason": "Review research-derived security and implementation assumptions."}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "Review the new cross-layer native import contract against implementation and tests."}

@@ -1,8 +1,17 @@
 import type { ChangeEvent } from 'react'
+import type { Class } from '~/lib/types'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { getBookmarkletAdapterBySchoolId } from '~/lib/bookmarklets'
 import { getParserById } from '~/lib/parsers'
+import {
+  CourseImportError,
+  courseImportPlugin,
+  getCourseImportErrorCode,
+  getCourseImportErrorMessage,
+  getNativeCourseImportAdapter,
+  isNativeCourseImportAvailable,
+} from '~/lib/native-course-import'
 import { useClassStore } from '~/store'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 import { getCurrentRealWeek } from '~/features/schedule/utils'
@@ -18,6 +27,11 @@ const parserImportSteps = [
   { id: 'install', label: '安装脚本' },
   { id: 'export', label: '导出 JSON' },
   { id: 'upload', label: '上传 JSON' },
+]
+
+const nativeImportSteps = [
+  { id: 'source', label: '来源' },
+  { id: 'native-webview', label: '应用内导入' },
 ]
 
 export function useImportFlow() {
@@ -42,7 +56,8 @@ export function useImportFlow() {
   } = useClassStore()
   const { handleFileSelect } = useDataExportImport()
   const isBackupImport = selectedImportMethod === 'backup'
-  const steps = isBackupImport ? backupImportSteps : parserImportSteps
+  const isNativeImport = selectedImportMethod === 'native-webview'
+  const steps = isBackupImport ? backupImportSteps : isNativeImport ? nativeImportSteps : parserImportSteps
   const stepper = useStepper({ stepCount: steps.length })
   const wasImportDialogOpenRef = useRef(false)
   const parserFileInputRef = useRef<HTMLInputElement>(null)
@@ -52,12 +67,17 @@ export function useImportFlow() {
   const [parserFirstWeekStartDate, setParserFirstWeekStartDate] = useState<string | null>(null)
   const [term, setTerm] = useState('')
   const [isImporting, setIsImporting] = useState(false)
+  const [nativeImportStatus, setNativeImportStatus] = useState<'idle' | 'opening' | 'captured' | 'failed'>('idle')
+  const [nativeImportError, setNativeImportError] = useState<string | null>(null)
 
   const activeSchool = selectedSchool || school
+  const nativeImportAdapter = getNativeCourseImportAdapter(activeSchool?.id)
+  const nativeImportAvailable = isNativeCourseImportAvailable()
   const handleImportMethodChange = useCallback(
     (method: typeof selectedImportMethod) => {
       setSelectedImportMethod(method)
-      const nextStepCount = (method === 'backup' ? backupImportSteps : parserImportSteps).length
+      const nextStepCount = (method === 'backup' ? backupImportSteps : method === 'native-webview' ? nativeImportSteps : parserImportSteps)
+        .length
       stepper.goToStep(Math.min(stepper.currentStep, nextStepCount - 1))
     },
     [setSelectedImportMethod, stepper]
@@ -85,6 +105,8 @@ export function useImportFlow() {
     setParserFirstWeekStartDate(firstWeekStartDate)
     setTerm(defaultTerm)
     setIsImporting(false)
+    setNativeImportStatus('idle')
+    setNativeImportError(null)
     if (!selectedSchool && school) {
       setSelectedSchool(school)
     }
@@ -116,6 +138,10 @@ export function useImportFlow() {
     setSelectedSchool(nextSchool)
     const adapter = getBookmarkletAdapterBySchoolId(nextSchool?.id)
     setTerm(currentSemester?.code || adapter?.resolveTerm({ now: new Date() }) || adapter?.defaultTerm || '')
+    if (selectedImportMethod === 'native-webview' && !getNativeCourseImportAdapter(nextSchool?.id)) {
+      setSelectedImportMethod('parser')
+      stepper.goToStep(0)
+    }
   }
 
   const handleOpenChange = (open: boolean) => {
@@ -157,6 +183,73 @@ export function useImportFlow() {
       setShowImportDialog(false)
     } else {
       toast.error(result.error || '导入失败')
+    }
+  }
+
+  const handleNativeImport = async () => {
+    if (!nativeImportAvailable || !nativeImportAdapter || !term) {
+      const message = '当前环境不支持应用内导入，请改用 JSON/书签脚本导入。'
+      setNativeImportStatus('failed')
+      setNativeImportError(message)
+      toast.error(message)
+      return
+    }
+
+    if (!parserFirstWeekStartDate) {
+      const message = '请选择本学期第一周第一天后再导入。'
+      setNativeImportStatus('failed')
+      setNativeImportError(message)
+      toast.error(message)
+      return
+    }
+
+    const parser = getParserById(nativeImportAdapter.schoolId)
+    if (!parser) {
+      const message = '未找到天津理工大学课程解析器，请改用 JSON/书签脚本导入。'
+      setNativeImportStatus('failed')
+      setNativeImportError(message)
+      toast.error(message)
+      return
+    }
+
+    setIsImporting(true)
+    setNativeImportStatus('opening')
+    setNativeImportError(null)
+    try {
+      const result = await courseImportPlugin.open({ adapterId: nativeImportAdapter.adapterId, url: nativeImportAdapter.entryUrl, term })
+      let data: unknown
+      try {
+        data = JSON.parse(result.data) as unknown
+      } catch {
+        throw new CourseImportError('PARSE_ERROR', '课表响应不是有效 JSON')
+      }
+      setNativeImportStatus('captured')
+      let classes: Class[]
+      try {
+        classes = importClasses(data, parser.parse, { firstWeekStartDate: parserFirstWeekStartDate })
+      } catch {
+        throw new CourseImportError('PARSE_ERROR', '课表响应无法识别')
+      }
+      if (classes.length === 0) {
+        throw new CourseImportError('PARSE_ERROR', '未解析到课程数据')
+      }
+      setFirstWeekStartDate(parserFirstWeekStartDate)
+      setCurrentWeek(getCurrentRealWeek(classes, parserFirstWeekStartDate))
+      if (activeSchool) {
+        setSchool(activeSchool)
+      }
+      setIsInitialized(true)
+      toast.success(`已成功导入 ${classes.length} 条课程数据`)
+      setShowImportDialog(false)
+    } catch (error) {
+      const message = getCourseImportErrorMessage(error)
+      setNativeImportStatus('failed')
+      setNativeImportError(message)
+      if (getCourseImportErrorCode(error) !== 'CANCELLED') {
+        toast.error(message)
+      }
+    } finally {
+      setIsImporting(false)
     }
   }
 
@@ -213,12 +306,17 @@ export function useImportFlow() {
       return
     }
 
-    if (!isBackupImport && stepper.currentStep < 3) {
+    if (isNativeImport && stepper.currentStep === 1) {
+      await handleNativeImport()
+      return
+    }
+
+    if (!isBackupImport && !isNativeImport && stepper.currentStep < 3) {
       stepper.goNext()
       return
     }
 
-    if (!isBackupImport && stepper.currentStep === 3) {
+    if (!isBackupImport && !isNativeImport && stepper.currentStep === 3) {
       await handleParserImport()
       return
     }
@@ -229,15 +327,19 @@ export function useImportFlow() {
   const primaryLabel = useMemo(() => {
     if (stepper.currentStep === 0) return '下一步'
     if (isBackupImport) return isImporting ? '导入中...' : '导入数据'
+    if (isNativeImport && stepper.currentStep === 1) return isImporting ? '导入中...' : '打开教务系统并导入'
     if (stepper.currentStep === 3) return isImporting ? '导入中...' : '导入'
     return '下一步'
-  }, [isBackupImport, isImporting, stepper.currentStep])
+  }, [isBackupImport, isImporting, isNativeImport, stepper.currentStep])
 
   const primaryDisabled =
     isImporting ||
     (stepper.currentStep === 0 && !activeSchool) ||
-    (!isBackupImport && stepper.currentStep === 1 && !canUseBookmarklet) ||
-    (!isBackupImport && stepper.currentStep === 3 && (!parserFile || !selectedParserId || !parserFirstWeekStartDate)) ||
+    (!isBackupImport && !isNativeImport && stepper.currentStep === 1 && !canUseBookmarklet) ||
+    (isNativeImport &&
+      stepper.currentStep === 1 &&
+      (!nativeImportAvailable || !nativeImportAdapter || !term || !parserFirstWeekStartDate)) ||
+    (!isBackupImport && !isNativeImport && stepper.currentStep === 3 && (!parserFile || !selectedParserId || !parserFirstWeekStartDate)) ||
     (isBackupImport && stepper.currentStep === 1 && !backupFile)
 
   return {
@@ -256,6 +358,11 @@ export function useImportFlow() {
     bookmarkletHref,
     term,
     isBackupImport,
+    isNativeImport,
+    nativeImportAvailable,
+    nativeImportAdapter,
+    nativeImportError,
+    nativeImportStatus,
     isImporting,
     primaryLabel,
     primaryDisabled,

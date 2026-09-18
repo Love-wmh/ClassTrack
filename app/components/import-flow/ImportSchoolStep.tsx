@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { Database, FileJson2 } from 'lucide-react'
+import { Database, FileJson2, Smartphone } from 'lucide-react'
 import { Label } from '~/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { schools } from '~/lib/parsers'
 import type { School } from '~/lib/types'
 import type { ImportMethod } from '~/store/slices/uiSlice'
 import { OptionCard } from '~/components/common/OptionCard'
+import { getNativeCourseImportAdapter } from '~/lib/native-course-import'
 
 const importMethods: Array<{
   value: ImportMethod
@@ -25,6 +26,12 @@ const importMethods: Array<{
     description: '导入学校课程表 JSON，并通过解析器生成课程数据。',
     icon: <FileJson2 className="size-4" />,
   },
+  {
+    value: 'native-webview',
+    title: '应用内打开教务系统',
+    description: '在 Android App 内登录并直接捕获当前课表，无需安装书签脚本。',
+    icon: <Smartphone className="size-4" />,
+  },
 ]
 
 type ImportSchoolStepProps = {
@@ -32,9 +39,20 @@ type ImportSchoolStepProps = {
   selectedImportMethod: ImportMethod
   onSchoolChange: (school: School | null) => void
   onImportMethodChange: (method: ImportMethod) => void
+  nativeImportAvailable: boolean
 }
 
-export function ImportSchoolStep({ selectedSchool, selectedImportMethod, onSchoolChange, onImportMethodChange }: ImportSchoolStepProps) {
+export function ImportSchoolStep({
+  selectedSchool,
+  selectedImportMethod,
+  onSchoolChange,
+  onImportMethodChange,
+  nativeImportAvailable,
+}: ImportSchoolStepProps) {
+  const availableImportMethods = importMethods.filter(
+    (method) => method.value !== 'native-webview' || (nativeImportAvailable && Boolean(getNativeCourseImportAdapter(selectedSchool?.id)))
+  )
+
   const handleSchoolChange = (schoolId: string) => {
     onSchoolChange(schools.find((school) => school.id === schoolId) || null)
   }
@@ -60,7 +78,7 @@ export function ImportSchoolStep({ selectedSchool, selectedImportMethod, onSchoo
       <div className="space-y-2">
         <Label>导入方式</Label>
         <div className="grid gap-2">
-          {importMethods.map((method) => (
+          {availableImportMethods.map((method) => (
             <OptionCard
               key={method.value}
               title={method.title}
