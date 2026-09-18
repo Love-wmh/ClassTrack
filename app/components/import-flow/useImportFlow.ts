@@ -16,6 +16,7 @@ import { useClassStore } from '~/store'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 import { getCurrentRealWeek } from '~/features/schedule/utils'
 import { useStepper } from '~/components/stepper'
+import { isValidFirstWeekStartDate } from '~/lib/course-import-shell-protocol'
 
 const backupImportSteps = [
   { id: 'source', label: '来源' },
@@ -216,7 +217,16 @@ export function useImportFlow() {
     setNativeImportStatus('opening')
     setNativeImportError(null)
     try {
-      const result = await courseImportPlugin.open({ adapterId: nativeImportAdapter.adapterId, url: nativeImportAdapter.entryUrl, term })
+      const result = await courseImportPlugin.open({
+        adapterId: nativeImportAdapter.adapterId,
+        url: nativeImportAdapter.entryUrl,
+        term,
+        firstWeekStartDate: parserFirstWeekStartDate,
+      })
+      const importedFirstWeekStartDate =
+        result.firstWeekStartDate && isValidFirstWeekStartDate(result.firstWeekStartDate)
+          ? result.firstWeekStartDate
+          : parserFirstWeekStartDate
       let data: unknown
       try {
         data = JSON.parse(result.data) as unknown
@@ -226,15 +236,15 @@ export function useImportFlow() {
       setNativeImportStatus('captured')
       let classes: Class[]
       try {
-        classes = importClasses(data, parser.parse, { firstWeekStartDate: parserFirstWeekStartDate })
+        classes = importClasses(data, parser.parse, { firstWeekStartDate: importedFirstWeekStartDate })
       } catch {
         throw new CourseImportError('PARSE_ERROR', '课表响应无法识别')
       }
       if (classes.length === 0) {
         throw new CourseImportError('PARSE_ERROR', '未解析到课程数据')
       }
-      setFirstWeekStartDate(parserFirstWeekStartDate)
-      setCurrentWeek(getCurrentRealWeek(classes, parserFirstWeekStartDate))
+      setFirstWeekStartDate(importedFirstWeekStartDate)
+      setCurrentWeek(getCurrentRealWeek(classes, importedFirstWeekStartDate))
       if (activeSchool) {
         setSchool(activeSchool)
       }

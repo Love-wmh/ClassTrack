@@ -5,11 +5,14 @@ export type CourseImportOpenOptions = {
   adapterId: string
   url: string
   term: string
+  firstWeekStartDate?: string
 }
 
 export type CourseImportResult = {
   data: string
   sourceUrl: string
+  term?: string
+  firstWeekStartDate?: string
 }
 
 export type CourseImportErrorCode =
@@ -90,8 +93,9 @@ export function getCourseImportErrorMessage(error: unknown) {
     case 'CANCELLED':
       return '已取消应用内导入。'
     case 'INVALID_ADAPTER':
-    case 'INVALID_URL':
       return '应用内导入配置无效，请改用 JSON/书签脚本导入。'
+    case 'INVALID_URL':
+      return '应用内导入网址或跳转不在允许范围内，请返回后重试。'
     case 'NOT_LOGGED_IN_OR_NO_SCHEDULE':
       return '未找到课表响应，请登录并进入课表详情页后刷新重试。'
     case 'NETWORK_ERROR':

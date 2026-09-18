@@ -15,24 +15,20 @@ public final class ScheduleResponseValidator {
 
     private ScheduleResponseValidator() {}
 
+    /** Navigation is intentionally broader than capture only through this explicit policy. */
     public static boolean isAllowedPageUrl(String value) {
-        if (value == null) return false;
-        URI uri = parseUri(value);
-        return uri != null
-                && "https".equalsIgnoreCase(uri.getScheme())
-                && TARGET_HOST.equalsIgnoreCase(uri.getHost())
-                && uri.getUserInfo() == null
-                && (uri.getPort() == -1 || uri.getPort() == 443);
+        return CourseImportNavigationPolicy.isAllowedNavigationUrl(value);
     }
 
     public static boolean isTargetUrl(String value, String currentPageUrl) {
         if (value == null || !isAllowedPageUrl(currentPageUrl)) return false;
         URI uri = parseUri(value);
-        return uri != null && "https".equalsIgnoreCase(uri.getScheme())
+        return uri != null
+                && "https".equalsIgnoreCase(uri.getScheme())
                 && TARGET_HOST.equalsIgnoreCase(uri.getHost())
-                && uri.getUserInfo() == null
+                && uri.getRawUserInfo() == null
                 && (uri.getPort() == -1 || uri.getPort() == 443)
-                && TARGET_PATH.equals(uri.getPath());
+                && TARGET_PATH.equals(uri.getRawPath());
     }
 
     private static URI parseUri(String value) {

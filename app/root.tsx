@@ -2,6 +2,7 @@ import { isRouteErrorResponse, Links, Meta, Outlet, Scripts, ScrollRestoration }
 
 import type { Route } from './+types/root'
 import { Toaster } from '~/components/ui/sonner'
+import CourseImportShellEntry from '~/components/import-flow/CourseImportShellEntry'
 import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/nord.css'
 import MarkdownEditorDialog from '~/components/dialog/MarkdownEditorDialog'
@@ -10,7 +11,13 @@ import './app.css'
 import React from 'react'
 
 // React Router v7 自动使用的特殊函数
+function isNativeShellRequest() {
+  return typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('native-shell') === '1'
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
+  const nativeShell = isNativeShellRequest()
+
   return (
     <html lang="zh-CN">
       <head>
@@ -28,10 +35,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <Toaster position="top-center" />
-        <MarkdownEditorDialog />
-        <PwaUpdatePrompt />
-        <ScrollRestoration />
+        {!nativeShell && <Toaster position="top-center" />}
+        {!nativeShell && <MarkdownEditorDialog />}
+        {!nativeShell && <PwaUpdatePrompt />}
+        {!nativeShell && <ScrollRestoration />}
         <Scripts />
       </body>
     </html>
@@ -39,7 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />
+  return isNativeShellRequest() ? <CourseImportShellEntry /> : <Outlet />
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

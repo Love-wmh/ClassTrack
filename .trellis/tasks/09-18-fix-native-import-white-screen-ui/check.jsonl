@@ -1,0 +1,14 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend quality scope and checklist for verification."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Required test, typecheck, lint, format, build, and diff gates."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review shared CourseImportShell shadcn component reuse and responsive UI."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"Review TypeScript native option/result and shell protocol contracts."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Review first-week date, semester, parser, and import store synchronization."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Review Android/WebView/Capacitor/React data flow, lifecycle, and bridge boundaries."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Review parser/import and shared UI reuse; detect duplicated contracts."}
+{"file":".trellis/spec/frontend/native-course-import.md","reason":"Review navigation/capture allowlists, private-file handoff, error mapping, and fallback behavior."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/prd.md","reason":"Check every implementation result against requirements and acceptance criteria."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/design.md","reason":"Review dual WebView layout, appasset origin, bridge schema, security, and lifecycle design."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/implement.md","reason":"Review execution checklist, validation commands, device matrix, and rollback gates."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/white-screen-root-cause.md","reason":"Verify diagnostics address logcat evidence and do not overclaim root cause."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/architecture-decision.md","reason":"Verify persistent React chrome/content-slot decision and downgrade handling."}
+{"file":".trellis/tasks/09-18-fix-native-import-white-screen-ui/research/implementation-scope-and-tests.md","reason":"Review file scope, test layers, and environment-blocker handling."}
