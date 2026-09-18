@@ -120,3 +120,25 @@
 ### Next Steps
 
 - 提交四笔、发 PR、等 CI、rebase 合并
+
+
+## Session 3: 完成金智教务应用内导入
+<!-- trellis-session: v=2 fp=b32f01617dc335d4 -->
+
+**Date**: 2026-09-18
+**Task**: 完成金智教务应用内导入
+**Branch**: `feat/in-app-jinzhi-import`
+
+### Summary
+
+在 feat/in-app-jinzhi-import 分支实现 Android Capacitor 自有 CourseImport bridge 与受限 WebView，捕获天津理工大学金智课表接口并复用现有解析器/Zustand 导入；保留 Web/PWA 书签脚本与 JSON/备份降级。新增响应校验、XHR/fetch hook、临时文件清理及 TypeScript/Android 单元测试，更新 README、设计文档和 frontend native import code-spec。pnpm test/typecheck/lint/format:check/build、cap:sync、task validate 和 diff check 通过；Android Gradle 编译因 Gradle 下载网络/本地 SDK 环境阻塞，已记录。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c8889f7` | feat(import): add native JinZhi schedule import |
+
+### Status
+
+[OK] **Completed**
