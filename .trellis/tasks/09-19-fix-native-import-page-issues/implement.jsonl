@@ -1,0 +1,8 @@
+{"file":".trellis/spec/frontend/native-course-import.md","reason":"Native WebView shell, asset origin, bridge, content-slot, lifecycle, security, parser handoff, and required validation contract."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"React/shadcn component reuse and UI ownership constraints for the import shell."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Frontend verification, formatting, test, and build expectations."}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"TypeScript state and bridge contract safety requirements."}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Import flow state transitions and recovery behavior."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Cross-layer reasoning for React shell, Capacitor plugin, Activity, WebView assets, and parser data flow."}
+{"file":".trellis/tasks/archive/2026-09/09-18-fix-native-import-white-screen-ui/design.md","reason":"Previous dual-WebView architecture, asset-loader, lifecycle, and content-slot decisions to preserve unless new evidence disproves them."}
+{"file":".trellis/tasks/archive/2026-09/09-18-fix-native-import-white-screen-ui/implement.md","reason":"Previous implementation and verification record, including known Gradle/device blockers."}

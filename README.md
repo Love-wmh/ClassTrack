@@ -109,7 +109,7 @@ pnpm build
 pnpm cap:install:android
 ```
 
-该命令会构建 Debug APK、覆盖安装到手机，并重新打开 ClassTrack。需要本机有完整 JDK 21 和 Android SDK。
+该命令会先执行 `cap sync` 和 Debug APK 构建，再校验 APK 内的 `assets/public` 与最新 `build/client` 完全一致，最后覆盖安装并重新打开 ClassTrack。需要本机有完整 JDK 21 和 Android SDK；校验失败时不会安装旧 APK。
 
 本机还没有 JDK 21 或 Android SDK 时，先按[本机 Android 构建环境](#本机-android-构建环境)补齐。
 
@@ -205,6 +205,7 @@ docker run --rm -p 3000:3000 classtrack
 完成后：
 
 ```bash
-pnpm cap:build:android    # 产出 android/app/build/outputs/apk/debug/app-debug.apk
-pnpm cap:install:android  # 构建并安装到已连接的手机（脚本同时支持 Linux 与 macOS）
+pnpm cap:build:android    # sync、构建并校验 android/app/build/outputs/apk/debug/app-debug.apk
+pnpm test:android-assets    # 运行资产一致性检查的回归测试
+pnpm cap:install:android  # 构建、校验并安装到已连接的手机（脚本同时支持 Linux 与 macOS）
 ```
