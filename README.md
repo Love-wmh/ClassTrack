@@ -175,6 +175,8 @@ docker run --rm -p 3000:3000 classtrack
 
 ## 本机 Android 构建环境
 
+在 Android Studio 中打开 Android 工程时，请直接打开仓库内的 `android/` 目录，不要打开仓库根目录。Gradle JDK 请选择 Android Studio bundled JDK 21，或本机配置的完整 JDK 21；工程同步完成后，选择 `app` 运行配置即可部署 Debug 应用到模拟器或已连接的设备。Android Studio 的 `.idea` 配置和 `android/local.properties` 均为本机文件，不提交到仓库。
+
 在 Linux 或 macOS 上构建 Android，需要一次性补齐：
 
 1. **JDK 21**（含 `jlink`）：Linux 用 `sudo apt install openjdk-21-jdk`，macOS 用 `brew install openjdk@21`。
