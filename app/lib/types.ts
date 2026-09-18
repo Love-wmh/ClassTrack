@@ -87,6 +87,14 @@ export interface BookmarkletAdapter {
   createScript: (params: { term: string }) => string
 }
 
+// 原生应用内导入适配器只描述入口和能力，不复制课程字段映射。
+export interface NativeCourseImportAdapter {
+  adapterId: string
+  schoolId: string
+  entryUrl: string
+  endpointPath: string
+}
+
 // 应用状态类型
 export interface AppData {
   school: School | null

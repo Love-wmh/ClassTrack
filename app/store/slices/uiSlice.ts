@@ -1,7 +1,7 @@
 import type { School } from '~/lib/types'
 import type { StoreSlice } from '../types'
 
-export type ImportMethod = 'backup' | 'parser'
+export type ImportMethod = 'backup' | 'parser' | 'native-webview'
 
 export type MarkdownEditorDialogOptions = {
   title: string
