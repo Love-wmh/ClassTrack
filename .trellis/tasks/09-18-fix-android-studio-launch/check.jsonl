@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "项目规范索引"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "质量门禁和 Android 构建验证要求"}
+{"file": "docs/pwa-capacitor-changes.md", "reason": "既有 Android 工程变更与验证记录"}
+{"file": "README.md", "reason": "用户可执行的 Android Studio/Android 构建环境说明"}
