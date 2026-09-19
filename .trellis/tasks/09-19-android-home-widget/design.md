@@ -49,7 +49,7 @@
   
   走 buildscript classpath（而非 `plugins {}` + `gradlePluginPortal()`）的原因：根 `build.gradle` 只声明 `google()` / `mavenCentral()`，没有 Gradle Plugin Portal；这两个构件在 Maven Central 上存在（已实测华为云/阿里云镜像均 200），因此不需要新增仓库。
 - `android/variables.gradle` 增加 `kotlinVersion = '2.1.20'`、`glanceAppWidgetVersion = '1.2.0'`、`androidxWorkVersion = '2.11.2'`。
-- `android/app/build.gradle` 应用 `org.jetbrains.kotlin.android` 与 `org.jetbrains.kotlin.plugin.compose`，新增 `androidx.glance:glance-appwidget`、显式 `androidx.work:work-runtime-ktx`，并补齐 `compileOptions` / `kotlinOptions` 的 jvmTarget 一致性（见 D1.2）。
+- `android/app/build.gradle` 应用 `org.jetbrains.kotlin.android` 与 `org.jetbrains.kotlin.plugin.compose`，新增 `androidx.glance:glance-appwidget`、显式 `androidx.work:work-runtime-ktx`，并用 `kotlin { jvmToolchain(21) }` + `compilerOptions.jvmTarget` 把 Kotlin 的 jvmTarget 与 Java 侧对齐（见 D1.2）。
 - Kotlin 源码放在 `android/app/src/main/java/com/classtrack/app/widget/`（与既有包路径一致；Android 不要求 `.kt` 与 `.java` 分目录）。
 
 ### D1.1 版本选择依据
@@ -66,7 +66,7 @@
 | 风险 | 缓解 |
 |---|---|
 | KGP 与 AGP 8.13.0 的组合未在本仓库验证过 | 实现阶段第 1 步就是「只加工具链、加一个空 Kotlin 类」跑通 `assembleDebug`，再写业务代码（implement.md P1） |
-| Java 与 Kotlin 的 jvmTarget 不一致会导致构建失败 | 显式设置 `compileOptions`/`kotlinOptions` 同为 17；若现有 Java 编译设置被影响，以 `:app:testDebugUnitTest` + APK 构建双重确认 |
+| Java 与 Kotlin 的 jvmTarget 不一致会导致构建失败 | **已实测落地**：本机只有 JDK 21（`/usr/lib/jvm/temurin-21-jdk-amd64`），AGP 8.13 默认就按 21 产出 Java 字节码（改动前 `MainActivity.class` 已是 major 65）。只写 `compileOptions { targetCompatibility 17 }` **无效** —— AGP 用 JVM toolchain 覆盖它，Java 任务仍是 21，于是 KGP 报 `Inconsistent JVM-target compatibility: compileDebugJavaWithJavac (21) vs compileDebugKotlin (17)`。最终方案：统一为 **21**，用 `kotlin { jvmToolchain(21); compilerOptions { jvmTarget = JVM_21 } }`；实测 Kotlin 产物 major 65，与 Java 一致。**不引入第二个 JDK。** |
 | `buildFeatures.compose` 是否需要开启存在歧义 | 实现时以真实构建为准：先只应用 compose 插件；构建报错再补 `buildFeatures { compose = true }` |
 | `compose-compiler-gradle-plugin` 从 `repo1.maven.org` 直连在本机不稳（实测多次 000，但阿里云/华为云 200） | 若依赖解析失败，按 README 启用 `scripts/gradle-mirrors.init.gradle`；本设计不新增仓库声明 |
 | Glance 在 `:app` 模块内与 Capacitor 的 Java 代码共存出现问题 | 回滚路径见 §Rollback，降级到 RemoteViews（纯 Java/XML，零新工具链） |
