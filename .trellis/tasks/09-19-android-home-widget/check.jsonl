@@ -1,9 +1,7 @@
-{"file": ".trellis/tasks/09-19-android-home-widget/prd.md", "reason": "R1-R5 功能需求、N1-N6 非功能需求与 A/B/C/D 全部验收标准，是本次检查的判定依据"}
-{"file": ".trellis/tasks/09-19-android-home-widget/design.md", "reason": "D1-D10 决策、被否决方案、冻结契约与末尾 8 项一致性检查表；检查需确认实现未越界、未引入被否决的做法"}
-{"file": ".trellis/tasks/09-19-android-home-widget/implement.md", "reason": "阶段校验命令、通过判据、回滚点与收尾特别核对清单，检查按此逐项核对"}
 {"file": ".trellis/tasks/09-19-android-home-widget/research/external-glance-widget.md", "reason": "Glance 的已知限制与 provider XML 要求，用于判断渲染实现是否有平台级错误"}
 {"file": ".trellis/spec/frontend/native-course-import.md", "reason": "既有原生桥接与构建门禁契约；检查需确认边界未被放宽、check-android-assets 契约未被削弱"}
 {"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁与禁止模式的准确定义，决定是否存在为通过门禁而放宽规则的情况"}
 {"file": ".trellis/spec/frontend/type-safety.md", "reason": "类型与禁止抑制手段约定，检查新增 TS 模块是否违规"}
 {"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层契约单一事实来源的判断依据，用于确认 Web 与原生没有各自维护一份日期/周次逻辑"}
 {"file": ".trellis/tasks/09-19-android-home-widget/design-appendix.md", "reason": "D11/D12 的保证与失效边界、14 项一致性检查表；检查必须逐项核对，尤其 #3 权限合规、#9 覆盖窗口、#12 L2 广播、#13 L3 可降级、#14 结构性保证"}
+{"file": ".trellis/tasks/09-19-android-home-widget/env-setup.md", "reason": "本机 Gradle/Android 构建环境的必要绕法（可写 GRADLE_USER_HOME、HTTP 代理、ANDROID_USER_HOME）与各阶段推进状态；不按此配置 Gradle 会直接失败"}

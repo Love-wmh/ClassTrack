@@ -118,8 +118,9 @@
 
 ## 未决 / 需在实现中确认的事实
 
-1. `buildFeatures { compose = true }` 是否为 Glance-only 构建所必需（以真实构建为准）。
-2. KGP 2.1.20 与 AGP 8.13.0 的实际兼容性（KGP 对未测试 AGP 版本可能只告警）。
+1. ~~`buildFeatures { compose = true }` 是否为 Glance-only 构建所必需~~ → **已结案（P1 实测）**：**不需要**。只应用 `org.jetbrains.kotlin.plugin.compose` 即可编译 `@Composable`，未添加 `buildFeatures.compose`。
+2. ~~KGP 2.1.20 与 AGP 8.13.0 的实际兼容性~~ → **已结案（P1 实测）**：兼容，构建通过，未出现 AGP 版本告警阻断。真正的坑是 jvmTarget 对齐，见 design.md D1.2。
+2b. **本机 JDK 相关实测结论**：本机只有 JDK 21，AGP 8.13 默认按 21 产出 Java 字节码；`compileOptions` 会被 toolchain 覆盖，因此统一用 `kotlin { jvmToolchain(21) }` 让 Kotlin 与 Java 同为 21。**不需要、也不引入第二个 JDK。**
 3. WorkManager 2.11.2 是否与 Capacitor 8 / minSdk 24 组合正常（否则回落到 Glance 传递的 2.7.1 或 2.10.5）。
 4. 模拟器上通过 `adb` 完成「放置小工具」的具体可行路径（`adb shell input` 长按 + 拖拽，或人工放置后截图）。若不可行，D4 验收改为人工放置 + 截图留档，并在 check 阶段说明。
 5. 典型学期的实际快照体积（需在 P2 实测并写入测试断言）。若超过 256 KiB，先收紧 `WIDGET_MAX_ENTRIES` 再考虑压缩字段名。
