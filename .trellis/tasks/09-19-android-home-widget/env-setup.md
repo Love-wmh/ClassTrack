@@ -38,5 +38,5 @@ export GRADLE_USER_HOME=$GH ANDROID_USER_HOME=$AH
 | P3 Android 通道 | ✅ 完成 | 新增 6 个 Java 类 + 2 个 JUnit 测试类；Android 单测 16 → **47** 全绿（parser 14 / resolver 17）；`assembleDebug` 通过；`WidgetSnapshotPlugin` 已在 `MainActivity` 注册（比原计划提前，使该提交自成闭环） |
 | P4 Glance + 调度 | ✅ 完成 | Kotlin widget 包 8 个文件 + provider XML/布局/配色/字符串 + manifest 三接收器；`pnpm cap:build:android` 与 `android:check-assets` 通过；APK 内实测 `updatePeriodMillis=1800000`、`targetCellWidth=4/targetCellHeight=2`、三个接收器齐全；Android 单测 47 全绿。已完成里程碑：**小工具可被安装到桌面**（端到端放置待 P6） |
 | P5 Web 接入 | ✅ 完成 | 新增 `useWidgetSnapshotSync`（去抖 1.5s + 启动推送 + `resumed` 监听）、`WidgetSnapshotSync` 挂载组件、`useWidgetPrecision` 与 `WidgetPrecisionSettings`；Web 五项门禁全绿。**D5 已用真实 Chrome（CDP）取证**：`platform: "web"`、页面完整渲染、`exceptions: []`、仅两条既有的 DialogContent 警告（本次未新增任何 Dialog 代码）、无任何 WidgetSnapshot 桥调用。附带发现：Web 上 `isPluginAvailable('WidgetSnapshot')` 为 true（WebPlugin 兜底自己注册），因此平台判断是承重的。 |
-| P6 端到端 | ⬜ 待做 | |
+| P6 端到端 | ⚠️ 部分完成 | 设备相关的端到端**未完成**：`/dev/kvm` 不存在（x86_64 模拟器要求硬件加速）且无真机连接，模拟器直接拒绝启动。不依赖设备的验收项已全部取证（含新增的 9 个跨层用例，用 Web 侧真实产出的快照喂给原生解析器）；逐项证据与未验证清单见 [verification.md](./verification.md) |
 ---
