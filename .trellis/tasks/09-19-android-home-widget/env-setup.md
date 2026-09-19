@@ -36,7 +36,7 @@ export GRADLE_USER_HOME=$GH ANDROID_USER_HOME=$AH
 | P1 工具链 | ✅ 完成 | KGP 2.1.20 + compose 编译器插件 + Glance 1.2.0 + WorkManager 2.11.2 可编译出 APK；**不需要** `buildFeatures.compose`；Java/Kotlin jvmTarget 统一 21（见 design.md D1.2） |
 | P2 Web 契约 | ✅ 完成 | `app/lib/widget-snapshot.ts`（+18 用例）、`native-widget-snapshot.ts`（+5 用例）落地；全量 vitest 52 用例通过 |
 | P3 Android 通道 | ✅ 完成 | 新增 6 个 Java 类 + 2 个 JUnit 测试类；Android 单测 16 → **47** 全绿（parser 14 / resolver 17）；`assembleDebug` 通过；`WidgetSnapshotPlugin` 已在 `MainActivity` 注册（比原计划提前，使该提交自成闭环） |
-| P4 Glance + 调度 | ⬜ 待做 | |
+| P4 Glance + 调度 | ✅ 完成 | Kotlin widget 包 8 个文件 + provider XML/布局/配色/字符串 + manifest 三接收器；`pnpm cap:build:android` 与 `android:check-assets` 通过；APK 内实测 `updatePeriodMillis=1800000`、`targetCellWidth=4/targetCellHeight=2`、三个接收器齐全；Android 单测 47 全绿。已完成里程碑：**小工具可被安装到桌面**（端到端放置待 P6） |
 | P5 Web 接入 | ⬜ 待做 | |
 | P6 端到端 | ⬜ 待做 | |
 ---

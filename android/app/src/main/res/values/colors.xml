@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!--
+      小工具的配色：同名颜色在 values 与 values-night 各定义一次，Glance 侧用
+      ColorProvider(R.color.xxx) 引用，系统会按当前配置自动选到正确的一套，
+      因此渲染代码里不需要出现任何 if (isDark) 分支。
+    -->
+    <color name="widget_surface">#FFFFFFFF</color>
+    <color name="widget_text_primary">#FF1C1C1E</color>
+    <color name="widget_text_secondary">#FF4B5563</color>
+    <color name="widget_text_muted">#FF6B7280</color>
+    <color name="widget_accent">#FF2563EB</color>
+</resources>
