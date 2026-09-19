@@ -161,3 +161,28 @@ export function getWidgetSnapshotErrorMessage(error: unknown): string {
 export function addWidgetSnapshotResumedListener(listener: () => void): Promise<PluginListenerHandle> {
   return widgetSnapshotPlugin.addListener('resumed', listener)
 }
+
+/** 课表页路由；与原生 `WidgetPendingRoute.ROUTE_SCHEDULE` 必须一致（见对应的路由守卫测试）。 */
+export const WIDGET_ROUTE_SCHEDULE = '/'
+
+/** Web 层允许导航到的路由白名单。原生侧已经过滤过一次，这里再兜一层。 */
+const ALLOWED_WIDGET_ROUTES = [WIDGET_ROUTE_SCHEDULE]
+
+/**
+ * 读取并清空「点击小工具时带来的待跳转路由」。
+ *
+ * 原生侧（`WidgetPendingRoute`）已经把值白名单化成编译期常量；这里再做一次白名单判断，
+ * 是因为这是一条从 `Intent` extra 一路流到客户端路由的路径，跨了三层，任何一层都不该
+ * 单独承担「值一定是安全的」这个假设。
+ *
+ * @returns 允许跳转的路由；没有待跳转或值不在白名单内时返回 `null`。
+ */
+export async function consumeWidgetPendingRoute(): Promise<string | null> {
+  try {
+    const { route } = await widgetSnapshotPlugin.consumePendingRoute()
+    return route && ALLOWED_WIDGET_ROUTES.includes(route) ? route : null
+  } catch {
+    // 拿不到路由是正常情况（非原生环境、用户手动打开应用），不应影响启动。
+    return null
+  }
+}

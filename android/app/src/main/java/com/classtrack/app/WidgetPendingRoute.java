@@ -10,7 +10,14 @@ package com.classtrack.app;
 public final class WidgetPendingRoute {
     public static final String EXTRA_ROUTE = "classtrack_widget_route";
 
-    public static final String ROUTE_SCHEDULE = "/schedule";
+    /**
+     * 课表页在客户端的路由。
+     *
+     * 课表是 `app/routes.ts` 里的 **index 路由**，因此这里必须是 `/`，写成 `/schedule` 会让
+     * 客户端路由匹配失败并渲染 404 —— 而 ErrorBoundary 会替换整棵树，连带把小工具同步组件
+     * 一起卸载掉。这条契约由 `app/lib/native-widget-route.test.ts` 用真实路由表守住。
+     */
+    public static final String ROUTE_SCHEDULE = "/";
 
     private static volatile String pendingRoute;
 

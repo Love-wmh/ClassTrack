@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   appwidget-provider 的 initialLayout 是必填项：它在 Glance 完成第一次合成之前短暂显示。
-  这里刻意只放一个带圆角的纯色块，不放任何文字 —— 真正的文案全部由 Glance 渲染，
-  避免出现「占位文案一闪而过」的观感问题。
+  这里刻意只放一个纯色块，不放任何文字 —— 真正的文案全部由 Glance 渲染。
+
+  **RemoteViews 只允许 @RemoteView 白名单内的类**（FrameLayout / LinearLayout / TextView /
+  ImageView 等）。这里曾经放过一个 <View> 子节点，结果 launcher 在 inflate 阶段抛
+  `InflateException: Class not allowed to be inflated android.view.View`，桌面直接显示
+  「Can't load widget」。因此这里只用 FrameLayout 自身承载背景，不再放任何子节点。
 
   注意：这与 previewLayout 不是一回事。previewLayout 需要一份完整的传统 RemoteViews 布局，
   收益只有小工具选择器里的预览像素，本任务刻意不实现（见 design.md D7）。
@@ -11,10 +15,4 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/widget_surface"
-    android:padding="12dp">
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/widget_surface" />
-</FrameLayout>
+    android:padding="12dp" />

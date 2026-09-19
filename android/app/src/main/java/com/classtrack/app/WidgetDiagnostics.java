@@ -41,6 +41,10 @@ public final class WidgetDiagnostics {
         Log.w(TAG, "phase=refresh_failed");
     }
 
+    public static void compositionFailed(int errorCode, Throwable throwable) {
+        Log.e(TAG, "phase=composition_failed code=" + errorCode + " type=" + (throwable == null ? "none" : throwable.getClass().getSimpleName()));
+    }
+
     /**
      * 只允许白名单内的固定枚举值进入日志。
      *

@@ -33,6 +33,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.classtrack.app.MainActivity
 import com.classtrack.app.R
+import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
 import com.classtrack.app.WidgetOccurrence
 import com.classtrack.app.WidgetPendingRoute
@@ -62,6 +63,11 @@ class ClassTrackWidget : GlanceAppWidget() {
             WidgetRefreshController.resolveCurrentState(context, System.currentTimeMillis())
         }
         provideContent { WidgetContent(state) }
+    }
+
+    override fun onCompositionError(context: Context, appWidgetId: GlanceId, appWidgetErrorCode: Int, throwable: Throwable) {
+        WidgetDiagnostics.compositionFailed(appWidgetErrorCode, throwable)
+        super.onCompositionError(context, appWidgetId, appWidgetErrorCode, throwable)
     }
 }
 
