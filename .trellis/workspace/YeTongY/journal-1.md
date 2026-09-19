@@ -186,3 +186,25 @@ Fresh cap sync confirmed build/client and Android assets match, while the existi
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: Fix native shell 404 white screen and verify on emulator
+<!-- trellis-session: v=2 fp=2d79bf486e6ed130 -->
+
+**Date**: 2026-09-19
+**Task**: Fix native shell 404 white screen and verify on emulator
+**Branch**: `fix/native-import-white-screen-ui`
+
+### Summary
+
+Reproduced the reported white screen, layout and 404 on a real emulator and found the root cause: CourseImportActivity loaded the shell at /index.html, a path the client router cannot match, so React Router's ErrorBoundary replaced the whole tree with a 404 page. Loaded the shell at the origin root with an asset handler index mapping, allowed the CAS login host authserver.tjut.edu.cn as an explicit host plus path pair, de-duplicated the failed-state retry button, guarded the shell state callback that ran before React registered it, and stopped registering a Service Worker inside the native app. Verified on emulator: shell renders, bridge ready, CAS login page loads, back/refresh/cancel clean, rotation stable, four tabs render, no destroy-while-attached warning. Commit 5efd0bc tightened the shell URL predicate. Unverified: course CRUD, JSON upload and backup entry, IME and font scale, post-login capture.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a2fccfd` | fix(import): boot native shell at origin root and allow CAS host |
+
+### Status
+
+[OK] **Completed**
