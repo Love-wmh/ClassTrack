@@ -13,8 +13,18 @@ public class CourseImportNavigationPolicyTest {
         assertTrue(CourseImportNavigationPolicy.isAllowedNavigationUrl(ScheduleResponseValidator.ENTRY_URL));
         assertTrue(CourseImportNavigationPolicy.isAllowedNavigationUrl(
                 "https://jwxt.tjut.edu.cn/authserver/login?service=secret"));
+        assertTrue(CourseImportNavigationPolicy.isAllowedNavigationUrl(
+                "https://authserver.tjut.edu.cn/authserver/login"));
+        assertTrue(CourseImportNavigationPolicy.isAllowedNavigationUrl(
+                "https://authserver.tjut.edu.cn/authserver/login/deeper"));
         assertFalse(CourseImportNavigationPolicy.isAllowedNavigationUrl("http://jwxt.tjut.edu.cn/authserver"));
         assertFalse(CourseImportNavigationPolicy.isAllowedNavigationUrl("https://example.com/authserver"));
+        assertFalse(CourseImportNavigationPolicy.isAllowedNavigationUrl("https://authserver.tjut.edu.cn/jwapp/sys/wdkb"));
+        assertEquals("path", CourseImportNavigationPolicy.evaluateNavigation(
+                "https://authserver.tjut.edu.cn/jwapp/sys/wdkb").getReason());
+        assertFalse(CourseImportNavigationPolicy.isAllowedNavigationUrl("https://authserver.tjut.edu.cn/other"));
+        assertEquals("path", CourseImportNavigationPolicy.evaluateNavigation(
+                "https://authserver.tjut.edu.cn/other").getReason());
         assertFalse(CourseImportNavigationPolicy.isAllowedNavigationUrl("https://jwxt.tjut.edu.cn:8443/authserver"));
         assertFalse(CourseImportNavigationPolicy.isAllowedNavigationUrl(
                 "https://user:password@jwxt.tjut.edu.cn/authserver"));

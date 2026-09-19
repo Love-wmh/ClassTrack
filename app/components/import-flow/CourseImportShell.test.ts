@@ -30,7 +30,6 @@ describe('CourseImportShell', () => {
         status: 'ready',
         onBack: () => undefined,
         onRefresh: () => undefined,
-        onRetry: () => undefined,
         onPrimary: () => undefined,
       })
     )
@@ -40,6 +39,23 @@ describe('CourseImportShell', () => {
     expect(html).toContain('请求导入')
     expect(html).not.toContain('确认学年学期代码正确，然后点击“打开教务系统并导入”。')
     expect(html).not.toContain('min-h-full')
+  })
+
+  it('renders one retry action without refresh in the native failed state', () => {
+    const html = renderToStaticMarkup(
+      createElement(CourseImportShell, {
+        ...baseProps,
+        variant: 'native',
+        status: 'failed',
+        onBack: () => undefined,
+        onRefresh: () => undefined,
+        onPrimary: () => undefined,
+        onCancel: () => undefined,
+      })
+    )
+
+    expect(html.match(/>重试</g)).toHaveLength(1)
+    expect(html).not.toContain('>刷新<')
   })
 
   it('keeps the active native chrome compact for loading and captured states', () => {

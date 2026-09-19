@@ -7,6 +7,7 @@ import '@milkdown/crepe/theme/common/style.css'
 import '@milkdown/crepe/theme/nord.css'
 import MarkdownEditorDialog from '~/components/dialog/MarkdownEditorDialog'
 import PwaUpdatePrompt from '~/components/pwa/PwaUpdatePrompt'
+import { isNativeApp } from '~/lib/native-platform'
 import './app.css'
 import React from 'react'
 
@@ -37,7 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
         {!nativeShell && <Toaster position="top-center" />}
         {!nativeShell && <MarkdownEditorDialog />}
-        {!nativeShell && <PwaUpdatePrompt />}
+        {!nativeShell && !isNativeApp() && <PwaUpdatePrompt />}
         {!nativeShell && <ScrollRestoration />}
         <Scripts />
       </body>

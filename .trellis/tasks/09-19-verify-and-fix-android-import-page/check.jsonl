@@ -1,0 +1,6 @@
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/prd.md", "reason": "A/B/C/D 四组验收标准与约束，是本次检查的判定依据"}
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/design.md", "reason": "D1-D6 决策与既有安全边界，用于判断实现是否越界"}
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/implement.md", "reason": "阶段校验命令与回滚点，检查按此逐项核对"}
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/research/native-shell-404-root-cause.md", "reason": "复现证据；检查需确认修复确实覆盖该根因，且不引入新的 404 形态"}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "shell origin、导航 allowlist、capture allowlist 与数据流契约，检查是否存在边界被放宽"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁与测试规范，检查新增测试是否真正覆盖回归点而非形式化断言"}

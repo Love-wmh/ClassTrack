@@ -21,7 +21,6 @@ type CourseImportShellProps = {
   onBack?: () => void
   onRefresh?: () => void
   canRefresh?: boolean
-  onRetry?: () => void
   onPrimary?: () => void
   onCancel?: () => void
 }
@@ -60,7 +59,6 @@ export function CourseImportShell({
   onBack,
   onRefresh,
   canRefresh = true,
-  onRetry,
   onPrimary,
   onCancel,
 }: CourseImportShellProps) {
@@ -158,12 +156,7 @@ export function CourseImportShell({
                 <ArrowLeft />
                 返回
               </Button>
-              {status === 'failed' ? (
-                <Button variant="outline" onClick={onRetry}>
-                  <RefreshCw />
-                  重试
-                </Button>
-              ) : (
+              {status !== 'failed' && (
                 <Button variant="outline" onClick={onRefresh} disabled={!isActive || !canRefresh}>
                   <RefreshCw />
                   刷新

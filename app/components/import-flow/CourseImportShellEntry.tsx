@@ -84,7 +84,6 @@ export default function CourseImportShellEntry() {
         onBack={() => window.CourseImportShell?.back()}
         onRefresh={() => window.CourseImportShell?.refreshAcademic()}
         canRefresh={nativeState.canRefresh}
-        onRetry={startAcademic}
         onPrimary={
           status === 'idle' ? startAcademic : status === 'failed' ? startAcademic : () => window.CourseImportShell?.requestImport()
         }

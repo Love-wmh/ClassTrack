@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { assertAssetMapEqual, collectLocalAssetReferences } from './check-android-assets.js'
+import { assertAssetMapEqual, assertNativeShellContract, collectLocalAssetReferences } from './check-android-assets.js'
+
+test('requires a route-matching native shell boot path', () => {
+  assert.doesNotThrow(() => assertNativeShellContract())
+})
 
 test('collects only local shell asset references', () => {
   assert.deepEqual(
