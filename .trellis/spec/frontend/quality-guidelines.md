@@ -90,4 +90,6 @@ Android Studio 直接启动时，必须打开仓库内的 `android/` 目录，�
 
 网络不畅时有两个入库的逃生通道：gradle 发行版可从华为云预置到 wrapper dists 目录；依赖镜像可复制 `scripts/gradle-mirrors.init.gradle` 到 `~/.gradle/init.d/`（华为云中央仓库优先、阿里云 Google Maven 其次、官方仓库兜底）。注意华为云**没有**可用的 Google Maven 镜像（实测返回 HTML）。
 
+Android 测试版由 `.github/workflows/android-beta.yml` 自动发布（merge 进 `master` 且改动涉及 `android/**`、`app/**`、`scripts/**`、`package.json`、`pnpm-lock.yaml` 时触发，也可手动 dispatch）：跑 `pnpm cap:sync:android`、原生单元测试、编译 APK、用 `CLASS_TRACK_ANDROID_APK_PATH` 指向**本次要发布的那个包**做资产一致性校验，然后创建 `android-beta-<run_number>` 预发布并把 APK 挂上（保留最近 10 个）。签名凭据只从 Secrets 读（`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`），`android/app/build.gradle` 只在四个变量齐备时注册 `signingConfigs.release`；缺任一变量则工作是发 debug 包并在日志里告警，**不要**把签名密钥或 `android/local.properties` 提交进仓库。版本号由 `CLASSTRACK_VERSION_CODE` / `CLASSTRACK_VERSION_NAME` 注入（取 Actions 的 run_number），保证测试机可覆盖安装。
+
 生产镜像是两阶段构建（Node 22 + pnpm 构建 → nginx 托管 `build/client`，监听 3000）：`docker build -t classtrack .` 与 `docker run --rm -p 3000:3000 classtrack`。SPA 深层路由回退 `index.html`，`sw.js`/manifest/`index.html` 均为 `no-cache`，哈希资产长缓存。`pnpm start` 是 SSR 模式的模板残留脚本，本项目 `ssr: false` 下必然失败，不要使用。
