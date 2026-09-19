@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 import MobileNavigationSettings from './MobileNavigationSettings'
+import WidgetPrecisionSettings from './WidgetPrecisionSettings'
 
 export default function ProfilePage() {
   const {
@@ -106,6 +107,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
             <MobileNavigationSettings />
+            <WidgetPrecisionSettings />
           </div>
         </div>
       </div>

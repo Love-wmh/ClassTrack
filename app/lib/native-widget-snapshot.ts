@@ -101,6 +101,11 @@ export const widgetSnapshotPlugin = registerPlugin<WidgetSnapshotPlugin>('Widget
  * 只有 Android 且原生插件已注册时为真；其余环境（浏览器、PWA、iOS）返回 false，
  * 调用方必须据此完全跳过同步逻辑。
  *
+ * **平台判断是承重的，不要简化掉**：在浏览器里 `Capacitor.isPluginAvailable('WidgetSnapshot')`
+ * 会返回 **true** —— 因为上面 `registerPlugin` 的 `web:` 兜底本身就注册了一个实现。
+ * 只靠它判断会让浏览器走上真正的同步分支，从而产生无意义的桥调用与报错。
+ * 这一点已在真实 Chrome 里实测确认（见 P5 的 D5 取证：`platform: "web"`、插件可用为 true、零桥调用）。
+ *
  * @returns 是否可用。
  */
 export function isNativeWidgetSnapshotAvailable(): boolean {
