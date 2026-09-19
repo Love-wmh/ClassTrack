@@ -248,3 +248,50 @@ node /tmp/wv-eval.mjs @/tmp/seed.js && node /tmp/wv-eval.mjs "location.reload()"
 - **「拖放放置时 configure 自动弹窗」**：Pixel Launcher 全屏 picker 下未能捕获该时序。
 - **`preview_sized 286×158` 与真机卡片量测 240×138 dp 的差值**来自 launcher 自身的内缩，属已知差异；
   预览与真机的**内容裁决**已一致。
+
+---
+
+## 2026-09-20 第三轮真机回测：滚动条、默认样式与整卡点击回归
+
+用户回测又报了三件事，全部修完并在真机取证。
+
+### 缺陷 C：点卡片打不开 App（严重，本轮新引入的回归）
+
+- **现象**：改成整卡滚动之后，点击卡片没有任何反应，App 打不开。
+- **根因**：`LazyColumn` 的底层是 RemoteViews 集合里的 `ListView`，它几乎铺满整张卡片；`AbsListView` 会为自己的
+  滚动吃掉触摸事件，**挂在外层根布局上的 `clickable` 因此永远收不到点击**。改成整卡滚动之前列表只占下半部分，
+  上半部分的 hero 区还能命中根布局，所以问题没有暴露。
+- **修法**：同一个 `actionStartActivity(...)` 挂到三处 —— `LazyColumn` 自身、每个列表项的 `Box`、以及首尾两个
+  留白项（覆盖内边距与内容下方空白）。
+- **真机验证**：`adb shell input tap` 分别命中 hero 区（512,1830）与课程行区（512,2020），
+  `dumpsys activity activities` 的 `topResumedActivity` 两次都变成 `com.classtrack.app/.MainActivity`
+  （修复前是 `com.android.launcher/.Launcher`）。
+
+### 缺陷 D：拖动时右缘出现滚动条，压住教室列
+
+- **根因**：Glance 的集合容器布局是 `glance_list.xml` 里的 `ListView`，其 style `Glance.AppWidget.List` 只设了
+  `ellipsize`、**没有**关滚动条，于是走 Android 给 `ListView` 的默认纵向滚动条。
+- **修法**：app 模块放一份同名资源 `res/layout/glance_list.xml`（与 `glance-appwidget-1.2.0` 逐字一致，只多
+  `android:scrollbars="none"`）—— Android 的资源合并是 app 覆盖库，因此不需要 fork 依赖。
+- **APK 取证**（`aapt2` 为 SDK build-tools 36.0.0）：
+  `aapt2 dump xmltree --file res/layout/glance_list.xml app-debug.apk`
+  → `E: ListView` + `android:scrollbars(0x010100de)=0x00000000`（none）。
+- **未做到的部分**：真机上卡片内容恰好一屏放得下（三节课全部可见），因此**没有出现可滚动状态**，无法用截图
+  复现「拖动时的滚动条」前后对比。本轮证据是资源层的（APK 内该属性为 none）+ 机制说明；升级 Glance 时必须重新
+  对照上游那份布局（见 design D17 坑 2 的版本耦合提醒）。
+
+### 需求变更：默认样式改为「接下来」
+
+- `WidgetStyleConfig.DEFAULT_LAYOUT_STYLE` 由 `DAY_LIST` 改为 `NEXT_UP`（单元测试同步改为
+  `defaultsAreNextUpWithDimmedFinishedClasses`）。
+- 选择器预览按 R10 的一致性要求同步换成默认样式的长相：新增 `res/layout/widget_preview_next_up.xml`
+  （RemoteViews 白名单类，无 `<View>`/`Space`），provider 的 `previewLayout` 指向它，删除
+  `widget_preview_day_list.xml`；示意图脚本 `scripts/generate-widget-preview.py` 改为绘制同一套默认样式，
+  并顺带把内边距/圆角同步到运行期的 14/12dp 与 20dp。
+- APK 取证：`aapt2 dump resources` → `previewLayout=0x7f0b04b8` 即 `layout/widget_preview_next_up`。
+
+### 门禁
+
+- Android 单测 **87 例全绿**（默认样式用例已改写）。
+- 资源层校验：`strings.xml` / provider XML / 新 mock 布局 XML 均通过解析；`glance_list.xml` 覆盖生效。
+- 真机回归：整卡点击恢复；样式切换、刷新链路与日志无异常（无 `FATAL` / `ActionException`）。

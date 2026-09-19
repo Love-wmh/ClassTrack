@@ -35,8 +35,13 @@ public final class WidgetStyleConfig {
     /** 存储键；与配置页写入的键保持一致。 */
     public static final String KEY_FINISHED_POLICY = "finished_policy";
 
-    /** 未配置过的实例使用「全天课表」。 */
-    public static final LayoutStyle DEFAULT_LAYOUT_STYLE = LayoutStyle.DAY_LIST;
+    /**
+     * 未配置过的实例使用「接下来」。
+     *
+     * <p>2026-09-20 由产品负责人从「全天课表」改成「接下来」：它同时给出 hero（现在上什么）与当天的课表，
+     * 在放置时不多问一句也已经是信息量最大的默认值；想要纯列表的用户可以在配置页里改成「全天课表」。
+     */
+    public static final LayoutStyle DEFAULT_LAYOUT_STYLE = LayoutStyle.NEXT_UP;
 
     /** 未配置过的实例使用「已上完灰显」。 */
     public static final FinishedPolicy DEFAULT_FINISHED_POLICY = FinishedPolicy.SHOW_DIM;

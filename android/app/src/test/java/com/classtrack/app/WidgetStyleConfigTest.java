@@ -14,10 +14,10 @@ import org.junit.Test;
  */
 public class WidgetStyleConfigTest {
     @Test
-    public void defaultsAreDayListWithDimmedFinishedClasses() {
+    public void defaultsAreNextUpWithDimmedFinishedClasses() {
         WidgetStyleConfig config = WidgetStyleConfig.defaults();
 
-        assertEquals(WidgetStyleConfig.LayoutStyle.DAY_LIST, config.getLayoutStyle());
+        assertEquals("默认样式是「接下来」（2026-09-20 起）", WidgetStyleConfig.LayoutStyle.NEXT_UP, config.getLayoutStyle());
         assertEquals(WidgetStyleConfig.FinishedPolicy.SHOW_DIM, config.getFinishedPolicy());
     }
 

@@ -72,6 +72,7 @@
     <!-- 预览示意图里的示例课程：只是静态 mock，不是任何用户数据；三份示意图复用同一批 -->
     <string name="widget_preview_summary">今天 周三 · 共 6 节</string>
     <string name="widget_preview_hero_label">正在进行 · 第 3-4 节</string>
+    <string name="widget_preview_hero_name">数据结构</string>
     <string name="widget_preview_hero_time">14:00 - 15:35 · C305</string>
     <string name="widget_preview_style_entry">样式</string>
     <string name="widget_preview_counter">今天还有 2 节</string>

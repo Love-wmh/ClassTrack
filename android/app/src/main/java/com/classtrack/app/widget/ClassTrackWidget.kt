@@ -23,6 +23,7 @@ import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
@@ -264,10 +265,22 @@ private fun ColumnScope.WidgetBody(context: Context, state: WidgetDisplayState, 
         return
     }
 
-    LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-        item { Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING)) }
-        items(lines.size) { index -> BodyLineView(context, state, plan, hero, appWidgetId, lines[index]) }
-        item { Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING)) }
+    // 点击必须同时挂在**列表容器**与**每一个列表项**上，不能只挂在外层根布局：
+    // 真机上 `LazyColumn` 底层是 RemoteViews 集合里的 `ListView`，它几乎铺满整张卡片，`AbsListView`
+    // 会把触摸事件自己吃掉，于是挂在根布局上的点击收不到任何点击（真机复现：点卡片没反应、打不开 App）。
+    // 项级点击是集合型 widget 的标准做法，容器级点击则覆盖列表项之间的空隙与下方留白。
+    val openApp = actionStartActivity(scheduleIntent(context))
+
+    LazyColumn(
+        modifier = GlanceModifier.fillMaxWidth().defaultWeight().clickable(openApp),
+    ) {
+        item { Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING).clickable(openApp)) }
+        items(lines.size) { index ->
+            Box(modifier = GlanceModifier.fillMaxWidth().clickable(openApp)) {
+                BodyLineView(context, state, plan, hero, appWidgetId, lines[index])
+            }
+        }
+        item { Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING).clickable(openApp)) }
     }
 }
 

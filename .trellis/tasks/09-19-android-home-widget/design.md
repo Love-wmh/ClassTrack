@@ -328,7 +328,7 @@ fun formatCountdown(...)  // 不使用；时间文案全部来自 JS
 
 - 存储：`updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs -> ... }` 写两个键；读取用 `currentState(glanceId, PreferencesGlanceStateDefinition)`。选 Glance 状态容器而不是自建 prefs 键，是因为它天然按 `GlanceId` 分片、随实例删除而清理，不会因为 `appWidgetId` 复用而继承上一个实例的样式。
 - 映射：`GlanceAppWidgetManager.getAppWidgetId(glanceId)` / `getGlanceIdBy(appWidgetId)` / `getGlanceIdBy(intent)`（三个 API 已在 `glance-appwidget-1.2.0` 的字节码里确认存在，见下）。
-- 默认值：从未写入过状态 → 全天课表 + 已上完灰显。未知或损坏的值按默认值处理、不抛异常（与 D2 `schemaVersion` 不匹配时的策略一致）。
+- 默认值：从未写入过状态 → **接下来**（`DEFAULT_LAYOUT_STYLE`，2026-09-20 从「全天课表」改）+ 已上完灰显。选择器预览（D14）与配置页的默认选中项都跟随这个常量：改它就要同步改 `widget_preview_next_up.xml` 与 `scripts/generate-widget-preview.py`。未知或损坏的值按默认值处理、不抛异常（与 D2 `schemaVersion` 不匹配时的策略一致）。
 - 清理：覆写 `GlanceAppWidgetReceiver.onDeleted(context, appWidgetIds)`，删除该实例的键。
 
 ```kotlin
@@ -392,10 +392,32 @@ fun getGlanceIdBy(intent: Intent): GlanceId
 - **hero 课程名只给一行**（`maxLines = 1`）：真机上两行标题会把卡片上半部分吃光，留给「剩余课程」的位置只剩一丝。用户的原话：「如果课程要换行，留给剩余部分的显示面积就很少」。
 - **紧凑样式不因格子变大而加内容**：它的定位就是只显示一节课（R8），用户也确认「紧凑可以就不显示那么多」。
 
+---
+
+## D17. 集合型 widget 的两个真机坑：点击与滚动条（2026-09-20 回测确立）
+
+`LazyColumn` 让正文变成 RemoteViews **集合**（底层是宿主的 `ListView` + `RemoteViewsService`）。这一步带来两个只有真机能发现的坑，都已修，并写进 spec 契约防止复发。
+
+### 坑 1：整卡点击失效（严重，用户报「点卡片打不开 App」）
+
+- **现象**：改装成整卡滚动之后，点卡片没有任何反应，App 打不开。
+- **根因**：`LazyColumn` 变成的 `ListView` 几乎铺满整张卡片，`AbsListView` 会为自己的滚动把触摸事件吃掉，**挂在最外层根布局上的 `clickable` 因此永远收不到点击**。此前能点是因为列表只占卡片下半部分，上半部分的 hero 区还能命中根布局。
+- **修法**：同一个 `actionStartActivity(...)` 同时挂在三处 —— `LazyColumn` 自己（覆盖列表容器，包括项之间的空隙）、每个列表项的 `Box`（项级点击，集合型 widget 的标准做法）、以及首尾两个留白项（覆盖内边距与内容下方的空白）。改动渲染层时必须保留这三处。
+- **验证**：真机 `adb shell input tap` 命中 hero 区与课程行区，`dumpsys activity activities` 的 `topResumedActivity` 都变成 `com.classtrack.app/.MainActivity`（修复前是 launcher）。
+
+### 坑 2：拖动时出现滚动条，压住教室列
+
+- **现象**：上下滑动时右缘出现一条纵向滚动条，正好压在教室文字上。
+- **根因**：Glance 的集合容器布局是 `glance_list.xml` 里的 `ListView`，它的 style `Glance.AppWidget.List` 只设了 `ellipsize`，**没有**关滚动条 —— 于是走 Android 给 `ListView` 的默认纵向滚动条。
+- **修法**：在 app 模块放一份同名资源 `android/app/src/main/res/layout/glance_list.xml`（与 `glance-appwidget-1.2.0` 的版本逐字一致，只多 `android:scrollbars="none"`）。Android 的资源合并是 **app 覆盖库**，因此不需要 fork 依赖。验证方式：`aapt2 dump xmltree --file res/layout/glance_list.xml <apk>` 应显示 `scrollbars=0x0`。
+- **代价**：这份文件与 Glance 版本耦合 —— 升级 Glance 时必须重新 diff 上游那份布局，否则会漏掉上游新增的属性。
+
+---
+
 **权衡**：`Exact` 下每次尺寸变化都要重新组合（`Responsive` 会预先为几档尺寸各组合一次），代价是首次绘制稍贵；换来的是任意尺寸都正确、以及预览与真机不再可能不一致。
 ---
 
 ## 附录
 
-D11（长期不打开 App 的保证与失效边界）、D12（精度阶梯的用户可见行为与交付口径）、D13（每实例样式配置与配置页安全边界）、D14（预览：真实渲染与残余风险）、D15（两处实验性 API opt-in）、D16（响应式：按真实尺寸自适应）、一致性检查表、Rollback、验证策略与未决事实见 [design-appendix.md](./design-appendix.md)。**D11/D12 是交付口径的强制部分；D13 的安全边界与 D14 的残余风险是新增攻击面的强制部分；D16 是渲染改动的强制约束（不许回到尺寸档位与阈值），实现与检查都必须读。**
+D11（长期不打开 App 的保证与失效边界）、D12（精度阶梯的用户可见行为与交付口径）、D13（每实例样式配置与配置页安全边界）、D14（预览：真实渲染与残余风险）、D15（两处实验性 API opt-in）、D16（响应式：按真实尺寸自适应）、D17（集合型 widget 的点击与滚动条）、一致性检查表、Rollback、验证策略与未决事实见 [design-appendix.md](./design-appendix.md)。**D11/D12 是交付口径的强制部分；D13 的安全边界与 D14 的残余风险是新增攻击面的强制部分；D16 是渲染改动的强制约束（不许回到尺寸档位与阈值），实现与检查都必须读。**
 
