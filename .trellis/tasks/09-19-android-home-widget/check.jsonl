@@ -5,3 +5,4 @@
 {"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层契约单一事实来源的判断依据，用于确认 Web 与原生没有各自维护一份日期/周次逻辑"}
 {"file": ".trellis/tasks/09-19-android-home-widget/design-appendix.md", "reason": "D11/D12 的保证与失效边界、14 项一致性检查表；检查必须逐项核对，尤其 #3 权限合规、#9 覆盖窗口、#12 L2 广播、#13 L3 可降级、#14 结构性保证"}
 {"file": ".trellis/tasks/09-19-android-home-widget/env-setup.md", "reason": "本机 Gradle/Android 构建环境的必要绕法（可写 GRADLE_USER_HOME、HTTP 代理、ANDROID_USER_HOME）与各阶段推进状态；不按此配置 Gradle 会直接失败"}
+{"file": ".trellis/tasks/09-19-android-home-widget/verification.md", "reason": "各验收项的真实证据与「未验证项 + 可复现阻塞原因」清单；检查必须以此为准，不得把未验证项当作已完成"}
