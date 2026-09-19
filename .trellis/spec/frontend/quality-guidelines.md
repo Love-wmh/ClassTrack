@@ -80,6 +80,28 @@ toast.success('数据导入成功')
 
 ---
 
+## 提交信息（Commit Message）
+
+**主题必须用中文写**，由 `commitlint.config.cjs` 里的内联插件规则强制，不靠自觉：
+
+| 位置 | 规则 | 级别 |
+|---|---|---|
+| 主题 | 必须含中文（否则拒绝提交） | error（`subject-chinese`） |
+| 正文 | 非空时应含中文 | warning（`body-chinese`，`Refs: #12` 这类英文脚注不拦） |
+| `type` | 仍限定在 `build \| chore \| ci \| docs \| feat \| fix \| perf \| refactor \| revert \| style \| test` | error（`type-enum`） |
+| `scope` | 保持英文标识（`widget`、`android`、`import`…），便于工具与检索 | 约定 |
+
+```text
+fix(widget): 修掉点卡片打不开 App 的问题      ✅
+ci(android): 自动发布测试版 APK                ✅
+fix(widget): keep card clicks working          ❌ 主题没有中文
+```
+
+- 本地：husky 的 `.husky/commit-msg` → `pnpm commitlint --edit`，`git commit` 时即被拦下；
+- CI：`.github/workflows/ci.yml` 的 `commitlint` job 校验 PR 范围内的每个提交，因此 `--no-verify` 绕不过去；
+- 手工自查：`pnpm exec commitlint --edit <文件>`，或对一段范围 `pnpm exec commitlint --from <A> --to <B> --verbose`；
+- **不回改历史**：2026-09-20 之前的提交信息是英文的，规则从该日起对新提交生效。
+
 ## 构建环境
 
 五项门禁在本机直接执行即可（Node 22 + pnpm 9.15.9 是当前对齐版本）。

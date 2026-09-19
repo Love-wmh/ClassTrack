@@ -28,3 +28,25 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: pnpm build
+
+  # 提交信息规范：主题必须用中文写（规则见 commitlint.config.cjs 的内联插件）。
+  # 本地由 husky 的 commit-msg hook 拦一次，这里再拦一次，`--no-verify` 因此绕不过去。
+  # 只校验 PR 内的提交：master 上的推送通常就是这些提交，没必要重复跑。
+  commitlint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 默认只拉一个 commit，校验不了范围内的提交。
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 校验 PR 内所有提交信息
+        run: pnpm exec commitlint --from "${{ github.event.pull_request.base.sha }}" --to "${{ github.event.pull_request.head.sha }}" --verbose
