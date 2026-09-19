@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/research/native-shell-404-root-cause.md", "reason": "本次缺陷的真实复现证据与完整根因链路；实现必须以此为准，不得凭猜测改动"}
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/design.md", "reason": "D1-D6 设计决策、被否决方案与安全等价性要求"}
+{"file": ".trellis/tasks/09-19-verify-and-fix-android-import-page/implement.md", "reason": "阶段划分、每阶段校验命令与回滚点"}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "双 WebView、shell/content-slot、导航与捕获 allowlist、生命周期与数据流的既有契约，本次改动不得违背"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁、测试与格式检查的准确定义，决定新增文件是否会被拦下"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "新增 TS 模块（native-platform、native-shell-url）的类型与禁止抑制手段约定"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "root.tsx 条件渲染调整需遵循的组件与 props 约定"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Java 与 TS 之间壳层 URL 契约的单一事实来源判断依据"}

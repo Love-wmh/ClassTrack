@@ -2,27 +2,28 @@ package com.classtrack.app;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /** Keeps page navigation policy separate from the exact schedule-response capture policy. */
 public final class CourseImportNavigationPolicy {
-    private static final Set<String> ALLOWED_NAVIGATION_HOSTS;
-    private static final Set<String> ALLOWED_NAVIGATION_PATH_PREFIXES;
+    /** Explicit host to allowed path-prefix allowlist. A prefix granted for one host is never granted to another. */
+    private static final Map<String, Set<String>> ALLOWED_NAVIGATION_HOST_PATHS;
 
     static {
-        Set<String> hosts = new HashSet<>();
-        // The authentication page observed for the configured adapter remains on this host.
-        // Add future CAS hosts here explicitly after device verification; never use a wildcard.
-        hosts.add(ScheduleResponseValidator.TARGET_HOST);
-        ALLOWED_NAVIGATION_HOSTS = Collections.unmodifiableSet(hosts);
-
-        Set<String> paths = new HashSet<>();
-        // Main-frame navigation is limited to the JinZhi app and the observed same-host CAS.
-        paths.add("/jwapp/sys/wdkb");
-        paths.add("/authserver");
-        ALLOWED_NAVIGATION_PATH_PREFIXES = Collections.unmodifiableSet(paths);
+        Map<String, Set<String>> allowed = new HashMap<>();
+        Set<String> jinZhi = new HashSet<>();
+        jinZhi.add("/jwapp/sys/wdkb");
+        jinZhi.add("/authserver");
+        allowed.put(ScheduleResponseValidator.TARGET_HOST, Collections.unmodifiableSet(jinZhi));
+        // The CAS login host was added as an explicit entry from redacted device evidence; never use a wildcard.
+        Set<String> cas = new HashSet<>();
+        cas.add("/authserver");
+        allowed.put("authserver.tjut.edu.cn", Collections.unmodifiableSet(cas));
+        ALLOWED_NAVIGATION_HOST_PATHS = Collections.unmodifiableMap(allowed);
     }
 
     private CourseImportNavigationPolicy() {}
@@ -55,10 +56,10 @@ public final class CourseImportNavigationPolicy {
         }
 
         String host = uri.getHost().toLowerCase(Locale.ROOT);
-        if (!ALLOWED_NAVIGATION_HOSTS.contains(host)) {
+        if (!hasAllowedNavigationHost(host)) {
             return Decision.blocked("host", safeUrl(uri));
         }
-        if (!isAllowedNavigationPath(uri.getRawPath())) {
+        if (!isAllowedNavigationPath(host, uri.getRawPath())) {
             return Decision.blocked("path", safeUrl(uri));
         }
         return Decision.allowed(safeUrl(uri));
@@ -117,9 +118,15 @@ public final class CourseImportNavigationPolicy {
     }
 
 
-    private static boolean isAllowedNavigationPath(String path) {
+    private static boolean hasAllowedNavigationHost(String host) {
+        return ALLOWED_NAVIGATION_HOST_PATHS.containsKey(host);
+    }
+
+    private static boolean isAllowedNavigationPath(String host, String path) {
         if (path == null || path.isEmpty()) return false;
-        for (String prefix : ALLOWED_NAVIGATION_PATH_PREFIXES) {
+        Set<String> prefixes = ALLOWED_NAVIGATION_HOST_PATHS.get(host);
+        if (prefixes == null) return false;
+        for (String prefix : prefixes) {
             if (path.equals(prefix) || path.startsWith(prefix + "/")) return true;
         }
         return false;

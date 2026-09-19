@@ -39,8 +39,6 @@ public class CourseImportActivity extends AppCompatActivity {
     private static final String EXTRA_FIRST_WEEK_START_DATE = "firstWeekStartDate";
     private static final String EXTRA_RESULT_FILE = "resultFile";
     private static final String EXTRA_SOURCE_URL = "sourceUrl";
-    private static final String SHELL_URL = "https://appassets.androidplatform.net/index.html?native-shell=1";
-    private static final String SHELL_HOST = "appassets.androidplatform.net";
     private static final long CAPTURE_TIMEOUT_MS = 8_000L;
     private static final float MIN_SHELL_HEIGHT_DP = 112f;
     private static final float MAX_SHELL_HEIGHT_DP = 480f;
@@ -116,8 +114,8 @@ public class CourseImportActivity extends AppCompatActivity {
         setContentView(rootView);
         configureShellWebView();
         configureAcademicWebView();
-        CourseImportDiagnostics.navigationStarted(SHELL_URL, true, true);
-        shellWebView.loadUrl(SHELL_URL);
+        CourseImportDiagnostics.navigationStarted(CourseImportShellUrl.SHELL_URL, true, true);
+        shellWebView.loadUrl(CourseImportShellUrl.SHELL_URL);
         updateShellState();
     }
 
@@ -130,9 +128,7 @@ public class CourseImportActivity extends AppCompatActivity {
 
         @Override
         public WebResourceResponse handle(String path) {
-            String assetPath = path == null ? "" : path;
-            if (assetPath.startsWith("/")) assetPath = assetPath.substring(1);
-            return delegate.handle("public/" + assetPath);
+            return delegate.handle(PublicAssetPathResolver.toAssetPath(path));
         }
     }
 
@@ -161,7 +157,7 @@ public class CourseImportActivity extends AppCompatActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                if (!isShellOriginUrl(url)) return blockedShellResource();
+                if (!CourseImportShellUrl.isShellOriginUrl(url)) return blockedShellResource();
                 WebResourceResponse response = assetLoader.shouldInterceptRequest(request.getUrl());
                 return response == null ? blockedShellResource() : response;
             }
@@ -169,7 +165,7 @@ public class CourseImportActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
-                if (isShellUrl(url)) return false;
+                if (CourseImportShellUrl.isShellUrl(url)) return false;
                 CourseImportDiagnostics.navigationBlocked(url, "shell-origin");
                 return true;
             }
@@ -181,7 +177,7 @@ public class CourseImportActivity extends AppCompatActivity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!isShellUrl(url) || destroyed) return;
+                if (!CourseImportShellUrl.isShellUrl(url) || destroyed) return;
                 shellReady = true;
                 CourseImportDiagnostics.pageFinished(url, view.getProgress());
                 updateShellState();
@@ -315,28 +311,6 @@ public class CourseImportActivity extends AppCompatActivity {
         });
     }
 
-    private boolean isShellOriginUrl(String url) {
-        try {
-            java.net.URI uri = new java.net.URI(url);
-            return "https".equalsIgnoreCase(uri.getScheme())
-                    && SHELL_HOST.equalsIgnoreCase(uri.getHost())
-                    && uri.getRawUserInfo() == null
-                    && uri.getPort() == -1;
-        } catch (Exception ignored) {
-            return false;
-        }
-    }
-
-    private boolean isShellUrl(String url) {
-        try {
-            java.net.URI uri = new java.net.URI(url);
-            return isShellOriginUrl(url)
-                    && "/index.html".equals(uri.getPath())
-                    && "native-shell=1".equals(uri.getQuery());
-        } catch (Exception ignored) {
-            return false;
-        }
-    }
 
     private WebResourceResponse blockedShellResource() {
         return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", java.util.Collections.emptyMap(), new java.io.ByteArrayInputStream(new byte[0]));
@@ -526,9 +500,14 @@ public class CourseImportActivity extends AppCompatActivity {
             safeState.put("canRefresh", state == SessionState.ACADEMIC_READY || state == SessionState.CAPTURED || state == SessionState.CAPTURE_WAITING);
             safeState.put("canImport", state == SessionState.ACADEMIC_READY || state == SessionState.CAPTURED);
             safeState.put("contentSlotActive", academicWebView.getVisibility() == View.VISIBLE);
-            shellWebView.evaluateJavascript("window.__classTrackNativeState(" + safeState + ");", null);
+            // The shell app registers this handler in a React effect, so an early page-finished push can arrive first.
+            // Call it only when it exists; the shell bridge ready() signal triggers an authoritative push afterwards.
+            shellWebView.evaluateJavascript(
+                    "(function(){var handler=window.__classTrackNativeState;if(typeof handler==='function'){handler("
+                            + safeState + ");}})();",
+                    null);
         } catch (Exception ignored) {
-            CourseImportDiagnostics.consoleError("state", SHELL_URL, 0, "state-update-failed");
+            CourseImportDiagnostics.consoleError("state", CourseImportShellUrl.SHELL_URL, 0, "state-update-failed");
         }
     }
 
@@ -645,7 +624,7 @@ public class CourseImportActivity extends AppCompatActivity {
         @JavascriptInterface
         public void ready() {
             runOnUiThread(() -> {
-                if (destroyed || !isShellUrl(shellWebView.getUrl())) return;
+                if (destroyed || !CourseImportShellUrl.isShellUrl(shellWebView.getUrl())) return;
                 shellReady = true;
                 updateShellState();
             });
@@ -654,7 +633,7 @@ public class CourseImportActivity extends AppCompatActivity {
         @JavascriptInterface
         public void resize(float heightCssPx) {
             runOnUiThread(() -> {
-                if (destroyed || !shellReady || !isShellUrl(shellWebView.getUrl()) || !Float.isFinite(heightCssPx)) return;
+                if (destroyed || !shellReady || !CourseImportShellUrl.isShellUrl(shellWebView.getUrl()) || !Float.isFinite(heightCssPx)) return;
                 float density = getResources().getDisplayMetrics().density;
                 int heightPx = (int) (heightCssPx * density);
                 int min = (int) (MIN_SHELL_HEIGHT_DP * density);
@@ -714,7 +693,7 @@ public class CourseImportActivity extends AppCompatActivity {
     }
 
     private boolean isShellBridgeActive() {
-        return !destroyed && shellReady && shellWebView != null && isShellUrl(shellWebView.getUrl());
+        return !destroyed && shellReady && shellWebView != null && CourseImportShellUrl.isShellUrl(shellWebView.getUrl());
     }
 
     private final class CourseImportBridge {

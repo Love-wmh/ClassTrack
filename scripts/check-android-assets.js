@@ -10,6 +10,8 @@ const SYNCED_ASSETS_DIR = join(ROOT_DIR, 'android', 'app', 'src', 'main', 'asset
 const DEFAULT_APK_PATH = join(ROOT_DIR, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
 const APK_ASSET_PREFIX = 'assets/public/'
 const SHELL_ORIGIN = 'https://appassets.androidplatform.net'
+const SHELL_URL_SOURCE = join(ROOT_DIR, 'android', 'app', 'src', 'main', 'java', 'com', 'classtrack', 'app', 'CourseImportShellUrl.java')
+const ROUTES_SOURCE = join(ROOT_DIR, 'app', 'routes.ts')
 const MAX_UNZIP_OUTPUT_BYTES = 32 * 1024 * 1024
 
 function sha256File(filePath) {
@@ -89,6 +91,21 @@ export function readAssetDirectory(directory) {
   return files
 }
 
+export function assertNativeShellContract({ shellUrlSource = SHELL_URL_SOURCE, routesSource = ROUTES_SOURCE } = {}) {
+  const shellSource = readFileSync(shellUrlSource, 'utf8')
+  const routesSourceText = readFileSync(routesSource, 'utf8')
+
+  if (!/SHELL_BOOT_PATH\s*=\s*["']\/["']/.test(shellSource)) {
+    throw new Error('native shell boot path must be the root route')
+  }
+  if (/SHELL_URL[^;]*\.html/.test(shellSource)) {
+    throw new Error('native shell URL must not use a static HTML path')
+  }
+  if (!/\bindex\s*\(/.test(routesSourceText)) {
+    throw new Error('native shell boot path must match the index route')
+  }
+}
+
 export function assertAssetMapEqual(label, expected, actual, { allowedExtraPaths = [] } = {}) {
   const allowedExtras = new Set(allowedExtraPaths)
   const missing = [...expected.keys()].filter((assetPath) => !actual.has(assetPath))
@@ -132,6 +149,7 @@ export function readApkAssetDirectory(apkPath) {
 }
 
 export function checkAndroidAssets({ buildDir = BUILD_DIR, syncedAssetsDir = SYNCED_ASSETS_DIR, apkPath = DEFAULT_APK_PATH } = {}) {
+  assertNativeShellContract()
   const buildAssets = readAssetDirectory(buildDir)
   const syncedAssets = readAssetDirectory(syncedAssetsDir)
   assertAssetMapEqual('Capacitor synced assets', buildAssets, syncedAssets, {
