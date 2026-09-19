@@ -1,5 +1,14 @@
 package com.classtrack.app;
 
+import android.app.AlarmManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+
+import com.classtrack.app.widget.WidgetRefreshBridge;
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -8,7 +17,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Web → 原生 的快照通道。
+ * Web → 原生 的快照通道，以及小工具精度等级的查询/授权入口。
  *
  * Web 侧把算好的课表快照（绝对 epoch + 预格式化文案）推过来，这里只做三件事：
  * 校验、落盘、触发小工具刷新。原生侧不解析 localStorage、不重算周次、不做日期运算。
@@ -45,9 +54,65 @@ public class WidgetSnapshotPlugin extends Plugin {
 
         // 只有确认落盘之后才 resolve：否则 Web 侧会以为推送成功，而小工具可能仍读到旧值。
         WidgetDiagnostics.snapshotStored(byteLength);
-        WidgetDiagnostics.refreshRequested("plugin_push");
-        // TODO(P4): 落盘成功后触发 WidgetRefreshBridge.requestRefresh(getContext()) 立即重渲染。
+        WidgetRefreshBridge.requestRefresh(getContext());
         call.resolve();
+    }
+
+    /**
+     * 读取并清空「点击小工具时带来的待跳转路由」。
+     *
+     * 永远 resolve，不 reject：没有待跳转是正常情况，Web 层只需要拿到 `null` 然后什么都不做。
+     */
+    @PluginMethod
+    public void consumePendingRoute(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("route", WidgetPendingRoute.consumePendingRoute());
+        call.resolve(result);
+    }
+
+    /**
+     * 查询精确闹钟（L3）的可用性，供应用内的精度设置节如实展示当前等级。
+     */
+    @PluginMethod
+    public void getExactAlarmStatus(PluginCall call) {
+        JSObject result = new JSObject();
+        boolean available = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S;
+        result.put("available", available);
+        result.put("exact", available && canScheduleExactAlarms());
+        call.resolve(result);
+    }
+
+    /**
+     * 跳转系统「闹钟与提醒」设置页。
+     *
+     * **只跳设置页**：既不在应用内自行请求，也不假装已授权。用户返回后由
+     * [@link WidgetExactAlarmWatcher] 或下一次前台刷新重新评估真实状态。
+     */
+    @PluginMethod
+    public void requestExactAlarmPermission(PluginCall call) {
+        JSObject result = new JSObject();
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            // 该权限从 Android 12 才存在，低版本本来就是精确的。
+            result.put("launched", false);
+            result.put("exact", true);
+            call.resolve(result);
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                    .setData(Uri.parse("package:" + getContext().getPackageName()));
+            getActivity().startActivity(intent);
+            result.put("launched", true);
+        } catch (RuntimeException error) {
+            // 部分 ROM 没有这个设置页；不把它当成失败，用户仍可从系统设置手动授权。
+            WidgetDiagnostics.exactAlarmUnavailable("unsupported");
+            result.put("launched", false);
+        }
+
+        result.put("exact", canScheduleExactAlarms());
+        call.resolve(result);
     }
 
     /**
@@ -58,5 +123,35 @@ public class WidgetSnapshotPlugin extends Plugin {
     @Override
     protected void handleOnResume() {
         notifyListeners("resumed", null);
+    }
+
+    /**
+     * 插件加载时开始观察精确闹钟授权变化。
+     *
+     * 该广播只能被运行时注册的接收器收到，插件存活期正好覆盖「用户切到系统设置授权再切回来」
+     * 这个最常见的路径。
+     */
+    @Override
+    public void load() {
+        WidgetExactAlarmWatcher.register(getContext());
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        WidgetExactAlarmWatcher.unregister(getContext());
+    }
+
+    /**
+     * 读取当前是否已获得精确闹钟授权。
+     *
+     * @return API 31 以下恒为 true；以上取决于用户是否在系统设置中授予。
+     */
+    private boolean canScheduleExactAlarms() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+
+        Context context = getContext();
+        if (context == null) return false;
+        AlarmManager manager = context.getSystemService(AlarmManager.class);
+        return manager != null && manager.canScheduleExactAlarms();
     }
 }

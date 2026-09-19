@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  widget 元数据。
+
+  updatePeriodMillis = 1800000（30 分钟，AOSP 的 MIN_UPDATE_PERIOD 硬下限）是 L5 兜底：
+  由系统 AppWidgetServiceImpl 用自己的闹钟投递 ACTION_APPWIDGET_UPDATE，不依赖 WorkManager、
+  不依赖应用进程被预热、也不需要任何权限。这是「长期不打开 App」时最独立的一条刷新路径，
+  因此**不能写成 0**。
+
+  minWidth/minHeight 与 targetCellWidth/Height 一起声明：前者兼容旧版本，后者供 Android 12+
+  的桌面按格子摆放。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/class_track_widget_initial"
+    android:minHeight="60dp"
+    android:minWidth="180dp"
+    android:previewImage="@mipmap/ic_launcher"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="4"
+    android:updatePeriodMillis="1800000" />

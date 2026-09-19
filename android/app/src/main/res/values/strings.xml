@@ -4,4 +4,39 @@
     <string name="title_activity_main">ClassTrack</string>
     <string name="package_name">com.classtrack.app</string>
     <string name="custom_url_scheme">com.classtrack.app</string>
+
+    <!-- 桌面小工具 -->
+    <string name="widget_label">ClassTrack 课程</string>
+    <string name="widget_description">在桌面上显示接下来的一节课和今天剩余课程</string>
+
+    <!-- 「接下来」的标签 -->
+    <string name="widget_hero_in_progress">正在进行</string>
+    <string name="widget_hero_upcoming">接下来 · 第 %1$s 节</string>
+    <string name="widget_hero_upcoming_other_day">接下来 · %1$s</string>
+
+    <!-- 时间与教室 -->
+    <string name="widget_time_range">%1$s - %2$s</string>
+    <string name="widget_time_and_room">%1$s · %2$s</string>
+
+    <!-- 今日剩余 -->
+    <string name="widget_today_remaining">今日剩余</string>
+    <string name="widget_more_remaining">另有 %1$d 节</string>
+
+    <!-- 没有任何可展示课程时的引导文案：五种原因必须分开，避免误导用户 -->
+    <string name="widget_prompt_sync">打开 ClassTrack 同步课表到桌面</string>
+    <string name="widget_prompt_set_semester">请先在 ClassTrack 里设置学期开始日期</string>
+    <string name="widget_prompt_import">暂无课表数据，打开 ClassTrack 导入</string>
+    <string name="widget_prompt_stale">课表数据已过期，请打开 ClassTrack 同步</string>
+    <string name="widget_no_upcoming">本学期课程已结束</string>
+
+    <!-- 小工具设置页（精度等级） -->
+    <string name="widget_precision_title">桌面小工具</string>
+    <string name="widget_precision_level_basic">基础</string>
+    <string name="widget_precision_level_exact">精确</string>
+    <string name="widget_precision_basic_hint">基础模式不需要任何特殊权限；息屏深度省电时，课程切换最长可能延迟约 30 分钟，但显示的课程名始终正确。</string>
+    <string name="widget_precision_exact_hint">精确模式已开启：课程开始/结束时即使设备在休眠中也会按点切换。</string>
+    <string name="widget_precision_enable">开启精确切换</string>
+    <string name="widget_precision_granted">已开启精确切换</string>
+    <string name="widget_precision_open_settings">前往系统设置</string>
+    <string name="widget_precision_unavailable">当前系统版本不需要该权限。</string>
 </resources>

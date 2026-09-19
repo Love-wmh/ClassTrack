@@ -42,8 +42,57 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!--
+          桌面小工具。
+
+          exported=true 是 AppWidget 框架的硬要求：小工具宿主（launcher / 系统）必须能向我们投递
+          ACTION_APPWIDGET_UPDATE。该接收器只读取本应用私有偏好并更新自己的 widget，不接受任何
+          外部输入数据，因此导出不构成数据暴露面。
+        -->
+        <receiver
+            android:name=".widget.ClassTrackWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/class_track_widget_info" />
+        </receiver>
+
+        <!--
+          L2：跨零点 / 用户改时间 / 换时区。这三个广播在处理系统的隐式广播豁免清单内，
+          因此可以声明在 manifest 上并被投递，且与 targetSdk 无关。exported=false 即可：
+          投递方是系统，不需要对外导出。
+        -->
+        <receiver
+            android:name=".widget.WidgetTimeChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+          L3：精确边界闹钟的落点。只由本应用自己的 PendingIntent 触发，因此 exported=false；
+          外部应用即使知道 action 名也无法投递（Android 12+ 对未导出接收器的隐式广播投递限制，
+          加上这里没有 intent-filter，只能被显式 Intent 命中）。
+        -->
+        <receiver
+            android:name=".widget.WidgetBoundaryAlarmReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+      桌面小工具的 L3 精确模式（用户可选增强）。
+      Android 12+ 起这是「特殊应用访问」，Android 14+ 对新安装应用默认拒绝，
+      必须由用户在系统设置里显式授予；未授予时小工具静默回退到 WorkManager + 系统 30 分钟兜底。
+      刻意**不**声明 USE_EXACT_ALARM：它只面向闹钟/日历类应用，会自动授予，不适用于本场景。
+    -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 </manifest>

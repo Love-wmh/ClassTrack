@@ -8,25 +8,37 @@ import android.util.Log;
  * 与 {@link CourseImportDiagnostics} 同一约定：固定 tag、只输出阶段/字节数/固定枚举值，
  * **绝不输出课程名、教室、时间或快照正文**。
  */
-final class WidgetDiagnostics {
+public final class WidgetDiagnostics {
     static final String TAG = "ClassTrack.Widget";
 
     private WidgetDiagnostics() {}
 
-    static void snapshotRejected(String phase, int byteLength) {
+    public static void snapshotRejected(String phase, int byteLength) {
         Log.w(TAG, "phase=" + phase + " bytes=" + Math.max(0, byteLength));
     }
 
-    static void snapshotStored(int byteLength) {
+    public static void snapshotStored(int byteLength) {
         Log.i(TAG, "phase=snapshot_stored bytes=" + Math.max(0, byteLength));
     }
 
-    static void refreshRequested(String trigger) {
+    public static void refreshRequested(String trigger) {
         Log.i(TAG, "phase=refresh_requested trigger=" + safeCategory(trigger));
     }
 
-    static void snapshotUnavailable(String reason) {
+    public static void snapshotUnavailable(String reason) {
         Log.w(TAG, "phase=snapshot_unavailable reason=" + safeCategory(reason));
+    }
+
+    public static void exactAlarmUnavailable(String reason) {
+        Log.i(TAG, "phase=exact_alarm_unavailable reason=" + safeCategory(reason));
+    }
+
+    public static void schedulingCancelled() {
+        Log.i(TAG, "phase=scheduling_cancelled");
+    }
+
+    public static void refreshFailed() {
+        Log.w(TAG, "phase=refresh_failed");
     }
 
     /**
@@ -42,9 +54,11 @@ final class WidgetDiagnostics {
         switch (value == null ? "" : value) {
             case "plugin_push":
             case "boundary_alarm":
+            case "boundary_work":
             case "time_change":
             case "widget_update":
-            case "manual":
+            case "revoked":
+            case "unsupported":
             case "empty":
             case "invalid":
             case "read_failed":

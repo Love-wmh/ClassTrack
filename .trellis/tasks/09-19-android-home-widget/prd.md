@@ -71,7 +71,7 @@
 - [ ] C2 快照写入是原子的：接收方不会读到半截 JSON；写入失败时插件 `reject` 明确错误码，不假装成功。
 - [ ] C3 无快照时显示引导态；快照超过 TTL 时显示陈旧提示而不是展示可能错误的课程。
 - [ ] C4 定时刷新使用最短权限方案，且在设备重启后仍能恢复（未申请 `RECEIVE_BOOT_COMPLETED`）。
-- [ ] C5 `AndroidManifest.xml` 新增权限仅为方案所必需，`SCHEDULE_EXACT_ALARM`/`USE_EXACT_ALARM` 未出现。
+- [ ] C5 `AndroidManifest.xml` 主动声明的权限只有 `INTERNET` 与 `SCHEDULE_EXACT_ALARM`（后者服务于用户可选的 L3 精确模式）；`USE_EXACT_ALARM` 必须以精确形式 `android:name="android.permission.USE_EXACT_ALARM"` **不出现**（注意：注释里出现这个词不算违规，判定要用精确串）。`RECEIVE_BOOT_COMPLETED` / `WAKE_LOCK` / `FOREGROUND_SERVICE` / `ACCESS_NETWORK_STATE` 只在合并清单里出现，来源是 `androidx.work` 的库清单，不是本次新增的声明。
 - [ ] C6 存在一条不依赖应用进程存活的系统级刷新路径（`appwidget-provider` 的 `updatePeriodMillis`），使小工具在应用长期未被打开时仍会周期性重新解析快照并重算状态。
 - [ ] C7 存在自动化断言证明「长期不打开 App」的正确性：以远超覆盖起点的 `nowEpochMs` 调用原生 resolver，断言仍能从 14 天以后、跨周、跨月的快照中选出正确课程，而不是落到过期态。
 - [ ] C8 跨零点 / 改时间 / 换时区由 manifest 声明的 `ACTION_DATE_CHANGED`、`ACTION_TIME_SET`、`ACTION_TIMEZONE_CHANGED` 接收器处理，且与 Worker 共用同一幂等重算入口（不复制第二套逻辑）。

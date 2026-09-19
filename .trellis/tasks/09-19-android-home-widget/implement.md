@@ -272,9 +272,10 @@ pnpm format:check
 pnpm cap:build:android        # = cap:sync:android + assembleDebug + android:check-assets
 ./android/gradlew -p android :app:testDebugUnitTest
 adb shell dumpsys appwidget | grep -i classtrack   # 需已安装并启动过 App
-adb shell dumpsys package com.classtrack.app | grep -i -E "SCHEDULE_EXACT_ALARM|USE_EXACT_ALARM"  # 必须无输出
+adb shell dumpsys package com.classtrack.app | grep -c "USE_EXACT_ALARM"   # 必须为 0
 grep -n updatePeriodMillis android/app/src/main/res/xml/class_track_widget_info.xml   # 必须为 1800000
-grep -c "SCHEDULE_EXACT_ALARM" android/app/src/main/AndroidManifest.xml            # 必须为 1（且不含 USE_EXACT_ALARM）
+grep -c 'android:name="android.permission.SCHEDULE_EXACT_ALARM"' android/app/src/main/AndroidManifest.xml  # 必须为 1
+grep -c 'android:name="android.permission.USE_EXACT_ALARM"' android/app/src/main/AndroidManifest.xml      # 必须为 0（用精确串，注释里出现该词不算）
 adb shell cmd appops get com.classtrack.app SCHEDULE_EXACT_ALARM                    # 查看当前授权状态
 ```
 

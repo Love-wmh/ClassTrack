@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- 深色模式下的同名覆盖，见 values/colors.xml 的说明。 -->
+    <color name="widget_surface">#FF1C1C1E</color>
+    <color name="widget_text_primary">#FFF5F5F7</color>
+    <color name="widget_text_secondary">#FFD1D5DB</color>
+    <color name="widget_text_muted">#FF9CA3AF</color>
+    <color name="widget_accent">#FF60A5FA</color>
+</resources>
