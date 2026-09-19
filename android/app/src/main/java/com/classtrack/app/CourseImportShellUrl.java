@@ -26,9 +26,9 @@ public final class CourseImportShellUrl {
     public static boolean isShellUrl(String url) {
         try {
             URI uri = new URI(url);
-            String path = uri.getPath();
+            // Only the explicit root path is a shell boot URL; an HTML file path would not match a client route.
             return isShellOriginUrl(url)
-                    && (path == null || path.isEmpty() || SHELL_BOOT_PATH.equals(path))
+                    && SHELL_BOOT_PATH.equals(uri.getPath())
                     && SHELL_QUERY.equals(uri.getQuery());
         } catch (Exception ignored) {
             return false;
