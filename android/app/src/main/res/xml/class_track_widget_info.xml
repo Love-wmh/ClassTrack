@@ -7,16 +7,28 @@
   不依赖应用进程被预热、也不需要任何权限。这是「长期不打开 App」时最独立的一条刷新路径，
   因此**不能写成 0**。
 
-  minWidth/minHeight 与 targetCellWidth/Height 一起声明：前者兼容旧版本，后者供 Android 12+
-  的桌面按格子摆放。
+  configure：launcher 在**放置时**会打开这个 Activity 让用户选样式；它同时被 widget 内的
+  「样式」入口用 ACTION_APPWIDGET_CONFIGURE 再次打开。widgetFeatures=reconfigurable（API 28+）
+  让长按菜单也出现「重新配置」。该 Activity 是导出的，安全边界见 WidgetConfigActivity 的注释。
+
+  previewLayout / previewImage（R10）：
+  - Android 12+ 的选择器渲染 previewLayout 这份布局 mock；
+  - Android 12 以下只认 previewImage，指向由 scripts/generate-widget-preview.py 生成的示意图。
+  两者都**不能**再用 @mipmap/ic_launcher —— 那样用户在选择器里看到的是 App 图标，而不是小工具长相。
+
+  尺寸：默认按 4x3 放置，允许缩到约 2x2；列表是可滚动列表，因此格子小只会需要滑动，
+  不会让用户看不到后面的课。minWidth/minHeight 同时是 Android 12 以下挑选布局档位的回退基准。
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.classtrack.app.widget.WidgetConfigActivity"
     android:description="@string/widget_description"
     android:initialLayout="@layout/class_track_widget_initial"
-    android:minHeight="60dp"
-    android:minWidth="180dp"
-    android:previewImage="@mipmap/ic_launcher"
+    android:minHeight="110dp"
+    android:minWidth="110dp"
+    android:previewImage="@drawable/widget_preview"
+    android:previewLayout="@layout/widget_preview_day_list"
     android:resizeMode="horizontal|vertical"
-    android:targetCellHeight="2"
+    android:targetCellHeight="3"
     android:targetCellWidth="4"
-    android:updatePeriodMillis="1800000" />
+    android:updatePeriodMillis="1800000"
+    android:widgetFeatures="reconfigurable" />

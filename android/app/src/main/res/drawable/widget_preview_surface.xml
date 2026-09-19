@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  预览示意图的表面：与运行期的 Glance 小工具一致（圆角 + 系统浅/深色表面色）。
+  只在预览示意图里使用；运行期的背景由 ClassTrackWidget 用 appWidgetBackground + cornerRadius 画。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_surface" />
+    <corners android:radius="16dp" />
+</shape>

@@ -135,26 +135,46 @@ public class WidgetSnapshotCrossLayerTest {
         assertEquals(first.getId(), state.getHero().getId());
         assertEquals(WidgetDisplayState.HeroState.IN_PROGRESS, state.getHeroState());
         assertEquals(0, state.getHero().getDayOffset());
-        assertTrue("进行中的课不应重复出现在今日剩余里",
-                state.getTodayRemaining().stream().noneMatch(item -> item.getId().equals(first.getId())));
+        assertEquals("hero（进行中的课）必须出现在今日课表里，且只出现一次", 1,
+                state.getTodayItems().stream().filter(item -> item.getOccurrence().getId().equals(first.getId())).count());
+        assertTrue("进行中的课在今日课表里的阶段应是 IN_PROGRESS",
+                state.getTodayItems().stream().filter(item -> item.getOccurrence().getId().equals(first.getId()))
+                        .allMatch(WidgetDayItem::isInProgress));
+        assertEquals("hero 本身不计入「今天还有 N 节」",
+                (int) state.getTodayItems().stream().filter(item -> item.getPhase() == WidgetDayItem.Phase.UPCOMING).count(),
+                state.getTodayRemainingCount());
     }
 
-    /** 「今日剩余」随着时间推进逐条减少，且不会把已结束的课留在列表里。 */
+    /**
+     * 今日课表始终包含当天全部课程；随时间推进变化的是每行的阶段与两个计数，
+     * 而不是「把已上完的课从列表里删掉」—— 后者正是用户报的「只能显示一节课」。
+     */
     @Test
-    public void todayRemainingShrinksAsTheDayGoesOn() {
+    public void todayListKeepsWholeDayWhileCountsProgress() {
         WidgetOccurrence first = snapshot.getEntries().get(0);
-        List<WidgetOccurrence> dayZero = snapshot.getEntries();
-        long day0Count = dayZero.stream().filter(item -> item.getDayOffset() == 0).count();
+        long day0Count = snapshot.getEntries().stream().filter(item -> item.getDayOffset() == 0).count();
         assertTrue("夹具第 0 天应当有课", day0Count > 0);
 
         long startOfDay = first.getStartEpochMs() - MINUTE_MS;
         WidgetDisplayState beforeAnyClass = WidgetStateResolver.resolve(snapshot, startOfDay);
-        assertEquals("上课前，第 0 天的课都应出现在今日剩余里", (int) day0Count - 1, beforeAnyClass.getTodayRemaining().size());
+        assertEquals("上课前，今日课表应包含当天全部课程", (int) day0Count, beforeAnyClass.getTodayItems().size());
+        assertEquals("上课前没有任何已上完的课", 0, beforeAnyClass.getTodayFinishedCount());
+        assertEquals("上课前，除 hero 外的当天课程都算「今天还有」", (int) day0Count - 1,
+                beforeAnyClass.getTodayRemainingCount());
 
         long afterFirstClass = first.getEndEpochMs() + MINUTE_MS;
         WidgetDisplayState afterFirstClassState = WidgetStateResolver.resolve(snapshot, afterFirstClass);
-        assertTrue("第一节课结束后它必须从今日剩余里消失",
-                afterFirstClassState.getTodayRemaining().stream().noneMatch(item -> item.getId().equals(first.getId())));
+        assertEquals("第一节课上完后仍留在今日课表里（只是变成已上完）", (int) day0Count,
+                afterFirstClassState.getTodayItems().size());
+        assertEquals("已上完计数应含第一节课", 1, afterFirstClassState.getTodayFinishedCount());
+        assertTrue("第一节课上完后必须被标记为已上完",
+                afterFirstClassState.getTodayItems().stream()
+                        .filter(item -> item.getOccurrence().getId().equals(first.getId()))
+                        .allMatch(WidgetDayItem::isFinished));
+        assertTrue("已上完的课不应再计入「今天还有 N 节」",
+                afterFirstClassState.getTodayItems().stream()
+                        .filter(item -> item.getOccurrence().getId().equals(first.getId()))
+                        .noneMatch(item -> item.getPhase() == WidgetDayItem.Phase.UPCOMING));
     }
 
     /** 快照覆盖约 4 个月，因此「一天只有一节课」的日子也必须能正确定位。 */

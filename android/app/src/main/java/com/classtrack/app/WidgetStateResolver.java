@@ -71,7 +71,7 @@ public final class WidgetStateResolver {
         long currentDayEnd = dayEnds.get(currentDayOffset);
         Long boundary = nextBoundaryEpochMs(entries, hero, nowEpochMs, currentDayEnd);
 
-        return WidgetDisplayState.ready(hero, todayRemaining(entries, hero, currentDayOffset, nowEpochMs), heroState,
+        return WidgetDisplayState.ready(hero, todayItems(entries, currentDayOffset, nowEpochMs), heroState,
                 snapshot.getValidUntilEpochMs(), currentDayEnd, boundary);
     }
 
@@ -108,24 +108,39 @@ public final class WidgetStateResolver {
     }
 
     /**
-     * 取今日剩余课程。
+     * 取今天的全部课程（含已上完），并标好每一行的阶段。
+     *
+     * `todayItems` 与 hero 是两种用途不同的视图：前者回答「今天整天有什么」，后者回答「现在上什么」。
+     * 只算「今日剩余」会让当天课上完之后只剩下明天的一行 —— 这正是用户报的「只能显示一节课」。
      *
      * @param entries 快照条目。
-     * @param hero 已选定的 hero。
      * @param currentDayOffset 今天的 `dayOffset`。
      * @param nowEpochMs 当前时刻。
-     * @return 今天尚未开始、且不是 hero 的课程，保持原有时间顺序。
+     * @return 今天的课程（含已上完），保持快照中的时间顺序。
      */
-    private static List<WidgetOccurrence> todayRemaining(List<WidgetOccurrence> entries, WidgetOccurrence hero,
-            int currentDayOffset, long nowEpochMs) {
-        List<WidgetOccurrence> remaining = new ArrayList<>();
+    private static List<WidgetDayItem> todayItems(List<WidgetOccurrence> entries, int currentDayOffset, long nowEpochMs) {
+        List<WidgetDayItem> items = new ArrayList<>();
         for (WidgetOccurrence occurrence : entries) {
             if (occurrence.getDayOffset() != currentDayOffset) continue;
-            if (occurrence.getStartEpochMs() <= nowEpochMs) continue;
-            if (occurrence.getId().equals(hero.getId())) continue;
-            remaining.add(occurrence);
+            items.add(new WidgetDayItem(occurrence, phaseOf(occurrence, nowEpochMs)));
         }
-        return remaining;
+        return items;
+    }
+
+    /**
+     * 判断一节课在 `now` 这一刻处于哪个阶段。
+     *
+     * 这是整条 `widget/` 渲染路径上唯一的时间比较，放在这里而不是渲染层，正是为了守住
+     * 「渲染层只读不判」的分工。
+     *
+     * @param occurrence 课程。
+     * @param nowEpochMs 当前时刻。
+     * @return 课程阶段。
+     */
+    private static WidgetDayItem.Phase phaseOf(WidgetOccurrence occurrence, long nowEpochMs) {
+        if (occurrence.getEndEpochMs() <= nowEpochMs) return WidgetDayItem.Phase.FINISHED;
+        if (occurrence.getStartEpochMs() <= nowEpochMs) return WidgetDayItem.Phase.IN_PROGRESS;
+        return WidgetDayItem.Phase.UPCOMING;
     }
 
     /**

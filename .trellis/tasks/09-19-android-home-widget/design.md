@@ -223,11 +223,18 @@ sealed interface WidgetDisplayState {
   data object Stale : WidgetDisplayState        // now > validUntilEpochMs，或设备时钟被回拨
   data object NoUpcoming : WidgetDisplayState   // 快照有效，但已无任何未结束的课程（学期已结束）
   data class Ready(
-    val hero: Hero,                  // 正在进行 / 接下来
-    val todayRemaining: List<Item>,  // 今日剩余（不含 hero）
-    val heroState: HeroState,        // InProgress | Upcoming | UpcomingOtherDay
-    val nextBoundaryEpochMs: Long,   // 下一次需要重渲染的时刻，由解析器一并算出
+    val hero: Hero,                       // 正在进行 / 接下来
+    val heroState: HeroState,             // InProgress | Upcoming | UpcomingOtherDay
+    val todayItems: List<WidgetDayItem>,  // 今天一整天的课（含已上完），按 startEpochMs 升序
+    val todayRemainingCount: Int,         // 今天尚未结束的节数（紧凑样式用）
+    val todayFinishedCount: Int,          // 今天已上完的节数（折叠策略用）
+    val nextBoundaryEpochMs: Long,        // 下一次需要重渲染的时刻，由解析器一并算出
   ) : WidgetDisplayState
+  data class WidgetDayItem(
+    val occurrence: WidgetOccurrence,
+    val phase: Phase,                     // 由解析器按 now 标好，渲染层因此不做任何时间比较
+  )
+  enum class Phase { FINISHED, IN_PROGRESS, UPCOMING }
 }
 ```
 
@@ -256,22 +263,30 @@ fun formatCountdown(...)  // 不使用；时间文案全部来自 JS
    - 否则若该项 `dayOffset == currentDayOffset` → `HeroState.Upcoming`。
    - 否则 → `HeroState.UpcomingOtherDay`（今日无课，显示后续日期）。
    - 没有任何候选 → `Empty`（课表已结束）。
-6. `todayRemaining` = `entries` 中 `dayOffset == currentDayOffset` 且 `startEpochMs > now` 且 `id != hero.id` 的项。
-7. 早退保护：`now < generatedAtEpochMs - 6h`（设备时钟被回拨）时按 `Stale` 处理。
+6. `todayItems` = `entries` 中 `dayOffset == currentDayOffset` 的**全部**项（含已上完），按 `startEpochMs` 升序，每项按 `now` 标 `phase`：`endEpochMs <= now` → `FINISHED`；`startEpochMs <= now < endEpochMs` → `IN_PROGRESS`；否则 `UPCOMING`。
+   - 时间比较**只发生在这里**：渲染层拿到的每一行都带好了 `phase`，所以「渲染层无时间运算」这条分工原则依然成立。
+   - `todayItems` 与 `hero` 是两种用途不同的视图：前者回答「今天整天有什么」，后者回答「现在上什么」。**原设计只显示一节的原因正在于此** —— `todayRemaining` 的定义排除了 hero 与已上完项，于是当天课上完后只剩一行明天的课。
+7. `todayRemainingCount` = `todayItems` 中 `endEpochMs > now` 的项数；`todayFinishedCount` = `phase == FINISHED` 的项数。（紧凑样式显示「今天还有 N 节」，折叠策略显示「已上完 N 节」，两者都直接读这两个数，不在渲染层重算。）
+8. 早退保护：`now < generatedAtEpochMs - 6h`（设备时钟被回拨）时按 `Stale` 处理。
 
 **这是本任务唯一需要精细推理的算法，因此全部落在纯 Java/Kotlin 类中，用 JUnit 覆盖（不依赖 Android 框架）。**
 
 ### 渲染
 
-- `SizeMode.Responsive(setOf(Compact(180×60dp), Detailed(250×140dp), Expanded(250×200dp)))`：
-  - `Compact` → 仅 hero（课程名 + `startLabel–endLabel`），单行省略；
-  - `Detailed` → hero 卡片 + 最多 4 条今日剩余；
-  - `Expanded` → hero 卡片 + 最多 7 条今日剩余。
-- 超出容量的列表**截断**，不滚动、不溢出（Glance 的 `LazyColumn` 在 widget 内可滚动，但固定尺寸下截断更可预测；列表尾部显示 `+N` 提示）。
-- 点击：整个 widget 绑定 `actionStartActivity` → `MainActivity`；若携带课表跳转 Intent extra，由 D8 处理。
+**三种样式，按 widget 实例选择**（R1/R8，配置见 D13）。渲染层的输入是「解析好的状态 + 该实例的配置」，输出是 RemoteViews；渲染层不做任何时间比较、也不做策略判断：
+
+| 样式 | 结构 | 小尺寸退化 |
+|---|---|---|
+| 全天课表（默认） | 汇总行（`今天 周三 · 共 N 节`）→ 可滚动列表（全天课程，`IN_PROGRESS` 高亮、`FINISHED` 按策略处理） | 高度 < 110dp 时省略汇总行 |
+| 接下来 | hero 卡片（状态标签 + 课程名 + 起止时间 + 教室）→ 分隔线 → 可滚动列表（同全天课表） | 高度 < 150dp 时只留 hero |
+| 紧凑 | hero（课程名 + 时间 + 教室）→ 一行「今天还有 N 节」/「今天已无课」 | 无（本身即最小形态） |
+
+- **列表真实滚动**：用 Glance 的 `LazyColumn`（`androidx.glance.appwidget.lazy`）+ `ColumnScope.defaultWeight()` 吃掉剩余高度。底层就是 Android 原生的集合型 widget（`GlanceRemoteViewsService` + `RemoteCollectionItems`），已在合并清单里，**不需要新增组件或权限**。因此不再有「+N 节未显示」这种截断（R5 变更）。
+- **行数由策略决定而不是截断**：`FINISHED` 行是显示、隐藏还是折叠成计数，由 D13 的「已上完的课」选项决定；这部分判断放在纯函数 `WidgetDayListPolicy`（Java，可 JUnit 覆盖）里，渲染层只按结果画。
+- 点击：widget 主体绑定 `actionStartActivity` → `MainActivity`（携课表跳转 extra，见 D8）；汇总行的「样式」小按钮绑定另一个 `actionStartActivity` → `WidgetConfigActivity`（携 `EXTRA_APPWIDGET_ID`，见 D13）。两个点击区域不重叠，主体点击行为不回归。
 - 主题：显式提供浅色/深色两组颜色（`res/values/colors.xml` + `res/values-night/colors.xml`），不依赖自定义字体（Glance 不支持）。
-- `android:updatePeriodMillis="1800000"`（见 D4 系统级兜底）；provider XML 声明 `minWidth/minHeight`、`targetCellWidth/Height`、`resizeMode="horizontal|vertical"`、`description`。
-  - `previewLayout` **不实现**：它需要一份传统 RemoteViews 布局资源，收益仅限选择器预览像素，列为可选打磨（见 implement.md P5）。未提供时系统使用默认预览。
+- 尺寸：`SizeMode.Responsive(setOf(110×110dp, 180×140dp, 250×180dp, 250×260dp))`，provider XML 的 `targetCellWidth/Height = 4x3`、`minWidth/minHeight = 110dp`（允许缩到约 2x2）。**实际渲染只依据 `LocalSize`，不依据命中了哪一档** —— 这样在 Android 12 以下（系统不给多尺寸集合，由 `AppWidgetUtilsKt.findBestSize()` 挑最接近的一档，provider 的 min 尺寸会成为回退基准）也不会因为「挑错档」而只显示一节。这条是 2026-09-19 那次缺陷的根治措施。
+- `android:updatePeriodMillis="1800000"`（见 D4 系统级兜底）；选择器预览见 D14。
 
 ---
 
@@ -307,7 +322,58 @@ fun formatCountdown(...)  // 不使用；时间文案全部来自 JS
 
 ---
 
+## D13. 每实例样式配置（R8/R9）
+
+**决策**：样式与「已上完的课」选项按 **widget 实例**保存，用 Glance 官方状态容器而不是自建 SharedPreferences。
+
+- 存储：`updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs -> ... }` 写两个键；读取用 `currentState(glanceId, PreferencesGlanceStateDefinition)`。选 Glance 状态容器而不是自建 prefs 键，是因为它天然按 `GlanceId` 分片、随实例删除而清理，不会因为 `appWidgetId` 复用而继承上一个实例的样式。
+- 映射：`GlanceAppWidgetManager.getAppWidgetId(glanceId)` / `getGlanceIdBy(appWidgetId)` / `getGlanceIdBy(intent)`（三个 API 已在 `glance-appwidget-1.2.0` 的字节码里确认存在，见下）。
+- 默认值：从未写入过状态 → 全天课表 + 已上完灰显。未知或损坏的值按默认值处理、不抛异常（与 D2 `schemaVersion` 不匹配时的策略一致）。
+- 清理：覆写 `GlanceAppWidgetReceiver.onDeleted(context, appWidgetIds)`，删除该实例的键。
+
+```kotlin
+// 已确认存在于 androidx.glance.appwidget.GlanceAppWidgetManager（1.2.0 字节码）
+fun getAppWidgetId(glanceId: GlanceId): Int
+fun getGlanceIdBy(appWidgetId: Int): GlanceId
+fun getGlanceIdBy(intent: Intent): GlanceId
+```
+
+### 配置页（`WidgetConfigActivity`）
+
+- provider XML 声明 `android:configure="com.classtrack.app.widget.WidgetConfigActivity"`，launcher 在**放置时**自动打开它；同时声明 `android:widgetFeatures="reconfigurable"`（API 28+），使长按菜单出现「重新配置」入口。
+- 放置之后再次修改：汇总行里的「样式」小按钮 → `Intent(context, WidgetConfigActivity::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)`。
+- 配置页用传统 View + XML 实现（不引入 Compose UI 依赖，把依赖面控制在「Glance 与其传递依赖」内）：两组单选（样式 / 已上完的课）+ 三张样式缩略预览（静态 mock inflate，见 D14）+ 确定 / 取消。
+- 确认：写状态 → `ClassTrackWidget().update(context, glanceId)` → `setResult(RESULT_OK, intent.putExtra(EXTRA_APPWIDGET_ID, id))` → `finish()`。取消：`setResult(RESULT_CANCELED)` 后 `finish()`，让 launcher 不留下实例。
+- 交互诚实性：选中「紧凑」样式时，「已上完的课」对它无效果，配置页必须就地标注这一点（R9），不能让用户以为设置坏了。
+
+### 安全边界（必须实现，属于新增攻击面）
+
+1. 该 Activity 必须 `android:exported="true"`（launcher 要能拉起它），因此 `EXTRA_APPWIDGET_ID` 一律按**不可信输入**处理：用 `AppWidgetManager.getAppWidgetInfo(id)` 校验该 id 存在、且其 `provider` 等于本应用的 `ClassTrackWidgetReceiver`；不满足立即 `setResult(RESULT_CANCELED)` + `finish()`，不做任何写入、不返回任何信息。
+2. 配置页**不显示任何课程数据**，只有样式名与静态缩略图 —— 即使被第三方应用启动，也读不到课表。
+3. Intent 里只有整数 widget id，不接收 URL、文件路径或任意 payload，也就没有注入面。
+4. 日志沿用 D3 的诊断约定：只记 phase / 枚举 / 布尔，不记课程载荷。
+
+---
+
+## D14. 选择器预览（R10）
+
+- **Android 12+**：`android:previewLayout` 指向一份传统 RemoteViews 布局 mock，只能使用白名单类（`FrameLayout` / `LinearLayout` / `TextView` / `ImageView` 等）。**绝不能再出现 `android.view.View`** —— 那正是 2026-09-19 设备验收发现的缺陷 1（`InflateException: Class not allowed to be inflated android.view.View`，桌面显示「Can't load widget」）。mock 展示默认样式（全天课表）。
+- **Android 12 以下**：`android:previewImage` 指向一张**由真机截图裁出的真实预览图**（`res/drawable-nodpi/widget_preview.png`，用 Pillow 从 `adb exec-out screencap` 的截图裁切），而不是现在的 `@mipmap/ic_launcher` —— 后者就是用户报的「没有做好预览」。
+- **配置页缩略图**：三套静态 mock 布局（与 `previewLayout` 同一资源家族）在配置页里各 inflate 一次。不放二进制资源、不放课程数据。
+- **诚实性要求**：mock 是静态资源，会与真实 Glance 渲染漂移。因此 (a) verification.md 必须记录「picker preview 与真机截图对照」的证据；(b) spec 中要写明：改动任一真实样式的视觉时必须同步更新对应 mock，否则预览会撒谎。
+
+---
+
+## D15. 唯一的实验性 API opt-in（滚动）
+
+- `androidx.glance.appwidget.lazy.LazyColumn` 在 Glance `1.2.0` 的字节码里带 `androidx.glance.ExperimentalGlanceApi` 注解（已实测确认），因此 `ClassTrackWidget.kt` 里会出现**唯一**一处 `@OptIn(ExperimentalGlanceApi::class)`。
+- **为什么接受**：这是官方提供的 opt-in 机制（不是 `@Suppress` 式的压制），并且它是 Glance 里**唯一**能实现 widget 内真实滚动的路径；用户明确要求「格子小了加滚动就能显示全」。底层走平台的 `RemoteViewsService` 集合机制（`GlanceRemoteViewsService` 已在合并清单中），不是私有 hack。
+- **影响面**：只影响 `ClassTrackWidget.kt` 一个文件。检查方式：`grep -rn "OptIn" android/app/src/main` 只应命中该处。注解不得扩散。
+- **回退路径**：若某个启动器不支持集合型 widget（滚动退化为不可滑），把列表换回「按 `LocalSize` 计算行数 + `+N 节未显示`」的截断实现即可 —— 纯 Kotlin 改动，不影响 D2 契约、D3 通道、D4 调度与 Java 纯逻辑。
+
+---
+
 ## 附录
 
-D11（长期不打开 App 的保证与失效边界）、D12（精度阶梯的用户可见行为与交付口径）、一致性检查表、Rollback、验证策略与未决事实见 [design-appendix.md](./design-appendix.md)。**D11/D12 是交付口径的强制部分，实现与检查都必须读。**
+D11（长期不打开 App 的保证与失效边界）、D12（精度阶梯的用户可见行为与交付口径）、D13（每实例样式配置与配置页安全边界）、D14（选择器预览）、D15（唯一的实验性 API opt-in）、一致性检查表、Rollback、验证策略与未决事实见 [design-appendix.md](./design-appendix.md)。**D11/D12 是交付口径的强制部分，D13 的安全边界是新增攻击面的强制部分，实现与检查都必须读。**
 

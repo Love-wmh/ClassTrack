@@ -95,6 +95,13 @@
 | 13 | L3 可降级 | 代码中存在 `canScheduleExactAlarms()` 判断；未授权时仍走 L4，且不产生异常或用户可见错误 |
 | 14 | 结构性保证成立 | JUnit 断言：一条课程 `start < now < end` 时它仍是 hero 且 `heroState = InProgress`；只有全部 `end <= now` 才可能为 `Empty` |
 | 15 | `Empty` 与 `NoUpcoming` 不混淆 | `WidgetDisplayState.Type` 同时存在 `EMPTY`（未导入课表）与 `NO_UPCOMING`（学期已结束）；解析器在快照有效但无未结束课程时返回后者，UI 文案随之不同 |
+| 16 | 渲染层无时间运算 | 渲染层拿到的每一行都带好了 `phase`（由解析器按 `now` 标好）；`grep` 检查 `ClassTrackWidget.kt` 中不出现 epoch 比较 |
+| 17 | 「今日全天」与「hero」是两套视图 | `WidgetDisplayState.Ready` 同时提供 `todayItems`（全天，含已上完）与 `hero`；渲染任一元素都不依赖另一个被裁剪 |
+| 18 | 实验性 API opt-in 只有一处 | `grep -rn "OptIn" android/app/src/main` 只命中 `ClassTrackWidget.kt`，且只用于 `ExperimentalGlanceApi` |
+| 19 | 配置页不泄露课程数据 | 配置页布局与代码中不出现课程名/教室/时间字段的渲染；只有样式名与静态 mock |
+| 20 | 配置页拒绝非法 widgetId | 传入不存在或不属于本应用的 widgetId 时 `getAppWidgetInfo` 校验失败 → `RESULT_CANCELED`，无写入、无输出 |
+| 21 | 选择器预览不再是 App 图标 | provider XML 的 `previewImage` 不指向 `@mipmap/ic_launcher`，且提供了 `previewLayout` |
+| 22 | 滚动未被偷偷降级成截断 | 列表使用 `LazyColumn`；代码中不存在「+N 节未显示」类截断文案 |
 
 ---
 
@@ -105,6 +112,8 @@
 | P1（工具链）失败 | 还原 `android/build.gradle`、`variables.gradle`、`app/build.gradle`；工作区回到纯 Java，无功能损失 |
 | P2/P3（Glance 渲染或调度无法跑通） | 保留 D2 契约、D3 通道、D4 调度、D6/D9 Web 侧全部成果，只把 `widget/` 的渲染层换成 RemoteViews（纯 Java/XML），并在本文件追加一节记录降级理由 |
 | P4（点击跳转不稳定） | 按 D8 降级条款，移除 Intent extra 消费逻辑，仅保留打开 App |
+| P7（样式/配置页/滚动）失败 | 保留 Java 纯逻辑与 provider 尺寸修正；把渲染退回单一「接下来」样式、去掉配置页（`android:configure` 与 `widgetFeatures` 一并移除）与 `LazyColumn`，即可回到本次变更前的可用状态 |
+| P7 仅滚动失败（某启动器不支持集合型 widget） | 只把滚动换回「按 `LocalSize` 计算行数 + 「+N 节未显示」」；样式与配置页保留（见 design D15 回退路径） |
 | 整体放弃 | 分支 `feat/android-home-widget` 独立于 `master`，未合并即无影响；`cap sync` 不会改写 `app/build.gradle`，因此回滚只需还原该文件与新增文件 |
 
 ## 验证策略
@@ -122,7 +131,10 @@
 1. ~~`buildFeatures { compose = true }` 是否为 Glance-only 构建所必需~~ → **已结案（P1 实测）**：**不需要**。只应用 `org.jetbrains.kotlin.plugin.compose` 即可编译 `@Composable`，未添加 `buildFeatures.compose`。
 2. ~~KGP 2.1.20 与 AGP 8.13.0 的实际兼容性~~ → **已结案（P1 实测）**：兼容，构建通过，未出现 AGP 版本告警阻断。真正的坑是 jvmTarget 对齐，见 design.md D1.2。
 2b. **本机 JDK 相关实测结论**：本机只有 JDK 21，AGP 8.13 默认按 21 产出 Java 字节码；`compileOptions` 会被 toolchain 覆盖，因此统一用 `kotlin { jvmToolchain(21) }` 让 Kotlin 与 Java 同为 21。**不需要、也不引入第二个 JDK。**
-3. WorkManager 2.11.2 是否与 Capacitor 8 / minSdk 24 组合正常（否则回落到 Glance 传递的 2.7.1 或 2.10.5）。
-4. 模拟器上通过 `adb` 完成「放置小工具」的具体可行路径（`adb shell input` 长按 + 拖拽，或人工放置后截图）。若不可行，D4 验收改为人工放置 + 截图留档，并在 check 阶段说明。
+3. ~~WorkManager 2.11.2 是否与 Capacitor 8 / minSdk 24 组合正常~~ → **已结案（P6 设备实测）**：终版跟随 Glance 传递的 `2.7.1`；边界任务在 `20:10:00.077` 按时交付，重启后待办由 WorkManager 自行恢复。原计划提升到 2.11.2 所依据的假设后来被证伪，已回退。
+4. ~~模拟器上通过 `adb` 完成「放置小工具」的可行路径~~ → **已结案（P6 实测）**：`adb shell input` 长按只能弹出 Settings 菜单，抓不到 launcher 的缩放句柄；改为人工放置/缩放 + `adb exec-out screencap` 截图留档，记录在 verification.md §4。
 5. 典型学期的实际快照体积（需在 P2 实测并写入测试断言）。若超过 256 KiB，先收紧 `WIDGET_MAX_ENTRIES` 再考虑压缩字段名。
 6. `commit()` 写入 ~100 KB 是否在 Capacitor 桥线程上造成可感知延迟；若明显，把落盘移出 `PluginCall` 线程并把 `resolve()` 改为在写入完成后回调（协议不变）。
+7. **配置页状态写入在真实 launcher 流程里是否按预期生效**：`android:configure` 的启动时机、`setResult` 的取值约定、以及 `onDeleted` 清理在 `appWidgetId` 复用后是否真的不发生串味 —— 都需要设备实测，不能只看 API 存在。
+8. **`LazyColumn` 在真实启动器里是否真的可滑**：`dumpsys appwidget` 能看到集合结构不等于手指能滑动，必须用真实手势（或 `input swipe`）验证。这是本次唯一依赖实验性 API 的地方（design D15）。
+9. **`previewLayout` mock 与真实渲染的漂移**：mock 是静态 XML，必须与真机截图逐项对照并把差异写进 verification.md（design D14 的诚实性要求）。
