@@ -97,11 +97,13 @@
 | 15 | `Empty` 与 `NoUpcoming` 不混淆 | `WidgetDisplayState.Type` 同时存在 `EMPTY`（未导入课表）与 `NO_UPCOMING`（学期已结束）；解析器在快照有效但无未结束课程时返回后者，UI 文案随之不同 |
 | 16 | 渲染层无时间运算 | 渲染层拿到的每一行都带好了 `phase`（由解析器按 `now` 标好）；`grep` 检查 `ClassTrackWidget.kt` 中不出现 epoch 比较 |
 | 17 | 「今日全天」与「hero」是两套视图 | `WidgetDisplayState.Ready` 同时提供 `todayItems`（全天，含已上完）与 `hero`；渲染任一元素都不依赖另一个被裁剪 |
-| 18 | 实验性 API opt-in 只有一处 | `grep -rn "OptIn" android/app/src/main` 只命中 `ClassTrackWidget.kt`，且只用于 `ExperimentalGlanceApi` |
-| 19 | 配置页不泄露课程数据 | 配置页布局与代码中不出现课程名/教室/时间字段的渲染；只有样式名与静态 mock |
+| 18 | 实验性 API opt-in 正好两处 | `grep -rn "OptIn" android/app/src/main` 只命中 `ClassTrackWidget.kt`（`ExperimentalGlanceApi`）与 `WidgetPreviewRenderer.kt`（`ExperimentalGlanceRemoteViewsApi`） |
+| 19 | 配置页的数据暴露边界已按 D14 重新决定 | 该边界已被用户主动替换（WYSIWYG 预览必须渲染真实课表）；保留的缓解是 widgetId 归属校验、Intent 无载荷、日志无课程内容。**不要**把它当遗漏去「修」，也不要靠白名单 launcher 包名伪装加固 |
 | 20 | 配置页拒绝非法 widgetId | 传入不存在或不属于本应用的 widgetId 时 `getAppWidgetInfo` 校验失败 → `RESULT_CANCELED`，无写入、无输出 |
-| 21 | 选择器预览不再是 App 图标 | provider XML 的 `previewImage` 不指向 `@mipmap/ic_launcher`，且提供了 `previewLayout` |
+| 21 | 选择器预览不再是 App 图标、且画的是默认样式 | provider XML 的 `previewImage` 不指向 `@mipmap/ic_launcher`；`previewLayout` 指向 `widget_preview_next_up.xml`（默认样式），与 `DEFAULT_LAYOUT_STYLE` 一致 |
 | 22 | 滚动未被偷偷降级成截断 | 列表使用 `LazyColumn`；代码中不存在「+N 节未显示」类截断文案 |
+| 23 | 整卡点击仍然有效 | 点击同时挂在 `LazyColumn`、每个列表项与首尾留白项上；真机 `input tap` 后 `topResumedActivity` 变为 `MainActivity`（design D17 坑 1） |
+| 24 | 集合列表不画滚动条 | app 侧 `res/layout/glance_list.xml` 覆盖 Glance 同名布局并带 `android:scrollbars="none"`；`aapt2 dump xmltree` 验证为 `0x0`（design D17 坑 2） |
 
 ---
 
