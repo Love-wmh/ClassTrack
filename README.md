@@ -101,6 +101,11 @@ pnpm format
 pnpm build
 ```
 
+### 提交信息
+
+提交信息用中文写主题（`type(scope): 中文主题`），例如 `fix(widget): 修掉点卡片打不开 App 的问题`；`type` 与 `scope` 保持英文。
+本地由 husky + commitlint 在 `git commit` 时校验，CI 也会校验 PR 里的每个提交，`--no-verify` 绕不过去。规则与例外见 `.trellis/spec/frontend/quality-guidelines.md` 的「提交信息」一节。
+
 ### 安装到 Android 手机
 
 代码改完后，连接已开启 USB 调试的 Android 手机，执行：
