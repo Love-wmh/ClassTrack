@@ -38,7 +38,9 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.classtrack.app.MainActivity
 import com.classtrack.app.R
+import com.classtrack.app.WidgetDateLabel
 import com.classtrack.app.WidgetDayItem
+import com.classtrack.app.WidgetDayPlan
 import com.classtrack.app.WidgetDayListPolicy
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
@@ -49,26 +51,19 @@ import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * 声明的候选尺寸。
- *
- * 这些值**不是**渲染分支的依据：实际布局只按 [LocalSize] 决定，因为用户可以把 widget 拉到任意大小，
- * 而且在 Android 12 以下系统不会给出多尺寸集合，`AppWidgetUtilsKt.findBestSize()` 只会挑最接近的一档
- * （provider 的 min 尺寸成为回退基准）。上一版正是把渲染绑在「命中了哪一档」上，才在真实设备上
- * 退化成「只显示一节课」。
- */
-private val SUPPORTED_SIZES = setOf(
-    DpSize(110.dp, 110.dp),
-    DpSize(180.dp, 140.dp),
-    DpSize(250.dp, 180.dp),
-    DpSize(250.dp, 260.dp)
-)
+/** 卡片内边距；横向略大于纵向，文字块看起来更稳。 */
+private val HORIZONTAL_PADDING = 14.dp
+private val VERTICAL_PADDING = 12.dp
 
-/** 低于这个高度就不画汇总行，把有限的空间让给课程本身。 */
-private val SUMMARY_MIN_HEIGHT = 110.dp
+/** 卡片圆角；比同屏其它卡片更圆一点，视觉上更柔和。 */
+private val CARD_RADIUS = 20.dp
 
-/** 「接下来」样式低于这个高度就只留 hero 卡片，不再接列表。 */
-private val NEXT_UP_LIST_MIN_HEIGHT = 150.dp
+/** 课表行距：首行与汇总行之间留出呼吸感，其余行更紧。 */
+private val ROW_GAP_FIRST = 6.dp
+private val ROW_GAP = 4.dp
+
+/** hero 区块与下方课表之间的间距。 */
+private val HERO_GAP = 6.dp
 
 /**
  * ClassTrack 桌面小工具。
@@ -76,9 +71,17 @@ private val NEXT_UP_LIST_MIN_HEIGHT = 150.dp
  * 它只负责渲染已经解析好的状态与配置：所有「现在该显示哪节课」的判断都在
  * [WidgetRefreshController.resolveCurrentState] 里完成，所有「今天哪几行要显示」的判断都在
  * [WidgetDayListPolicy] 里完成，因此这里没有任何时间比较，也就不会出现「渲染逻辑和排程逻辑各算一套」。
+ *
+ * <p>**响应式**：这里用 `SizeMode.Exact`，于是 `LocalSize` 就是宿主格子的真实尺寸 —— 用户把格子拉成
+ * 任意大小，布局都按真实尺寸自适应，而不是先声明几档固定尺寸再去命中其中一档。上一版把渲染绑在
+ * 「命中了哪一档」上，真机上直接退化成「只显示一节课」；声明几档尺寸还会让配置页预览与桌面卡片
+ * 各按不同的档位渲染（预览 250×180 列出三行课，桌面 180×140 只剩 hero）。
+ *
+ * <p>自适应靠的是布局本身，而不是算术：hero 与汇总行按内容占位，课程行交给可滚动列表吃掉剩余
+ * 高度 —— 格子高就多显示几行，格子矮就少显示几行并允许滑动。
  */
 class ClassTrackWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(SUPPORTED_SIZES)
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         // SharedPreferences 读取 + 上百 KB JSON 解析放到 IO 线程，不要占用 Glance 的合成线程。
@@ -88,12 +91,18 @@ class ClassTrackWidget : GlanceAppWidget() {
         val config = withContext(Dispatchers.IO) { readConfigSafely(context, id) }
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
 
+        // 配置与状态一样按实例缓存：`provideGlance` 不会随每次 update 重新执行，若不缓存，
+        // 配置页保存后合成层仍会用闭包里的旧配置渲染（真机实测：切成紧凑后切不回去）。
+        WidgetRenderCache.publishConfig(appWidgetId, config)
+
         WidgetDiagnostics.widgetRendered(state.type.name, state.todayItems.size, state.heroState?.name)
 
         provideContent {
-            // 必须在这里读最新解析结果，而不是直接用上面那个闭包变量：`provideGlance` 不会随每次
-            // update 重新执行，直接用闭包会让画面停在上一帧（见 WidgetRenderCache 的说明）。
-            WidgetContent(WidgetRenderCache.latest() ?: state, config, appWidgetId)
+            WidgetContent(
+                WidgetRenderCache.latest() ?: state,
+                WidgetRenderCache.latestConfig(appWidgetId, config),
+                appWidgetId
+            )
         }
     }
 
@@ -124,131 +133,192 @@ private suspend fun readConfigSafely(context: Context, glanceId: GlanceId): Widg
     WidgetStyleConfig.defaults()
 }
 
+/**
+ * 三种样式共用的小工具正文。
+ *
+ * <p>布局是自适应而非按尺寸分支：hero 与汇总行按内容占位，课程行交给可滚动列表吃掉剩余高度。
+ * 格子大就多显示几行、格子小就少显示几行并允许滑动，因此这里没有任何按尺寸写死的阈值 ——
+ * 用户把格子拉成任意大小都成立，也不需要预先声明「支持哪几档尺寸」。
+ */
 @Composable
-private fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig, appWidgetId: Int) {
+internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig, appWidgetId: Int,
+                           preview: Boolean = false) {
     val context = LocalContext.current
-    val availableHeight = LocalSize.current.height
     val hero = state.hero
+    // 「列今天还是列明天」的裁决只在这里做一次：三种样式共用，避免各自重算导致文案与列表打架。
+    val plan = WidgetDayPlan.resolve(state.todayItems, state.nextDayItems, config.finishedPolicy)
+
+    if (!preview) {
+        val size = LocalSize.current
+        WidgetDiagnostics.widgetSized(size.width.value.toInt(), size.height.value.toInt())
+    }
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .appWidgetBackground()
             .background(ColorProvider(R.color.widget_surface))
-            .cornerRadius(16.dp)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .cornerRadius(CARD_RADIUS)
+            // 只留横向内边距：纵向留白交给内容自己带（见 WidgetBody），否则滚动时顶部会残留一条固定白边。
+            .padding(horizontal = HORIZONTAL_PADDING)
             .clickable(actionStartActivity(scheduleIntent(context))),
     ) {
         if (!state.isReady || hero == null) {
+            Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING))
             Text(text = promptText(context, state), maxLines = 3, style = bodyStyle(R.color.widget_text_muted))
-            return@Column
-        }
-
-        when (config.layoutStyle) {
-            WidgetStyleConfig.LayoutStyle.COMPACT -> CompactBody(context, state, hero, appWidgetId)
-            WidgetStyleConfig.LayoutStyle.NEXT_UP -> NextUpBody(context, state, config, hero, appWidgetId, availableHeight)
-            else -> DayListBody(context, state, config, appWidgetId, availableHeight)
+        } else {
+            WidgetBody(context, state, config, plan, hero, appWidgetId, preview)
         }
     }
 }
 
 /**
- * 「全天课表」：汇总行 + 今天一整天的课。
+ * 正文里的一行。
  *
- * 列表用可滚动列表而不是按高度截断，因此「格子小」只会让它需要滑动，而不会让用户看不到后面的课。
+ * 把正文表达成「行的序列」，是为了让真实渲染与配置页预览共用同一份顺序与同一个渲染函数
+ * （[BodyLineView]）：两侧唯一的差别只是把序列装进 `LazyColumn` 还是普通 `Column`（见 [WidgetBody]），
+ * 因此预览不可能与桌面漂移。
  */
-@Composable
-private fun ColumnScope.DayListBody(context: Context, state: WidgetDisplayState, config: WidgetStyleConfig,
-                                    appWidgetId: Int, availableHeight: Dp) {
-    val plan = WidgetDayListPolicy.apply(state.todayItems, config.finishedPolicy)
-    val showSummary = availableHeight >= SUMMARY_MIN_HEIGHT
+private sealed interface BodyLine {
+    /** hero：状态标签 +「样式」入口 + 课程名 + 时间与教室。 */
+    data object Hero : BodyLine
 
-    if (showSummary) {
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            Text(text = daySummaryText(context, state, plan.rows.size), maxLines = 1,
-                modifier = GlanceModifier.defaultWeight(), style = captionStyle(R.color.widget_text_muted))
-            StyleEntry(context, appWidgetId)
-        }
+    /** 汇总行：「明天 周一 · 共 3 节」+「样式」入口；今天没课时这一行就是「今天无课」。 */
+    data object Summary : BodyLine
+
+    /** 「紧凑」样式底部的计数行。 */
+    data object Counter : BodyLine
+
+    /** 「已上完 N 节」。 */
+    data object Collapsed : BodyLine
+
+    /** 「下一节 · 10月8日 周四 08:00 高等数学」。 */
+    data object NextOther : BodyLine
+
+    /** 一行课程；[Course.index] 用来给首行留多一点与汇总行之间的间距。 */
+    data class Course(val item: WidgetDayItem, val index: Int) : BodyLine
+}
+
+/**
+ * 按样式算出正文的行序列。
+ *
+ * <p>三种样式「显示多少内容」的构成全在这里，而且是纯函数：调整顺序或增删行会同时作用到真机与预览。
+ *
+ * <p>「紧凑」样式**不会**因为格子变大而加内容 —— 它的定位就是只显示一节课（R8）。
+ *
+ * <p>「接下来」样式在列课表时不补「下一节」提示：hero 已经说明了下一节课，再补一行是重复信息。
+ */
+private fun bodyLines(state: WidgetDisplayState, style: WidgetStyleConfig.LayoutStyle,
+                      plan: WidgetDayPlan): List<BodyLine> {
+    if (style == WidgetStyleConfig.LayoutStyle.COMPACT) {
+        return listOf(BodyLine.Hero, BodyLine.Counter)
+    }
+
+    val lines = mutableListOf<BodyLine>()
+    if (style == WidgetStyleConfig.LayoutStyle.NEXT_UP) lines += BodyLine.Hero
+
+    if (plan.hasRows()) {
+        lines += BodyLine.Summary
+        plan.rows.forEachIndexed { index, item -> lines += BodyLine.Course(item, index) }
+        if (plan.collapsedFinishedCount > 0) lines += BodyLine.Collapsed
+        // 已经在列明天的课了，再补一行「下一节是明天 …」就是把同一节课说两遍。
+        if (style == WidgetStyleConfig.LayoutStyle.DAY_LIST
+            && plan.source != WidgetDayPlan.Source.TOMORROW) lines += BodyLine.NextOther
     } else {
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            Spacer(modifier = GlanceModifier.defaultWeight())
-            StyleEntry(context, appWidgetId)
-        }
+        // 没有课程行时，汇总行自己就是「今天无课 / 今天已无课」；紧凑样式由计数行表达同一件事。
+        if (style == WidgetStyleConfig.LayoutStyle.DAY_LIST) lines += BodyLine.Summary
+        if (plan.collapsedFinishedCount > 0) lines += BodyLine.Collapsed
+        lines += BodyLine.NextOther
     }
+    return lines
+}
 
-    if (plan.rows.isEmpty()) {
-        if (!showSummary) {
-            Text(text = context.getString(R.string.widget_day_no_class), maxLines = 2,
-                style = bodyStyle(R.color.widget_text_muted))
+/**
+ * 正文：整张卡片共用一条滚动轴。
+ *
+ * <p>真机把行序列装进 `LazyColumn` 并让它吃掉卡片剩余高度 —— hero、汇总行、课程行一起滚，而不是
+ * 「上方固定 + 下方一小块区域可滚」。后者在真机上很难用：可滚区域常常只剩一两行高，手指一滑就到底。
+ *
+ * <p>格子高就多显示几行、格子矮就少显示几行，全由布局自己决定，因此没有任何按尺寸写死的阈值。
+ *
+ * <p>配置页预览不能走 `LazyColumn`：它靠 launcher 的 `RemoteViewsService` 填行，在没有 `AppWidgetHost`
+ * 的普通 `View` 里会渲染成空列表。预览改用普通 `Column`，行内容与顺序完全一样（截图里被截掉的那半行，
+ * 在桌面上就是「还能往下滑」的提示）。
+ *
+ * <p>上下留白也算内容的一部分（序列首尾各一项），不挂在卡片内边距上：否则滚动时顶部会留下一条永不动
+ * 的白边，看起来像「上面有一条固定的白条」（真机回测报的就是这个）。
+ */
+@OptIn(ExperimentalGlanceApi::class)
+@Composable
+private fun ColumnScope.WidgetBody(context: Context, state: WidgetDisplayState, config: WidgetStyleConfig,
+                                   plan: WidgetDayPlan, hero: WidgetOccurrence, appWidgetId: Int,
+                                   preview: Boolean) {
+    val lines = bodyLines(state, config.layoutStyle, plan)
+
+    if (preview) {
+        Column(modifier = GlanceModifier.fillMaxWidth()) {
+            Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING))
+            for (line in lines) BodyLineView(context, state, plan, hero, appWidgetId, line)
+            Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING))
         }
-        NextOtherDayLine(context, state)
         return
     }
 
-    DayRows(plan.rows)
-
-    if (plan.collapsedFinishedCount > 0) {
-        Text(text = context.getString(R.string.widget_finished_count, plan.collapsedFinishedCount), maxLines = 1,
-            style = captionStyle(R.color.widget_text_muted))
-    }
-    NextOtherDayLine(context, state)
-}
-
-/** 「接下来」：hero 大卡片 + 今天的课表。 */
-@Composable
-private fun ColumnScope.NextUpBody(context: Context, state: WidgetDisplayState, config: WidgetStyleConfig,
-                                   hero: WidgetOccurrence, appWidgetId: Int, availableHeight: Dp) {
-    HeroSection(context, state, hero, appWidgetId)
-
-    if (availableHeight < NEXT_UP_LIST_MIN_HEIGHT) return
-
-    val plan = WidgetDayListPolicy.apply(state.todayItems, config.finishedPolicy)
-    if (plan.rows.isEmpty()) {
-        NextOtherDayLine(context, state)
-        return
-    }
-
-    Spacer(modifier = GlanceModifier.height(8.dp))
-    Text(text = daySummaryText(context, state, plan.rows.size), maxLines = 1,
-        style = captionStyle(R.color.widget_text_muted))
-    DayRows(plan.rows)
-    if (plan.collapsedFinishedCount > 0) {
-        Text(text = context.getString(R.string.widget_finished_count, plan.collapsedFinishedCount), maxLines = 1,
-            style = captionStyle(R.color.widget_text_muted))
+    LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+        item { Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING)) }
+        items(lines.size) { index -> BodyLineView(context, state, plan, hero, appWidgetId, lines[index]) }
+        item { Spacer(modifier = GlanceModifier.height(VERTICAL_PADDING)) }
     }
 }
 
-/** 「紧凑」：只显示正在上 / 接下来的一节课 + 一行计数。 */
+/** 渲染正文中的一行；真实渲染与配置页预览共用它，因此两条路径的视觉不会漂移。 */
 @Composable
-private fun ColumnScope.CompactBody(context: Context, state: WidgetDisplayState, hero: WidgetOccurrence, appWidgetId: Int) {
-    HeroSection(context, state, hero, appWidgetId)
+private fun BodyLineView(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan,
+                         hero: WidgetOccurrence, appWidgetId: Int, line: BodyLine) {
+    when (line) {
+        BodyLine.Hero -> HeroSection(context, state, hero, appWidgetId)
+        BodyLine.Summary -> SummaryRow(context, plan, appWidgetId)
+        BodyLine.Counter -> CounterRow(context, state, plan, appWidgetId)
+        BodyLine.Collapsed -> CollapsedLine(context, plan)
+        BodyLine.NextOther -> NextOtherDayLine(context, state)
+        is BodyLine.Course -> DayRow(line.item, rowGap(line.index))
+    }
+}
 
-    Spacer(modifier = GlanceModifier.height(4.dp))
+/** 汇总行：左侧说明这是哪一天、多少节课，右侧「样式」入口。 */
+@Composable
+private fun SummaryRow(context: Context, plan: WidgetDayPlan, appWidgetId: Int) {
     Row(modifier = GlanceModifier.fillMaxWidth()) {
-        Text(text = compactCounterText(context, state), maxLines = 1,
+        Text(text = daySummaryText(context, plan), maxLines = 1,
             modifier = GlanceModifier.defaultWeight(), style = captionStyle(R.color.widget_text_muted))
         StyleEntry(context, appWidgetId)
     }
 }
 
-/**
- * 可滚动的课程行列表。
- *
- * 依赖 Glance 的 `LazyColumn`（底层是平台原生的集合型 widget），因此文件里唯一一处
- * `@OptIn(ExperimentalGlanceApi::class)` 就在这里 —— 详见 design.md D15。
- */
-@OptIn(ExperimentalGlanceApi::class)
+/** 「已上完 N 节」折叠计数行；「已上完」策略选的不是折叠时什么都不画。 */
 @Composable
-private fun ColumnScope.DayRows(rows: List<WidgetDayItem>) {
-    Spacer(modifier = GlanceModifier.height(4.dp))
-    LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-        items(rows.size) { index -> DayRow(rows[index]) }
+private fun CollapsedLine(context: Context, plan: WidgetDayPlan) {
+    if (plan.collapsedFinishedCount <= 0) return
+    Text(text = context.getString(R.string.widget_finished_count, plan.collapsedFinishedCount), maxLines = 1,
+        style = captionStyle(R.color.widget_text_muted))
+}
+
+/** 「紧凑」底部的计数行。 */
+@Composable
+private fun CounterRow(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan, appWidgetId: Int) {
+    Row(modifier = GlanceModifier.fillMaxWidth()) {
+        Text(text = compactCounterText(context, state, plan), maxLines = 1,
+            modifier = GlanceModifier.defaultWeight(), style = captionStyle(R.color.widget_text_muted))
+        StyleEntry(context, appWidgetId)
     }
 }
 
+/** 首行贴近汇总行时留多一点空隙，其余行更紧。 */
+private fun rowGap(index: Int) = if (index == 0) ROW_GAP_FIRST else ROW_GAP
+
 /** 一行课程：时间 + 课程名 + 教室；正在上的那行用强调色，已上完的用弱化色。 */
 @Composable
-private fun DayRow(item: WidgetDayItem) {
+private fun DayRow(item: WidgetDayItem, topPadding: Dp) {
     val occurrence = item.occurrence
     val nameColor = when (item.phase) {
         WidgetDayItem.Phase.IN_PROGRESS -> R.color.widget_accent
@@ -256,7 +326,7 @@ private fun DayRow(item: WidgetDayItem) {
         else -> R.color.widget_text_primary
     }
 
-    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = 3.dp)) {
+    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = topPadding)) {
         Text(text = if (item.isInProgress) "●" else " ", maxLines = 1,
             modifier = GlanceModifier.width(12.dp), style = captionStyle(R.color.widget_accent))
         Text(text = occurrence.startLabel, maxLines = 1, modifier = GlanceModifier.width(44.dp),
@@ -269,21 +339,33 @@ private fun DayRow(item: WidgetDayItem) {
     }
 }
 
-/** hero 卡片：状态标签（含「样式」入口）+ 课程名 + 时间与教室。 */
+/**
+ * hero：状态标签（含「样式」入口）+ 课程名 + 时间与教室，末尾留一段与课表之间的间距。
+ *
+ * <p>课程名只给**一行**：真机 4×2 上原来的两行标题会把卡片撑满，留给下方「剩余课程」的位置就只剩
+ * 一丝。一行省略号 + 下面多列两节课，比「标题占满上半张卡片」有用得多。
+ *
+ * <p>自带 `Column` 而不是做成 `ColumnScope` 扩展：它现在是 `LazyColumn` 里的一项，需要自己是一个
+ * 完整的容器。
+ */
 @Composable
-private fun ColumnScope.HeroSection(context: Context, state: WidgetDisplayState, hero: WidgetOccurrence, appWidgetId: Int) {
-    Row(modifier = GlanceModifier.fillMaxWidth()) {
-        Text(text = heroLabel(context, state, hero), maxLines = 1,
-            modifier = GlanceModifier.defaultWeight(), style = captionStyle(R.color.widget_accent))
-        StyleEntry(context, appWidgetId)
+private fun HeroSection(context: Context, state: WidgetDisplayState, hero: WidgetOccurrence, appWidgetId: Int) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
+            Text(text = heroLabel(context, state, hero), maxLines = 1,
+                modifier = GlanceModifier.defaultWeight(), style = captionStyle(R.color.widget_accent))
+            StyleEntry(context, appWidgetId)
+        }
+
+        Text(text = hero.name, maxLines = 1, style = titleStyle())
+
+        val timeRange = context.getString(R.string.widget_time_range, hero.startLabel, hero.endLabel)
+        val detail = if (hero.classroom.isBlank()) timeRange
+        else context.getString(R.string.widget_time_and_room, timeRange, hero.classroom)
+        Text(text = detail, maxLines = 1, style = bodyStyle(R.color.widget_text_secondary))
+
+        Spacer(modifier = GlanceModifier.height(HERO_GAP))
     }
-
-    Text(text = hero.name, maxLines = 2, style = titleStyle())
-
-    val timeRange = context.getString(R.string.widget_time_range, hero.startLabel, hero.endLabel)
-    val detail = if (hero.classroom.isBlank()) timeRange
-    else context.getString(R.string.widget_time_and_room, timeRange, hero.classroom)
-    Text(text = detail, maxLines = 1, style = bodyStyle(R.color.widget_text_secondary))
 }
 
 /**
@@ -302,14 +384,14 @@ private fun StyleEntry(context: Context, appWidgetId: Int) {
     )
 }
 
-/** 今天已无课、但后面还有课时，补一行「下一节」。 */
+/** 今天已无课、但后面还有课时，补一行「下一节 · 10月8日 周四 08:00 高等数学」。 */
 @Composable
 private fun NextOtherDayLine(context: Context, state: WidgetDisplayState) {
     val hero = state.hero ?: return
     if (state.heroState != WidgetDisplayState.HeroState.UPCOMING_OTHER_DAY) return
 
     Text(
-        text = context.getString(R.string.widget_next_other_day_line, hero.weekdayLabel, hero.startLabel, hero.name),
+        text = context.getString(R.string.widget_next_other_day_line, heroDayLabel(hero), hero.startLabel, hero.name),
         maxLines = 1,
         style = captionStyle(R.color.widget_accent)
     )
@@ -320,9 +402,17 @@ private fun heroLabel(context: Context, state: WidgetDisplayState, hero: WidgetO
     when (state.heroState) {
         WidgetDisplayState.HeroState.IN_PROGRESS -> context.getString(R.string.widget_hero_in_progress)
         WidgetDisplayState.HeroState.UPCOMING_OTHER_DAY ->
-            context.getString(R.string.widget_hero_upcoming_other_day, hero.weekdayLabel)
+            context.getString(R.string.widget_hero_upcoming_other_day, heroDayLabel(hero))
         else -> context.getString(R.string.widget_hero_upcoming, hero.sections)
     }
+
+/**
+ * 一节课所属自然日的「日期 + 星期」文案。
+ *
+ * 长假期间只写「周一」看不出是哪一天，带上「10月8日」用户才能一眼看出那不是今天的课。
+ */
+private fun heroDayLabel(hero: WidgetOccurrence): String =
+    WidgetDateLabel.withWeekday(hero.dayKey, hero.weekdayLabel)
 
 /**
  * 汇总行文案。
@@ -330,25 +420,45 @@ private fun heroLabel(context: Context, state: WidgetDisplayState, hero: WidgetO
  * 计数用**可见行数**而不是整天课程数：选了「不显示已上完的课」时，如果仍写「共 6 节」而列表只有
  * 两行，用户会以为列表坏了。
  *
+ * 列明天的课时必须写「明天」：同一个数字写成「今天 周四 · 共 4 节」，会让用户在周日以为当天要上课。
+ *
  * @param context 任意 Context。
- * @param state 已解析状态。
- * @param visibleRows 当前实际渲染的行数。
+ * @param plan 「列今天还是列明天」的裁决结果。
  * @return 汇总文案。
  */
-private fun daySummaryText(context: Context, state: WidgetDisplayState, visibleRows: Int): String {
-    if (visibleRows <= 0) return context.getString(R.string.widget_day_no_class)
+private fun daySummaryText(context: Context, plan: WidgetDayPlan): String = when (plan.source) {
+    WidgetDayPlan.Source.TOMORROW -> if (plan.weekdayLabel.isBlank())
+        context.getString(R.string.widget_day_summary_tomorrow_no_weekday, plan.rows.size)
+    else context.getString(R.string.widget_day_summary_tomorrow, plan.weekdayLabel, plan.rows.size)
 
-    for (item in state.todayItems) {
-        val weekday = item.occurrence.weekdayLabel
-        if (weekday.isNotBlank()) return context.getString(R.string.widget_day_summary, weekday, visibleRows)
-    }
-    return context.getString(R.string.widget_day_summary_no_weekday, visibleRows)
+    WidgetDayPlan.Source.TODAY -> if (plan.weekdayLabel.isBlank())
+        context.getString(R.string.widget_day_summary_no_weekday, plan.rows.size)
+    else context.getString(R.string.widget_day_summary, plan.weekdayLabel, plan.rows.size)
+
+    else -> emptyDayText(context, plan)
 }
 
-/** 「紧凑」样式底部那行计数。 */
-private fun compactCounterText(context: Context, state: WidgetDisplayState): String =
-    if (state.todayRemainingCount > 0) context.getString(R.string.widget_today_remaining_count, state.todayRemainingCount)
-    else context.getString(R.string.widget_day_no_class)
+/**
+ * 没有课程行可列时的文案。
+ *
+ * 「今天已无课」（课上完了）与「今天无课」（本来就没课）必须分开；两者都不能写成「明天有课」，
+ * 下一节课在哪天由 [NextOtherDayLine] 用绝对日期表达。
+ */
+private fun emptyDayText(context: Context, plan: WidgetDayPlan): String =
+    if (plan.isTodayHadClasses) context.getString(R.string.widget_day_no_class)
+    else context.getString(R.string.widget_day_empty)
+
+/** 「紧凑」样式底部那行计数；今天没课时说清是「明天」还是「今天无课」。 */
+private fun compactCounterText(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan): String =
+    when (plan.source) {
+        WidgetDayPlan.Source.TODAY -> if (state.todayRemainingCount > 0)
+            context.getString(R.string.widget_today_remaining_count, state.todayRemainingCount)
+        else context.getString(R.string.widget_day_no_class)
+
+        WidgetDayPlan.Source.TOMORROW -> context.getString(R.string.widget_tomorrow_count, plan.rows.size)
+
+        else -> emptyDayText(context, plan)
+    }
 
 /**
  * 没有任何可用课程时的引导文案。

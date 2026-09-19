@@ -7,19 +7,26 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.RemoteViews
 import android.widget.RadioGroup
 import android.widget.TextView
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.appcompat.app.AppCompatActivity
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.classtrack.app.R
 import com.classtrack.app.WidgetDiagnostics
+import com.classtrack.app.WidgetDisplayState
 import com.classtrack.app.WidgetStyleConfig
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 单个 widget 实例的样式配置页。
@@ -31,17 +38,27 @@ import kotlinx.coroutines.launch
  * **安全边界**（本 Activity 必须 `exported="true"` 才能被 launcher 拉起，因此这是新增攻击面）：
  * 1. `EXTRA_APPWIDGET_ID` 一律当作不可信输入：必须存在、且 provider 就是本应用的小工具接收器，
  *    否则立即以 `RESULT_CANCELED` 退出，不做任何写入；
- * 2. 页面**不显示任何课程数据**，只有样式名与静态示意图，所以即使被第三方应用启动也读不到课表；
+ * 2. 页面里的三张样式预览是**真实合成结果**（同一份快照数据 + 该实例的真实尺寸），因此页面上会出现
+ *    课程数据。这是 2026-09-20 按用户要求（「预览必须和真实小工具一样」）做的取舍：第三方应用只要
+ *    拿到一个**有效**的 widgetId 就能拉起本页看到课表。之所以接受：这些数据本来就贴在桌面上，
+ *    攻击者要读取本页内容仍需额外权限（无障碍/投屏授权），且本页不把数据回传给调用方；
  * 3. Intent 里只有整数 widgetId，不接收 URL、文件或任意 payload。
  */
 class WidgetConfigActivity : AppCompatActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
+
+    /** 正在进行的预览渲染；连续切换选项时只保留最后一次结果。 */
+    private var previewJob: Job? = null
+
     private lateinit var layoutGroup: RadioGroup
     private lateinit var finishedGroup: RadioGroup
     private lateinit var finishedSection: TextView
     private lateinit var finishedHint: TextView
+    private lateinit var previewDayList: FrameLayout
+    private lateinit var previewNextUp: FrameLayout
+    private lateinit var previewCompact: FrameLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,12 +81,20 @@ class WidgetConfigActivity : AppCompatActivity() {
         finishedGroup = findViewById(R.id.widget_config_finished_group)
         finishedSection = findViewById(R.id.widget_config_finished_section)
         finishedHint = findViewById(R.id.widget_config_finished_hint)
+        previewDayList = findViewById(R.id.widget_config_preview_day_list)
+        previewNextUp = findViewById(R.id.widget_config_preview_next_up)
+        previewCompact = findViewById(R.id.widget_config_preview_compact)
 
         layoutGroup.setOnCheckedChangeListener { _, _ -> updateFinishedSectionState() }
+        // 预览随「已上完」的选项实时重渲：这个选项直接决定列表里有几行。
+        finishedGroup.setOnCheckedChangeListener { _, _ -> requestPreviews() }
         findViewById<Button>(R.id.widget_config_confirm).setOnClickListener { saveAndFinish() }
         findViewById<Button>(R.id.widget_config_cancel).setOnClickListener { finish() }
 
         restoreSelection()
+
+        // 预览按实例的真实尺寸渲染，需要等第一遍布局量出可用宽度之后才能定缩放比例。
+        window.decorView.post { requestPreviews() }
     }
 
     override fun onDestroy() {
@@ -137,6 +162,120 @@ class WidgetConfigActivity : AppCompatActivity() {
         finishedHint.visibility = if (effective) View.GONE else View.VISIBLE
     }
 
+    /**
+     * 请求重渲三张样式预览。
+     *
+     * 取消上一次尚未完成的渲染：连续点选项时只有最后一次结果该落到界面上。
+     */
+    private fun requestPreviews() {
+        previewJob?.cancel()
+        previewJob = scope.launch { renderPreviews() }
+    }
+
+    /**
+     * 用**真实合成结果**渲染三张样式预览。
+     *
+     * 解析快照要读 SharedPreferences 并解析上百 KB JSON，放到默认调度器；`RemoteViews.apply`
+     * 会 inflate 视图，必须留在主线程。
+     *
+     * 三张预览都用当前选中的「已上完」策略，因此用户一改选项就能看到列表怎么变。
+     */
+    private suspend fun renderPreviews() {
+        val state = withContext(Dispatchers.Default) {
+            WidgetRefreshController.resolveCurrentState(applicationContext, System.currentTimeMillis())
+        }
+        val size = instanceSizeDp()
+        val scale = previewScale(size)
+        WidgetDiagnostics.previewSized(size.width.value.toInt(), size.height.value.toInt())
+
+        for ((container, style) in previewTargets()) {
+            val config = WidgetStyleConfig(style, selectedFinishedPolicy())
+            val rendered = withContext(Dispatchers.Default) {
+                WidgetPreviewRenderer.render(applicationContext, size, state, config, appWidgetId)
+            } ?: continue
+            // 预览只是「锦上添花」：渲染或显示万一失败，也绝不能让配置页崩掉——否则用户连样式都改不回来。
+            try {
+                showPreview(container, rendered, size, scale)
+            } catch (error: RuntimeException) {
+                WidgetDiagnostics.previewFailed()
+            }
+        }
+    }
+
+    /** @return 三种样式各自要填的预览容器。 */
+    private fun previewTargets(): List<Pair<FrameLayout, WidgetStyleConfig.LayoutStyle>> = listOf(
+        previewDayList to WidgetStyleConfig.LayoutStyle.DAY_LIST,
+        previewNextUp to WidgetStyleConfig.LayoutStyle.NEXT_UP,
+        previewCompact to WidgetStyleConfig.LayoutStyle.COMPACT
+    )
+
+    /**
+     * 该实例的格子尺寸：预览就按这个尺寸渲染。
+     *
+     * `OPTION_APPWIDGET_MIN_WIDTH/HEIGHT` 在 Android 12+ 由 launcher 随缩放更新，拿到的就是当前格子
+     * 大小；取不到时退化为约 4×3 的常见尺寸。
+     *
+     * 小工具用 `SizeMode.Exact`，真实渲染用的就是这个尺寸，所以预览与桌面卡片画在同一张画布上。
+     * 反过来，上一版声明了几档固定候选尺寸，真实渲染用的是「命中那一档」、比格子小：预览列出三行课、
+     * 桌面只剩 hero；若按候选尺寸画预览，课程名又会被截成「毛泽东思…」。
+     *
+     * @return 预览画布尺寸（dp）。
+     */
+    private fun instanceSizeDp(): DpSize {
+        val options = AppWidgetManager.getInstance(this).getAppWidgetOptions(appWidgetId)
+        val width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, DEFAULT_PREVIEW_WIDTH_DP)
+        val height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, DEFAULT_PREVIEW_HEIGHT_DP)
+        return DpSize(width.coerceAtLeast(MIN_PREVIEW_DP).dp, height.coerceAtLeast(MIN_PREVIEW_DP).dp)
+    }
+
+    /**
+     * 预览的等比缩放比例。
+     *
+     * 只做视觉缩放、**不改渲染尺寸**：改渲染尺寸会让 Glance 按新高度挑另一套布局分支，预览就会
+     * 显示真实小工具上不存在的内容。
+     *
+     * @param size 实例真实尺寸。
+     * @return 不超过 1 的缩放比例。
+     */
+    private fun previewScale(size: DpSize): Float {
+        val slotWidthPx = previewDayList.width
+        if (slotWidthPx <= 0) return 1f
+        val realWidthPx = size.width.value * resources.displayMetrics.density
+        if (realWidthPx <= 0f) return 1f
+        return (slotWidthPx / realWidthPx).coerceAtMost(1f)
+    }
+
+    /**
+     * 把一张真实渲染结果放进预览容器。
+     *
+     * @param container 预览容器。
+     * @param remoteViews 真实合成的结果。
+     * @param size 实例真实尺寸（dp）。
+     * @param scale 等比缩放比例。
+     */
+    private fun showPreview(container: FrameLayout, remoteViews: RemoteViews, size: DpSize, scale: Float) {
+        val density = resources.displayMetrics.density
+        val widthPx = (size.width.value * density).toInt()
+        val heightPx = (size.height.value * density).toInt()
+
+        // 必须用 Application 上下文 inflate：Activity 的 LayoutInflater 上装着 AppCompat 的视图替换工厂，
+        // 会把 RemoteViews 布局里的框架控件换成 AppCompat* 版本，而 RemoteViews 的反射只接受框架类，
+        // apply() 时会直接抛 ActionException 崩掉进程（真机 Android 16 实测）。宿主 launcher 没有这个工厂，
+        // 因此 Application 上下文才等价于宿主实际 inflate 出来的布局。
+        val view = remoteViews.apply(applicationContext, container)
+        container.removeAllViews()
+        container.addView(view, FrameLayout.LayoutParams(widthPx, heightPx))
+
+        view.pivotX = 0f
+        view.pivotY = 0f
+        view.scaleX = scale
+        view.scaleY = scale
+
+        // 缩放是绘制期变换，不会改变测量结果，所以容器高度要显式按缩放后的尺寸给。
+        container.layoutParams = container.layoutParams.apply { height = (heightPx * scale).toInt() }
+        container.requestLayout()
+    }
+
     private fun selectedLayout(): WidgetStyleConfig.LayoutStyle = when (layoutGroup.checkedRadioButtonId) {
         R.id.widget_config_layout_next_up -> WidgetStyleConfig.LayoutStyle.NEXT_UP
         R.id.widget_config_layout_compact -> WidgetStyleConfig.LayoutStyle.COMPACT
@@ -164,6 +303,13 @@ class WidgetConfigActivity : AppCompatActivity() {
     private companion object {
         /** 拒绝原因分类；必须与 `WidgetDiagnostics` 的白名单一致。 */
         const val REJECT_REASON = "invalid_widget_id"
+
+        /** 取不到实例尺寸时的退化尺寸（约 4×3 格），避免预览塌成 0 高。 */
+        const val DEFAULT_PREVIEW_WIDTH_DP = 250
+        const val DEFAULT_PREVIEW_HEIGHT_DP = 180
+
+        /** 画布尺寸下限：异常选项不该把预览压成一条线。 */
+        const val MIN_PREVIEW_DP = 80
 
         /** 有效选项的视觉强度。 */
         const val ENABLED_ALPHA = 1.0f

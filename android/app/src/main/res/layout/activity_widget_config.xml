@@ -59,12 +59,13 @@
                 android:text="@string/widget_config_layout_day_list_desc"
                 android:textSize="12sp" />
 
-            <include
+            <!-- 预览由 WidgetConfigActivity 填入真实合成结果（见 design.md D14），不再是静态 mock -->
+            <FrameLayout
+                android:id="@+id/widget_config_preview_day_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="32dp"
-                android:layout_marginTop="6dp"
-                layout="@layout/widget_preview_day_list" />
+                android:layout_marginTop="6dp" />
 
             <RadioButton
                 android:id="@+id/widget_config_layout_next_up"
@@ -80,12 +81,12 @@
                 android:text="@string/widget_config_layout_next_up_desc"
                 android:textSize="12sp" />
 
-            <include
+            <FrameLayout
+                android:id="@+id/widget_config_preview_next_up"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="32dp"
-                android:layout_marginTop="6dp"
-                layout="@layout/widget_preview_next_up" />
+                android:layout_marginTop="6dp" />
 
             <RadioButton
                 android:id="@+id/widget_config_layout_compact"
@@ -101,12 +102,12 @@
                 android:text="@string/widget_config_layout_compact_desc"
                 android:textSize="12sp" />
 
-            <include
+            <FrameLayout
+                android:id="@+id/widget_config_preview_compact"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="32dp"
-                android:layout_marginTop="6dp"
-                layout="@layout/widget_preview_compact" />
+                android:layout_marginTop="6dp" />
         </RadioGroup>
 
         <TextView

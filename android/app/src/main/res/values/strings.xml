@@ -22,6 +22,12 @@
     <string name="widget_day_summary">今天 %1$s · 共 %2$d 节</string>
     <string name="widget_day_summary_no_weekday">今天 · 共 %1$d 节</string>
     <string name="widget_day_no_class">今天已无课</string>
+    <!-- 今天本来就没有课（周末/假期），与「今天已无课」区分；两者都不能说成「明天有课」 -->
+    <string name="widget_day_empty">今天无课</string>
+    <!-- 今天没课但明天有课时，列表是明天的，汇总行必须写明「明天」，不能冒充今天 -->
+    <string name="widget_day_summary_tomorrow">明天 %1$s · 共 %2$d 节</string>
+    <string name="widget_day_summary_tomorrow_no_weekday">明天 · 共 %1$d 节</string>
+    <string name="widget_tomorrow_count">明天 %1$d 节</string>
     <string name="widget_finished_count">已上完 %1$d 节</string>
     <string name="widget_today_remaining_count">今天还有 %1$d 节</string>
     <string name="widget_next_other_day_line">下一节 · %1$s %2$s %3$s</string>
@@ -50,11 +56,11 @@
     <string name="widget_config_intro">样式按这个小工具实例单独保存，桌面上可以放多个样式不同的实例。</string>
     <string name="widget_config_layout_section">布局样式</string>
     <string name="widget_config_layout_day_list">全天课表</string>
-    <string name="widget_config_layout_day_list_desc">列出今天一整天的课，正在上的那节高亮；格子放不下时可以上下滑动看完整天。</string>
+    <string name="widget_config_layout_day_list_desc">列出今天一整天的课，正在上的那节高亮；今天没课时改列明天的课，格子放不下时可以上下滑动看完整天。</string>
     <string name="widget_config_layout_next_up">接下来</string>
-    <string name="widget_config_layout_next_up_desc">顶部大卡片突出正在进行或接下来的一节课，下方接今天的课表。</string>
+    <string name="widget_config_layout_next_up_desc">顶部大卡片突出正在进行或接下来的一节课，下方接课表；今天没课时改接明天的课。</string>
     <string name="widget_config_layout_compact">紧凑</string>
-    <string name="widget_config_layout_compact_desc">只显示正在进行或接下来的一节课，另加一行今天剩余节数。</string>
+    <string name="widget_config_layout_compact_desc">只显示正在进行或接下来的一节课，另加一行今天的节数。</string>
     <string name="widget_config_finished_section">今天已上完的课</string>
     <string name="widget_config_finished_show_dim">灰显保留</string>
     <string name="widget_config_finished_hide">不显示</string>

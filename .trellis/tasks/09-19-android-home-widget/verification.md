@@ -192,3 +192,59 @@ node /tmp/wv-eval.mjs @/tmp/seed.js && node /tmp/wv-eval.mjs "location.reload()"
 注意：`am broadcast -a android.appwidget.action.APPWIDGET_UPDATE` **不可用** —— 系统会以
 `Permission Denial: not allowed to send broadcast ... from unknown caller` 拒绝 shell 投递该受保护广播。
 触发刷新请用「启动 App」或等待 L3/L5。
+
+---
+
+## 2026-09-20 第二轮真机回测：预览保真、Bug B、响应式改版
+
+真机 PKR110（Android 16 / API 36，1264×2780，560dpi）实测。三条缺陷与两次需求变更都在这一轮闭环。
+
+### 缺陷 B：切成「紧凑」后无法切回其它样式（已修复，真机复验通过）
+
+- **根因**：`ClassTrackWidget.provideGlance` 里 `provideContent { WidgetContent(..., config, ...) }` 的 `config`
+  是闭包捕获值；配置页保存后只调 `update()`，`provideGlance` 不会重跑，于是合成层永远用旧配置。
+- **修复**：`WidgetRenderCache` 增加按实例的配置缓存（`publishConfig` / `latestConfig`），`provideGlance` 与
+  `WidgetConfigBridge.save` 都发布；`provideContent` 改读 `latestConfig(appWidgetId, config)`。
+- **复验证据**：compact → day_list → next_up 连续回切成功，日志
+  `phase=style_configured style=day_list ...` 后立刻 `phase=widget_rendered ...`，桌面卡片同步变化。
+
+### 缺陷 A：配置页预览与真实小工具不一致（已修复，改为所见即所得）
+
+分三层原因，逐层修掉：
+
+1. **尺寸不一致**：小工具声明了 4 档固定候选尺寸（`SizeMode.Responsive`），真实渲染用「挑中的那一档」
+   （真机 4×2 为 180×140），而配置页按实例选项（286×158）渲染 → 预览列出三行课、桌面只剩 hero。
+   **修复**：改 `SizeMode.Exact`，`LocalSize` 即真实格子尺寸。修复后真机日志两条一致：
+   `phase=preview_sized w=286 h=158` 与 `phase=widget_sized w=286 h=158`。
+2. **静态 mock 会说谎**：三套手写 mock 用的是示例数据（「今天 周三 · 共 6 节」），且与真实渲染是两套代码。
+   **修复**：配置页改为渲染真实 Glance 组合（`WidgetPreviewRenderer` + `GlanceRemoteViews`），
+   `widget_preview_next_up.xml` / `widget_preview_compact.xml` 删除。
+3. **`RemoteViews.apply` 崩进程**（本轮新发现）：用 Activity 上下文 inflate 时，AppCompat 的视图替换工厂
+   把框架控件换成 `AppCompat*`，`RemoteViews` 反射拒绝非框架类：
+   `ActionException: view: androidx.appcompat.widget.AppCompatImageView can't use method with RemoteViews: setImageResource(int)`。
+   **修复**：改用 `applicationContext` inflate（宿主 launcher 没有该工厂），并在配置页再包一层
+   `RuntimeException` 捕获 —— 预览失败绝不阻止保存样式。修复后 `dumpsys`/logcat 无 `FATAL`、无 `ActionException`。
+
+### 需求变更：响应式与滚动手感（D16）
+
+- **整张卡片一条滚动轴**：hero / 汇总行 / 课程行改为同一个 `LazyColumn` 的 item。
+  真机手势验证（`input swipe` 三联截图）：滑动后顶部状态标签被滚走、三行课全部露出 → 不是「上方固定 +
+  下方一小块可滚」。
+- **去掉顶部固定白边**：纵向留白从卡片 `padding` 移到内容首尾两项。修复前滚动会留下一条不动的白色条带。
+- **hero 课程名一行**：`maxLines = 1`，把空间让给下方剩余课程（用户反馈「课程换行后剩余部分面积很少」）。
+- **尺寸自适应**：真机 4×2（286×158 dp 格子）上 hero + 汇总行 + 三行课全部显示，无需滑动；
+  格子变小则自动少显示几行。
+
+### 门禁与回归
+
+- Android 单测 **87 例全绿**（新增 `WidgetDayPlanTest`、`WidgetDateLabelTest`，`WidgetStateResolverTest` 增 2 例）。
+- Web 五项门禁全绿：`typecheck` / `lint`（0 warning）/ `format:check` / `vitest 54 例` / `android:check-assets`。
+- `pnpm cap:build:android` 通过（246 assets，index/apk sha256 校验通过）；`git diff --check` 无空白错误。
+
+### 仍未验证 / 已知限制
+
+- **B12（最小 2×2 像素布局）**：模拟器 launcher 的缩放句柄无法用合成手势拖动，仍只有 110×110 档的日志证据
+  （`widget_sized w=110 h=110`，布局自适应不发散），没有真机手势截图。
+- **「拖放放置时 configure 自动弹窗」**：Pixel Launcher 全屏 picker 下未能捕获该时序。
+- **`preview_sized 286×158` 与真机卡片量测 240×138 dp 的差值**来自 launcher 自身的内缩，属已知差异；
+  预览与真机的**内容裁决**已一致。

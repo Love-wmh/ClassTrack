@@ -38,6 +38,7 @@ public final class WidgetDisplayState {
     private final Type type;
     private final WidgetOccurrence hero;
     private final List<WidgetDayItem> todayItems;
+    private final List<WidgetDayItem> nextDayItems;
     private final int todayRemainingCount;
     private final int todayFinishedCount;
     private final HeroState heroState;
@@ -46,10 +47,12 @@ public final class WidgetDisplayState {
     private final Long nextBoundaryEpochMs;
 
     private WidgetDisplayState(Type type, WidgetOccurrence hero, List<WidgetDayItem> todayItems,
+            List<WidgetDayItem> nextDayItems,
             HeroState heroState, long validUntilEpochMs, long currentDayEndEpochMs, Long nextBoundaryEpochMs) {
         this.type = type;
         this.hero = hero;
         this.todayItems = Collections.unmodifiableList(new ArrayList<>(todayItems));
+        this.nextDayItems = Collections.unmodifiableList(new ArrayList<>(nextDayItems));
         this.heroState = heroState;
         this.validUntilEpochMs = validUntilEpochMs;
         this.currentDayEndEpochMs = currentDayEndEpochMs;
@@ -109,6 +112,7 @@ public final class WidgetDisplayState {
      *
      * @param hero 当前或接下来的那一节课。
      * @param todayItems 今天一整天的课（含已上完），阶段已由解析器按 `now` 标好。
+     * @param nextDayItems 明天的课；用于「今天没课、明天有课」时把格子填满，阶段同样已标好。
      * @param heroState hero 的时间状态。
      * @param validUntilEpochMs 快照覆盖窗口的结束时刻。
      * @param currentDayEndEpochMs 当前自然日的本地 24:00。
@@ -116,13 +120,15 @@ public final class WidgetDisplayState {
      * @return 渲染状态。
      */
     public static WidgetDisplayState ready(WidgetOccurrence hero, List<WidgetDayItem> todayItems,
+            List<WidgetDayItem> nextDayItems,
             HeroState heroState, long validUntilEpochMs, long currentDayEndEpochMs, Long nextBoundaryEpochMs) {
-        return new WidgetDisplayState(Type.READY, hero, todayItems, heroState, validUntilEpochMs,
+        return new WidgetDisplayState(Type.READY, hero, todayItems, nextDayItems, heroState, validUntilEpochMs,
                 currentDayEndEpochMs, nextBoundaryEpochMs);
     }
 
     private static WidgetDisplayState emptyState(Type type) {
-        return new WidgetDisplayState(type, null, Collections.emptyList(), null, Long.MIN_VALUE, Long.MIN_VALUE, null);
+        return new WidgetDisplayState(type, null, Collections.emptyList(), Collections.emptyList(), null,
+                Long.MIN_VALUE, Long.MIN_VALUE, null);
     }
 
     public Type getType() {
@@ -140,6 +146,14 @@ public final class WidgetDisplayState {
     /** @return 今天一整天的课（含已上完）；非 `READY` 状态为空列表。 */
     public List<WidgetDayItem> getTodayItems() {
         return todayItems;
+    }
+
+    /**
+     * @return 明天的课；用于「今天没课、明天有课」时把格子填满。非 `READY`、明天没课、
+     *     或明天已在快照覆盖窗口之外时为空列表。
+     */
+    public List<WidgetDayItem> getNextDayItems() {
+        return nextDayItems;
     }
 
     /** @return 今天尚未开始、且不是 hero 本身的节数（紧凑样式显示「今天还有 N 节」）。 */

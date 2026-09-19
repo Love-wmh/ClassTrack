@@ -1,6 +1,7 @@
 package com.classtrack.app;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -71,7 +72,13 @@ public final class WidgetStateResolver {
         long currentDayEnd = dayEnds.get(currentDayOffset);
         Long boundary = nextBoundaryEpochMs(entries, hero, nowEpochMs, currentDayEnd);
 
-        return WidgetDisplayState.ready(hero, todayItems(entries, currentDayOffset, nowEpochMs), heroState,
+        // 明天可能不存在：覆盖窗口可能在今天结束（学业最后一天），此时按「明天没课」处理，
+        // 让「今天没课」的卡片退化为提示行，而不是去猜一个窗口外的日期。
+        List<WidgetDayItem> nextDayItems = currentDayOffset + 1 < dayEnds.size()
+                ? dayItems(entries, currentDayOffset + 1, nowEpochMs)
+                : Collections.<WidgetDayItem>emptyList();
+
+        return WidgetDisplayState.ready(hero, dayItems(entries, currentDayOffset, nowEpochMs), nextDayItems, heroState,
                 snapshot.getValidUntilEpochMs(), currentDayEnd, boundary);
     }
 
@@ -108,20 +115,23 @@ public final class WidgetStateResolver {
     }
 
     /**
-     * 取今天的全部课程（含已上完），并标好每一行的阶段。
+     * 取某一天的**全部**课程（含已上完），并标好每一行的阶段。
      *
-     * `todayItems` 与 hero 是两种用途不同的视图：前者回答「今天整天有什么」，后者回答「现在上什么」。
+     * <p>它与 hero 是两种用途不同的视图：前者回答「这一天整天有什么」，后者回答「现在上什么」。
      * 只算「今日剩余」会让当天课上完之后只剩下明天的一行 —— 这正是用户报的「只能显示一节课」。
      *
+     * <p>同一天内不区分「今天」与「明天」：交给 {@link WidgetDayPlan} 决定该渲染哪一天，
+     * 这样「明天才有课」的回退规则可以独立单测。
+     *
      * @param entries 快照条目。
-     * @param currentDayOffset 今天的 `dayOffset`。
+     * @param dayOffset 目标自然日的 `dayOffset`；超出覆盖窗口时返回空列表。
      * @param nowEpochMs 当前时刻。
-     * @return 今天的课程（含已上完），保持快照中的时间顺序。
+     * @return 该天的课程（含已上完），保持快照中的时间顺序。
      */
-    private static List<WidgetDayItem> todayItems(List<WidgetOccurrence> entries, int currentDayOffset, long nowEpochMs) {
+    private static List<WidgetDayItem> dayItems(List<WidgetOccurrence> entries, int dayOffset, long nowEpochMs) {
         List<WidgetDayItem> items = new ArrayList<>();
         for (WidgetOccurrence occurrence : entries) {
-            if (occurrence.getDayOffset() != currentDayOffset) continue;
+            if (occurrence.getDayOffset() != dayOffset) continue;
             items.add(new WidgetDayItem(occurrence, phaseOf(occurrence, nowEpochMs)));
         }
         return items;
