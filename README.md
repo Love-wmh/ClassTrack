@@ -113,6 +113,19 @@ pnpm cap:install:android
 
 本机还没有 JDK 21 或 Android SDK 时，先按[本机 Android 构建环境](#本机-android-构建环境)补齐。
 
+### 下载测试版（beta）
+
+不接手机、也不想自己编译时，可以直接下载 CI 出来的测试版 APK：
+
+- 打开仓库的 **Releases**，找最新的 `android-beta-*` 预发布版本；
+- 下载 `ClassTrack-beta-latest.apk`（这个文件名永远指向最新测试版）或带版本号的那个；
+- 版本号形如 `1.0.<构建号>-beta`，构建号单调递增，因此可以直接覆盖安装上一个测试版。
+
+发布流程在 `.github/workflows/android-beta.yml`：merge 进 `master` 且改动涉及 App 产物时自动跑（也可在 Actions 页手动触发），
+编译、跑原生单元测试、校验 APK 内 Web 资源与 `build/client` 字节一致，然后把 APK 挂到预发布版本上，只保留最近 10 个。
+配好 `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
+四个仓库 Secrets 后会自动切换成签名 release 包；未配置时发的是 debug 包（日志里会有警告）。
+
 ### 启动生产服务
 
 本项目是纯 SPA（`react-router.config.ts` 中 `ssr: false`），生产环境由 [Docker 镜像](#docker)托管静态产物。

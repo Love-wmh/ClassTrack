@@ -4,6 +4,25 @@ apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
+// ---------------------------------------------------------------------------
+// 发布签名与版本号：只从环境变量读取，仓库里不放任何凭据。
+//
+// 这四个变量由 CI（.github/workflows/android-beta.yml）从 GitHub Secrets 注入；本机构建不设置它们，
+// 于是 `assembleRelease` 产出的是未签名 APK（无法安装），工作流会自动退回 debug 产物。
+//
+// 用环境变量而不是 `android.injected.signing.*`：注入签名依赖 AGP 内部行为，属未文档化路径；
+// 这里显式声明，任何人 clone 下来都能看懂 beta 包是怎么签的。
+// ---------------------------------------------------------------------------
+def releaseStoreFile = System.getenv('CLASSTRACK_KEYSTORE_FILE')
+def releaseStorePassword = System.getenv('CLASSTRACK_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('CLASSTRACK_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('CLASSTRACK_KEY_PASSWORD')
+def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
+// beta 包必须每次都递增 versionCode，否则测试机无法覆盖安装。
+def injectedVersionCode = System.getenv('CLASSTRACK_VERSION_CODE')
+def injectedVersionName = System.getenv('CLASSTRACK_VERSION_NAME')
+
 android {
     namespace = "com.classtrack.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -11,8 +30,8 @@ android {
         applicationId "com.classtrack.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode injectedVersionCode ? injectedVersionCode.toInteger() : 1
+        versionName injectedVersionName ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -20,10 +39,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 只有拿到密钥时才注册签名配置：否则 `signingConfigs.release` 不存在，buildTypes 里也无从引用。
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
