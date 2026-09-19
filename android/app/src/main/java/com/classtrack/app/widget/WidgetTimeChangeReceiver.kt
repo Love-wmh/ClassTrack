@@ -22,13 +22,15 @@ class WidgetTimeChangeReceiver : BroadcastReceiver() {
         if (intent.action !in WATCHED_ACTIONS) return
 
         // 接收器在主线程回调，且必须在数秒内返回；goAsync 让重算可以在后台线程完成。
+        // goAsync() 在极端时序下可能返回 null；判空而不是直接 finish()，
+        // 否则会以 NPE 杀掉整个进程（这类崩溃曾让小工具反复显示空白）。
         val pending = goAsync()
         val appContext = context.applicationContext
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 WidgetRefreshController.refresh(appContext, TRIGGER)
             } finally {
-                pending.finish()
+                pending?.finish()
             }
         }
     }

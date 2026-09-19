@@ -1,86 +1,153 @@
 # 验证结果与未验证项（P6）
 
 > 生成时间：2026-09-19 · 分支 `feat/android-home-widget`
-> 原则：**只记录真正执行过并拿到输出的证据**。凡未验证的，明确写「未验证」并给出可复现的阻塞原因，不用「类型检查通过」冒充行为验证。
+> 原则：**只记录真正执行过并拿到输出的证据**。凡未验证的，明确写「未验证」并给出可复现的原因，不用「类型检查通过」冒充行为验证。
 
-## 一、环境级阻塞（硬性、可复现）
+## 0. 结论摘要
 
-端到端设备验证**未完成**，原因不在代码：
+- 沙盒关闭后环境恢复（`~/.gradle` 可写、**`/dev/kvm` 存在**、DNS 正常、无代理），因此**回归与设备端验收都在真实环境下完成**。
+- 设备端验收发现并修复了 **3 个静态检查无法发现的真实缺陷**（见 §2）。其中两个是我自己引入的，一个会让小工具**反复显示空白**、一个会让点击**渲染 404**。
+- 最终状态：`prd.md` 中除 **B2（2x1 紧凑像素布局）为部分验证**外，其余验收项全部有证据。
 
-```text
-$ /home/yetongy/Android/Sdk/emulator/emulator -avd Medium_Phone -no-window -gpu off -no-snapshot
-ERROR | x86_64 emulation currently requires hardware acceleration!
-CPU acceleration status: /dev/kvm is not found: VT disabled in BIOS or KVM kernel module not loaded
+## 1. 回归测试（沙盒关闭后，使用项目文档里的原生命令）
+
+未做任何环境变量覆盖，即与普通开发者本机构建完全一致：
+
+| 门禁 | 命令 | 退出码 | 结果 |
+|---|---|---|---|
+| 类型检查 | `pnpm typecheck` | 0 | 通过 |
+| Lint | `pnpm lint` | 0 | 0 problems |
+| 格式 | `pnpm format:check` | 0 | All matched files use Prettier code style |
+| Web 单测 | `pnpm test` | 0 | **54 用例**（12 文件）全通过 |
+| Web 构建 | `pnpm build` | 0 | 通过 |
+| Android 单测 | `./android/gradlew -p android :app:testDebugUnitTest` | 0 | **56 用例**全通过（含 9 个跨层用例） |
+| APK + 资源一致性 | `pnpm cap:build:android` | 0 | BUILD SUCCESSFUL + `Android asset check passed: 246 assets, 28 index references` |
+
+**关键旁证**：真实 `~/.gradle` 缓存里出现了 `androidx.glance` 与 `org.jetbrains.kotlin`，说明构建不依赖此前为绕开只读挂载而临时建立的沙盒缓存 —— 之前那些绕法没有掩盖任何真实问题。
+
+## 2. 设备实测中发现并修复的缺陷（静态检查无效）
+
+这三个都是「代码能编译、单测全绿、静态审查通过」但真机上出错的问题。
+
+### 2.1 `initialLayout` 使用了 RemoteViews 不允许的类 → 桌面显示「Can't load widget」
+
+```
+AppWidgetHostView: Error inflating AppWidget ...
+android.view.InflateException: Binary XML file line #19 in com.classtrack.app:layout/class_track_widget_initial
+Caused by: Class not allowed to be inflated android.view.View
 ```
 
-- 本机 `/dev/kvm` 不存在（容器/沙箱内无 KVM），而 AVD `Medium_Phone` 与系统镜像 `android-37.1/google_apis_playstore_ps16k/x86_64` 都是 x86_64 ⇒ 模拟器拒绝启动。
-- `adb devices` 为空：无真机连接。
-- 结论：**任何依赖设备（launcher、桌面小工具渲染、Doze、真实广播投递）的验收项在本环境无法取证。** 已清理为启动而做的 AVD 副本改动（`-wipe-data`）不影响仓库。
+`appwidget-provider` 的 `initialLayout` 会走传统 RemoteViews 解析，**只允许 `@RemoteView` 白名单内的类**。我原本放了一个 `<View>` 子节点承载背景色，launcher 无法 inflate，桌面直接显示「Can't load widget」。
 
-## 二、已用真实执行的证据验证的验收项
+**修复**：`res/layout/class_track_widget_initial.xml` 只保留一个承载背景的 `FrameLayout`，不再放任何子节点。
 
-| 项 | 证据（可复现命令） | 结果 |
-|---|---|---|
-| **A1–A3** 快照契约与纯逻辑 | `npx vitest run app/lib/widget-snapshot.test.ts` | 18 用例通过；覆盖正常上课日、进行中、今日无课、休息日、`firstWeekStartDate` 缺失/非法、跨周、条数截断、体积上限、42 天后仍可定位 |
-| **A4** 插件封装与 Web 兜底 | `npx vitest run app/lib/native-widget-snapshot.test.ts` | 5 用例通过；Web 上 `pushSnapshot` 明确 reject 而非静默成功 |
-| **A5 / D5** Web 端集成与浏览器 no-op | 真实 headless Chrome 153 + CDP 打开 `pnpm dev`（脚本见 `/tmp/d5-check.mjs`） | 页面完整渲染（title=ClassTrack，12 个链接）；`exceptions: []`；`logErrors: []`；`platform: "web"` ⇒ 同步 hook 整体 no-op；**无任何 WidgetSnapshot 桥调用**；仅两条既有的 `DialogContent` aria 警告（`git diff master` 新增行里 `DialogContent` 计数为 0，非本次引入） |
-| **C2** 落盘成功才 resolve | `WidgetSnapshotPlugin` 代码 + `WidgetSnapshot` 写路径审查 | 四条失败路径各自 `reject` 具名错误码，`resolve` 只在 `commit()` 返回 true 之后 |
-| **C5** 权限最小化 | `aapt2 dump xmltree --file AndroidManifest.xml app-debug.apk` 与合并清单 | 主动声明仅 `INTERNET` + `SCHEDULE_EXACT_ALARM`；`android:name="android.permission.USE_EXACT_ALARM"` 计数 **0**；`RECEIVE_BOOT_COMPLETED`/`WAKE_LOCK`/`FOREGROUND_SERVICE` 仅来自 `androidx.work` 库清单 |
-| **C6** 系统级兜底 | 同上，`aapt2 dump xmltree --file res/xml/class_track_widget_info.xml` | `updatePeriodMillis=1800000`、`targetCellWidth=4`、`targetCellHeight=2`、`resizeMode=0x3`、`minWidth=180dp`、`minHeight=60dp` |
-| **C7** 长期不打开 App | `WidgetSnapshotCrossLayerTest#nativeSideStillPicksTheRightCourseSixWeeksLater`——夹具由 Web 侧 `buildWidgetSnapshot` **真实产出**（`android/app/src/test/resources/widget-snapshot-v1.json`），交给原生解析器与 resolver | 把 `now` 直接推到第 42 天（跨 6 周、中间零渲染），原生仍选出 `2026-11-02 高等数学` 且 `heroState=UPCOMING`；窗口末日仍可用，越过 `validUntil` 才转 `STALE`；关键点：学期最后一天末得 `NO_UPCOMING` 而非 `STALE` |
-| **C11** 结构性保证 | `WidgetStateResolverTest` + `WidgetSnapshotCrossLayerTest` | `start < now < end` 时仍是 hero 且 `IN_PROGRESS`；首尾相接处（A.end == B.start）该瞬间 hero 必须是 B（严格 `>` 语义）；只有快照里不存在 `end > now` 的课程才可能「无课」 |
-| **N3** 隐私 | 夹具生成时写入 3 个敏感哨兵值，`WidgetSnapshotCrossLayerTest#snapshotNeverCarriesFieldsBeyondTheDisplayContract` 断言它们不出现在快照里；`aapt2` 侧另有日志白名单 | 教师 / `courseId` / `classId` 三个哨兵在快照中计数均为 0 |
-| **N4** 不回归 | `pnpm cap:build:android`（含 `cap sync` + `assembleDebug` + `android:check-assets`） | `Android asset check passed: 245 assets, 27 index references` |
-| **N5** 可测试 | `./android/gradlew -p android :app:testDebugUnitTest` | **56 用例全通过**（原 16 + 新增 40：parser 14 / resolver 17 / 跨层 9） |
-| **D1** Web 五项门禁 | `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build` | 全绿；`lint` 0 problems；vitest 52 用例 |
-| **D2** APK 与资源一致性 | `pnpm cap:build:android` | BUILD SUCCESSFUL，`check-assets` 通过 |
-| **D3** 新增 Android 单测 | 同上 | 通过，且用 `test-results/*.xml` 逐类核对数量，未出现「被静默跳过」的假绿灯 |
-| **D8 的可静态验证部分** | `WidgetPendingRoute` 白名单 + `MainActivity.onNewIntent` 审查 | 路由 extra 只接受编译期常量 `/schedule`，外部应用无法注入任意路径；点击 Intent 不携带任何课程数据 |
+### 2.2 接收器里 `goAsync()` 返回 null → NPE 崩溃 → 小工具反复显示空白
 
-## 三、未验证项（**不声称已完成**）
+```
+FATAL EXCEPTION: DefaultDispatcher-worker-2
+java.lang.NullPointerException: Attempt to invoke virtual method
+'void android.content.BroadcastReceiver$PendingResult.finish()' on a null object reference
+	at com.classtrack.app.widget.ClassTrackWidgetReceiver$runInBackground$1.invokeSuspend(ClassTrackWidgetReceiver.kt:60)
+```
 
-| 项 | 未验证的内容 | 为什么无法验证 | 交给设备验证的步骤 |
+`goAsync()` 在 `AppWidgetProvider` 的 `onUpdate`/`onEnabled`/`onAppWidgetOptionsChanged` 这些回调里并不总是可用，实测返回 `null`；我直接调用 `pending.finish()` 导致进程被杀。**进程在更新途中被杀，正是小工具反复停留在 `initialLayout`（一片空白）的真实原因** —— 这个现象一度被我误判成 `TextStyle` 的问题，加诊断日志后才定位到崩溃。
+
+**修复**：
+- `ClassTrackWidgetReceiver` 彻底不再使用 `goAsync()` + 协程，改为入队持久化的 WorkManager 任务（这几个回调只需要把边界链续上，不需要接收器自行完成工作）；
+- 两个真正的 `onReceive`（L2 时间变更、L3 精确闹钟）那里 `goAsync()` 是合法的，但也补上了判空，避免同类崩溃。
+
+### 2.3 点击小工具的路由常量写错 → 客户端渲染 404
+
+`WidgetPendingRoute.ROUTE_SCHEDULE` 我写成了 `/schedule`，但**课表在 `app/routes.ts` 里是 index 路由 `/`**，根本没有 `/schedule` 这个路径。真机上点击小工具后：
+
+```
+路由 = /schedule
+页面 = 404 The requested page could not be found.
+```
+
+更严重的是：404 由 `root.tsx` 的 `ErrorBoundary` 渲染，它会**替换整棵组件树**，把小工具同步组件一起卸载 —— 即这条错误路径会连带停掉快照同步。
+
+另外「路由 extra → JS 消费」只实现了原生一半：我导出过 `consumePendingRoute`，但 Web 侧没有任何消费者，所以跳转从未生效。
+
+**修复**：
+- 常量改为 `/`（并注明它是 index 路由），JS 侧导出 `WIDGET_ROUTE_SCHEDULE` 供白名单复用；
+- 新增 `app/lib/native-widget-route.test.ts`，用 `matchRoutes(routes, ...)` 断言该常量**必须命中真实路由表**、且 `/schedule` 必须不命中 —— 与既有 `native-shell-url.test.ts` 同一模式，这类漂移以后由 CI 拦住；
+- 在 `WidgetSnapshotSync` 里补上 Web 侧消费者（`useWidgetPendingRoute`），并对路由做第二层白名单校验。
+
+## 3. 设备端验收证据（模拟器 `Medium_Phone`，Android 17 / SDK 37，x86_64 + KVM）
+
+数据注入方式：通过 WebView 调试通道（debug 构建默认开启）把一份包含「一节课正在进行 + 今日还有一节 + 明天一节」的课表写入 `localStorage` 并重载，让**真实同步链路**把它推给原生。读取原生状态用 `adb shell run-as`（debug 包）直接读私有 SharedPreferences。
+
+| 项 | 证据 |
+|---|---|
+| **B1** 出现在小工具选择器 / 可被添加 | ① 选择器搜索 `ClassTrack` 命中，预览卡片显示 **「ClassTrack / 4 × 2 / 在桌面上显示接下来的一节课和今天剩余课程」**（尺寸元数据与中文描述都正确）；② 拖到桌面后 `dumpsys appwidget` 出现 launcher 托管的实例（`host=...nexuslauncher`、`provider=...ClassTrackWidgetReceiver`）；③ 系统 provider 登记里 `updatePeriodMillis=1800000`、`resizeMode=3` 与声明一致 |
+| **B3** 进行中课程被标记，且自动切换 | 「正在进行」标签在真机渲染正确；把时间推到 20:10（课程结束时刻）后，两个实例都自动切到「接下来 · 第 3-4 节 / 大学物理 / 21:10 - 22:50 · 教二105」，「今日剩余」随之消失 —— **全程未打开 App** |
+| **B4** 点击打开 App 且跳到课表页 | 用小工具完全等价的 Intent（`MainActivity` + `classstrack_widget_route`）冷启动后：`topResumedActivity=com.classtrack.app/.MainActivity`、`path="/"`、`is404=false`、`isSchedule=true`。另测**白名单**：extra 传 `/evil-route` 时 `path="/"`、无 404，即被拒绝 |
+| **B5** 深色/浅色可读 | 浅色：白底深字 + 蓝色标签；`cmd uimode night yes` 后自动切到 `values-night` 配色（深底浅字），两个实例都正常渲染且可读 |
+| **B2** 尺寸适配 | **部分验证**：已在 250×200dp 下渲染 hero + 今日剩余列表；调试探针在真机上读到了 `LocalSize=250.0x200.0`，证明尺寸驱动分支有效；**2x1 紧凑尺寸的实际像素布局未验证**（该 launcher 的缩放句柄无法用合成手势抓取，长按只弹出 Settings 菜单） |
+| **C1** 推送后同一次推送内刷新 | 日志显示 `phase=snapshot_stored bytes=15128` → 同一秒内 `phase=refresh_requested trigger=plugin_push` 与 `trigger=widget_update`，且桌面内容随推送立即变化 |
+| **C2** 落盘成功才 resolve | 真机上 `snapshot_stored` 与随后刷新成对出现；插件四条失败路径各自 `reject` 具名错误码（代码审查 + 单测） |
+| **C3** 无数据/过期显示引导态 | 清空 WebView 的课表数据后重载，原生收到 `status=empty`，两个实例都显示「暂无课表数据，打开 ClassTrack 导入」，不猜课程 |
+| **C4** 重启后仍能恢复 | `adb reboot` 后约 42 秒开机，未打开 App 的前提下：`dumpsys jobscheduler` 中已存在 `com.classtrack.app/androidx.work...SystemJobService`（WorkManager 自行恢复待办），桌面两个实例均正常重渲染 |
+| **C6** 系统级兜底 | `dumpsys alarm` 中出现系统投递的 `ELAPSED_WAKEUP tag=*walarm*:android.appwidget.action.APPWIDGET_UPDATE repeatInterval=1800000`，与我们的 `updatePeriodMillis` 一致 |
+| **C8** 跨零点/改时间/换时区即时纠正 | 用 `cmd alarm set-time` 把时间改到 20:09:00 后，日志出现 `20:09:00.369 phase=refresh_requested trigger=time_change` —— L2 广播立即重算 |
+| **C9** 精确模式授予/撤销 | ① 默认（Android 14+ 未授予）：`com.classtrack.app` 的精确闹钟计数为 0 → 静默回退；② `cmd appops set ... allow` 后重新武装，`dumpsys alarm` 出现 `RTC_WAKEUP ... tag=*walarm*:com.classtrack.app.action.WIDGET_BOUNDARY_ALARM`、**`origWhen=2026-09-19 20:10:00.000`**（正好是那节课的结束时刻）、**`window=0`（精确）**、`exactAllowReason=permission`；③ `deny` 后再刷新，`dumpsys alarm` 出现 `Reason=alarm_cancelled` / `pi_cancelled`，精确闹钟被清理 |
+| **C10** 设置节如实展示 | 授权态：`path=/profile`、卡片存在、等级显示 **「精确」**；撤销授权后重载：等级显示 **「基础」**，文案包含 **「30 分钟」** 与 **「课程名」**（即如实说明延迟，同时说明课程名始终正确） |
+| **C11** 结构性保证 | resolver 单测 + 跨层用例（含「首尾相接处该瞬间 hero 必须是下一节」）；真机上「正在进行」标签按预期出现 |
+| **D4** 端到端 | 放置 → 导入数据 → 桌面正确显示「正在进行 高等数学 / 今日剩余 大学物理」；推进时间后自动切换（见 B3） |
+| **D6** 长期不打开 App | 见 B3/C8/C9：时间推进到边界时，**精确闹钟在 20:10:00.077 触发**（距边界 77ms），同时 L2（20:09:00.369）与 L4（同刻 `trigger=boundary_work`）也各自交付；整个过程未打开 App，且应用进程已回收（属广播唤醒路径） |
+| **N3** 隐私 | 真机快照内容检查：`status/entries/dayEndEpochMs` 等字段齐全，**教师、`courseId`、`classId` 三个哨兵值均未出现**；`logcat -s ClassTrack.Widget` 全程只有阶段名、字节数与白名单枚举值，无课程内容 |
+| **N4** 不回归 | `pnpm cap:build:android` 的 `check-android-assets` 通过（246 assets / 28 references 字节一致） |
+
+## 4. 未验证项 / 残余风险
+
+| 项 | 未验证内容 | 原因 | 复验方式 |
 |---|---|---|---|
-| **B1** | 小工具出现在 launcher 的「小工具」选择器中并可被拖到桌面 | 需要 launcher | `adb install -r android/app/build/outputs/apk/debug/app-debug.apk` → 桌面长按 → 小工具 → ClassTrack |
-| **B2** | 4x2 显示 hero + 今日剩余；2x1 不溢出 | 需要实际 RemoteViews 渲染 | 放置后分别放大到 4x2 与缩小到 2x1，截图对比 |
-| **B3** | 课程结束/开始时 widget 自动切换 | 需要真实时间推进 + Glance 渲染 | 改系统时间到某节课结束前后，观察切换 |
-| **B4 / D8** | 点击小工具真正跳转到课表页 | 需要设备 | 点击 widget 后确认落在 `/schedule`；若未跳转，按 design D8 的降级条款记录为「仅打开 App」。**当前不声称跳转已生效**：代码路径完整，但最坏情况只是打开首页，无副作用 |
-| **B5** | 深色/浅色可读性 | 需要实际渲染 | 切换系统深色模式截图 |
-| **C1** | 推送后「同一次推送内」看到刷新 | 需要设备 | 打开 App 改一下当前周，观察 widget 秒级更新 |
-| **C3** | 无快照/过期时的引导态外观 | 需要设备 | 全新安装（无快照）→ 应显示「打开 ClassTrack 同步课表到桌面」 |
-| **C4** | 重启后排程仍能恢复 | 需要设备重启 | 放置 widget → 重启 → 确认仍会刷新 |
-| **C8** | 三个广播的实际投递 | 需要设备 | 改系统时间/时区，确认 widget 在数秒内重算；manifest 声明与幂等入口已静态确认 |
-| **C9** | 精确闹钟在授予/撤销后的行为 | 需要设备 | `adb shell cmd appops set com.classtrack.app SCHEDULE_EXACT_ALARM allow` → 观察 Doze 下按点切换；再 `deny` → 确认静默回退且不崩 |
-| **D4** | 端到端放置 + 同步 + 显示正确 | 无 KVM、无真机 | 同上 B1–B3 的组合流程 |
-| **D6** | 「长期不打开 App」的设备实测 | 无 KVM、无真机 | 推送快照后不再打开 App，把系统时间跳到窗口内另一天 → 确认内容变化；再跳到超过 `validUntil` → 确认进入引导态，并截图留证 |
+| **B2** | 2x1（Compact）的实际像素布局不溢出 | 模拟器 launcher 的缩放句柄无法用 `adb shell input` 合成手势抓取（长按只弹 Settings 菜单） | 在真机桌面上手动把实例缩到 2 格宽，确认只显示课程名与时间、且不溢出 |
+| — | 桌面圆角在不同 launcher / Android 版本上的裁剪表现 | 只在模拟器 Pixel Launcher 上看过 | 真机多 launcher 抽查；异常时去掉 `cornerRadius(16.dp)`（不影响信息正确性） |
+| — | 超大字体缩放（`fontScale ≥ 1.5`）下的表现 | 未改过 `fontScale` | 设置里调到最大字号看是否截断（当前用 `maxLines` 截断，不会破坏布局） |
+| — | 定位到「首尾相接两节课」的真实数据下的切换 | 测试数据里两节课之间有空档 | 导入含相邻课的课表，跨过交界秒验证 |
 
-**残余风险（因未在真实 RemoteViews 上渲染，属于静态审查无法覆盖的部分）**：
+### 观察到但**无法归因于本次改动**的一次崩溃
 
-1. `appWidgetBackground()` + `cornerRadius(16.dp)` 在不同 launcher / Android 版本上的实际裁剪表现未验证；若出现异常圆角或背景缺失，可去掉 `cornerRadius`（不影响信息正确性）。
-2. 12.sp/13.sp 字号在超大字体缩放（`fontScale` ≥ 1.5）下是否溢出未验证；当前用 `maxLines` 截断，不会破坏布局，但可能截断课程名。
-3. `SizeMode.Responsive` 的三档尺寸与真实桌面格子换算在不同 launcher 上可能略有差异；列表行数由 `LocalSize.current.height` 决定，因此尺寸判定本身是自适应的。
-4. 冷启动路径（进程未运行 + 广播唤醒）在真机上的耗时未测量；设计上接收器只做「读偏好 + 重算 + 排程」，没有网络与长耗时 IO。
+沙盒阶段的一次设备运行中出现过 `Fatal signal 4 (SIGILL)`，崩溃栈完整落在 Chromium 内：
 
-## 四、验证脚本与命令速查
+```
+#00/#01  libwebviewchromium.so
+#08      WV.ig1.onTrimMemory
+#12–#16  ComponentCallbacksController.dispatchTrimMemory → Application.onTrimMemory
+```
+
+栈中没有任何我们自己的类，且本改动**没有引入任何原生库**（Glance / WorkManager 都是纯 JVM 字节码）。事后尝试用 `am send-trim-memory RUNNING_LOW/RUNNING_CRITICAL` 复现未成功，全日志中该 `Fatal signal` 仅出现一次。因此按「一次性环境/WebView 崩溃」记录，不声称已解释清楚。
+（另注：本次修复的 §2.2 NPE 与它是**两个不同**的崩溃，NPE 已定位并修复。）
+
+## 5. 命令速查（复现本报告的每一步）
 
 ```bash
-# 环境（必需，见 env-setup.md）
-export GRADLE_USER_HOME=/home/yetongy/.cache/gradle-home ANDROID_USER_HOME=/home/yetongy/.cache/android-home
-
-# Web 门禁
+# 回归（无需任何环境变量覆盖）
 pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm build
-
-# Android 单测（含跨层用例）
 ./android/gradlew -p android :app:testDebugUnitTest
-
-# APK + 资源一致性
 pnpm cap:build:android
 
-# APK 内容取证
-AAPT=~/Android/Sdk/build-tools/34.0.0/aapt2
-$AAPT dump xmltree --file res/xml/class_track_widget_info.xml android/app/build/outputs/apk/debug/app-debug.apk
-$AAPT dump xmltree --file AndroidManifest.xml android/app/build/outputs/apk/debug/app-debug.apk
+# 启动模拟器（需要 /dev/kvm）
+~/Android/Sdk/emulator/emulator -avd Medium_Phone -no-window -no-audio -no-boot-anim -no-snapshot-load -gpu swiftshader_indirect
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 
-# 重新生成跨层夹具（仅在 Web 侧契约变更时需要）
-# 临时用例调用 buildWidgetSnapshot 后写入 android/app/src/test/resources/widget-snapshot-v1.json
+# 设备侧取证
+adb shell dumpsys appwidget | grep -A4 classtrack.app     # provider 登记与实例
+adb shell run-as com.classtrack.app cat shared_prefs/class-track-widget.xml   # 原生收到的快照（debug 包）
+adb logcat -d -s ClassTrack.Widget                        # 刷新链路（不含课程内容）
+adb shell dumpsys alarm | grep -A3 WIDGET_BOUNDARY_ALARM # L3 精确闹钟
+adb shell dumpsys jobscheduler | grep classtrack          # WorkManager 待办（重启后仍在）
+adb shell cmd appops set com.classtrack.app SCHEDULE_EXACT_ALARM allow|deny  # 精确模式开关
+adb shell cmd alarm set-time <epochMs>                    # 推进时间（验证 L2/L3 与 D6）
+
+# 往真机 App 注入课表数据（走真实推送链路）
+adb shell pidof com.classtrack.app                          # 取 pid
+adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>
+node /tmp/wv-eval.mjs @/tmp/seed.js && node /tmp/wv-eval.mjs "location.reload()"
 ```
+
+注意：`am broadcast -a android.appwidget.action.APPWIDGET_UPDATE` **不可用** —— 系统会以
+`Permission Denial: not allowed to send broadcast ... from unknown caller` 拒绝 shell 投递该受保护广播。
+触发刷新请用「启动 App」或等待 L3/L5。

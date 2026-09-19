@@ -16,9 +16,10 @@ ext {
 
     // Android 桌面小工具依赖
     glanceAppWidgetVersion = '1.2.0'
-    // Glance 会传递引入 2.7.1 时代的 WorkManager，这里显式提升到当前稳定版，
-    // 以免旧版本在 targetSdk 36 上出现已知缺陷。
-    androidxWorkVersion = '2.11.2'
+    // 与 Glance 1.2.0 的传递版本保持一致：实测显式升到 2.11.2 会让 Glance 的
+    // SessionWorker 反复被 cancel，provideContent 永不返回，桌面只显示 initialLayout。
+    // 注意 Glance 把 WorkManager 声明为 runtime 作用域，因此仍需显式声明才能编译。
+    androidxWorkVersion = '2.7.1'
 
     // Java 与 Kotlin 的 jvmTarget 必须一致，否则 KGP 会直接报错。
     // 取 21 是因为 AGP 8.13 默认就按本机 JDK 产出 Java 21 字节码，而 compileOptions 会被

@@ -59,7 +59,7 @@
 | `glance-appwidget` | `1.2.0` | Google Maven metadata 中最新**稳定**版（`1.3.0-alpha02` 为预发布，不采用） |
 | `kotlin-gradle-plugin` / `compose-compiler-gradle-plugin` | `2.1.20` | Glance 1.2.0 声明 `kotlin-stdlib 2.0.21` + Compose Runtime `1.7.8`，2.1.x 与该时代匹配；Kotlin 2.x 起 Compose 编译器由 Kotlin 自带，无需独立版本对齐 |
 | Compose Runtime | 保持 Glance 传递的 `1.7.8` | 不额外引入 Compose BOM，避免与 Glance 发布元数据打架 |
-| `work-runtime-ktx` | `2.11.2` | Glance 传递引入的是 2021 年的 `2.7.1`；显式提升到当前稳定版，避免老版本在 targetSdk 36 上的已知缺陷 |
+| `work-runtime-ktx` | `2.7.1`（与 Glance 传递版本一致） | 早期设计想显式提升到当前稳定版；实机验证后改为**跟随 Glance 自带版本**：这个组合已在真机上验证过边界任务按时交付（20:10:00.077 触发）且重启后待办被 WorkManager 自行恢复。注意 Glance 把 WorkManager 声明为 `runtime` 作用域，因此仍需显式 `implementation` 才能编译。 |
 
 ### D1.2 已识别风险与缓解
 
