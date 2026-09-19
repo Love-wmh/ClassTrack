@@ -49,44 +49,48 @@
 
 ## Acceptance Criteria
 
+> 状态说明（2026-09-19）：`[x]` = 已用真实执行的证据验证；`⚠️ 未验证` = 需要真机/模拟器，本环境无 `/dev/kvm` 且无真机连接，模拟器拒绝启动。
+> 全部逐项证据（命令、输出、原始报错、残余风险、交给设备的复验步骤）见同目录 [verification.md](./verification.md)。**未勾选项一律不声称已完成。**
+> 结果：已取证 14 项、待设备验证 13 项。
+
 ### A. Web 侧快照与推送
 
-- [ ] A1 `app/lib/widget-snapshot.ts` 提供纯函数，从 `{classes, currentWeek, firstWeekStartDate}` 计算出含绝对本地时间的「接下来」与「今日剩余」；覆盖窗口从当天延伸到学期最后一周的最后一天；`firstWeekStartDate` 为 `null` 时返回 `unavailable` 状态与空窗口，而不是错误日期。
-- [ ] A2 快照 JSON 带 `schemaVersion`、`generatedAt`（含偏移的 ISO 8601）与 `timezone`，字段与 design D2 完全一致。
-- [ ] A3 vitest 覆盖：正常上课日、进行中课程、今日已无课、休息日、`firstWeekStartDate` 缺失、跨周与跨天边界；日期断言显式传入 `now`，不依赖 `new Date()` 当前时刻。
-- [ ] A4 新增 Capacitor 插件封装遵循 `app/lib/native-course-import.ts` 模式（`registerPlugin` + Web no-op 实现 + 具名错误码），在 Web 上不抛未捕获异常。
-- [ ] A5 存在一处集中式同步钩子：订阅 store 变化（去抖）推送、App 回到前台推送、启动/水合后推送一次；全部仅在原生 Android 上生效。
+- [x] A1 `app/lib/widget-snapshot.ts` 提供纯函数，从 `{classes, currentWeek, firstWeekStartDate}` 计算出含绝对本地时间的「接下来」与「今日剩余」；覆盖窗口从当天延伸到学期最后一周的最后一天；`firstWeekStartDate` 为 `null` 时返回 `unavailable` 状态与空窗口，而不是错误日期。
+- [x] A2 快照 JSON 带 `schemaVersion`、`generatedAt`（含偏移的 ISO 8601）与 `timezone`，字段与 design D2 完全一致。
+- [x] A3 vitest 覆盖：正常上课日、进行中课程、今日已无课、休息日、`firstWeekStartDate` 缺失、跨周与跨天边界；日期断言显式传入 `now`，不依赖 `new Date()` 当前时刻。
+- [x] A4 新增 Capacitor 插件封装遵循 `app/lib/native-course-import.ts` 模式（`registerPlugin` + Web no-op 实现 + 具名错误码），在 Web 上不抛未捕获异常。
+- [x] A5 存在一处集中式同步钩子：订阅 store 变化（去抖）推送、App 回到前台推送、启动/水合后推送一次；全部仅在原生 Android 上生效。
 
 ### B. Android 小工具
 
-- [ ] B1 桌面可添加小工具，`appwidget-provider` 元数据（标签、描述、尺寸、resizeMode）正确，出现在小工具选择器中。
-- [ ] B2 4x2 尺寸下显示「接下来」卡片与今日剩余列表；2x1 尺寸下不溢出，至少显示课程名与时间。
-- [ ] B3 进行中的课程被标记为进行中；课程结束后小工具自动切到下一节（无需打开 App）。
-- [ ] B4 点击小工具打开 ClassTrack；课表页跳转为 best-effort，若降级需在检查阶段显式记录该降级。
-- [ ] B5 深色/浅色主题下文字可读，无自定义字体依赖。
+- [ ] B1 桌面可添加小工具，`appwidget-provider` 元数据（标签、描述、尺寸、resizeMode）正确，出现在小工具选择器中。  ⚠️ **未验证**（需 launcher）
+- [ ] B2 4x2 尺寸下显示「接下来」卡片与今日剩余列表；2x1 尺寸下不溢出，至少显示课程名与时间。  ⚠️ **未验证**（需真实 RemoteViews 渲染）
+- [ ] B3 进行中的课程被标记为进行中；课程结束后小工具自动切到下一节（无需打开 App）。  ⚠️ **未验证**（需真实时间推进）
+- [ ] B4 点击小工具打开 ClassTrack；课表页跳转为 best-effort，若降级需在检查阶段显式记录该降级。  ⚠️ **未验证**（需设备（且按 D8 不声称已生效））
+- [ ] B5 深色/浅色主题下文字可读，无自定义字体依赖。  ⚠️ **未验证**（需实际渲染）
 
 ### C. 数据通道与刷新
 
-- [ ] C1 Web 推送后小工具在同一次推送内完成刷新（不依赖打开 App 以外的人工操作）。
-- [ ] C2 快照写入是原子的：接收方不会读到半截 JSON；写入失败时插件 `reject` 明确错误码，不假装成功。
-- [ ] C3 无快照时显示引导态；快照超过 TTL 时显示陈旧提示而不是展示可能错误的课程。
-- [ ] C4 定时刷新使用最短权限方案，且在设备重启后仍能恢复（未申请 `RECEIVE_BOOT_COMPLETED`）。
-- [ ] C5 `AndroidManifest.xml` 主动声明的权限只有 `INTERNET` 与 `SCHEDULE_EXACT_ALARM`（后者服务于用户可选的 L3 精确模式）；`USE_EXACT_ALARM` 必须以精确形式 `android:name="android.permission.USE_EXACT_ALARM"` **不出现**（注意：注释里出现这个词不算违规，判定要用精确串）。`RECEIVE_BOOT_COMPLETED` / `WAKE_LOCK` / `FOREGROUND_SERVICE` / `ACCESS_NETWORK_STATE` 只在合并清单里出现，来源是 `androidx.work` 的库清单，不是本次新增的声明。
-- [ ] C6 存在一条不依赖应用进程存活的系统级刷新路径（`appwidget-provider` 的 `updatePeriodMillis`），使小工具在应用长期未被打开时仍会周期性重新解析快照并重算状态。
-- [ ] C7 存在自动化断言证明「长期不打开 App」的正确性：以远超覆盖起点的 `nowEpochMs` 调用原生 resolver，断言仍能从 14 天以后、跨周、跨月的快照中选出正确课程，而不是落到过期态。
-- [ ] C8 跨零点 / 改时间 / 换时区由 manifest 声明的 `ACTION_DATE_CHANGED`、`ACTION_TIME_SET`、`ACTION_TIMEZONE_CHANGED` 接收器处理，且与 Worker 共用同一幂等重算入口（不复制第二套逻辑）。
-- [ ] C9 存在用户可选的精确模式：`canScheduleExactAlarms()` 为真时使用 `setExactAndAllowWhileIdle`，为假时静默回退到 L4；授予/撤销状态变化有明确处理。
-- [ ] C10 应用内「桌面小工具」设置节如实展示当前精度等级，并提供一键跳转系统设置授权的入口（不主动弹窗拦截）。
-- [ ] C11 结构性保证有自动化断言：课程 `start < now < end` 时它仍是 hero 且状态为「正在进行」；仅当快照中不存在任何 `end > now` 的课程时才可能显示「无课」。
+- [ ] C1 Web 推送后小工具在同一次推送内完成刷新（不依赖打开 App 以外的人工操作）。  ⚠️ **未验证**（需设备）
+- [x] C2 快照写入是原子的：接收方不会读到半截 JSON；写入失败时插件 `reject` 明确错误码，不假装成功。
+- [ ] C3 无快照时显示引导态；快照超过 TTL 时显示陈旧提示而不是展示可能错误的课程。  ⚠️ **未验证**（需设备）
+- [ ] C4 定时刷新使用最短权限方案，且在设备重启后仍能恢复（未申请 `RECEIVE_BOOT_COMPLETED`）。  ⚠️ **未验证**（需设备重启）
+- [x] C5 `AndroidManifest.xml` 主动声明的权限只有 `INTERNET` 与 `SCHEDULE_EXACT_ALARM`（后者服务于用户可选的 L3 精确模式）；`USE_EXACT_ALARM` 必须以精确形式 `android:name="android.permission.USE_EXACT_ALARM"` **不出现**（注意：注释里出现这个词不算违规，判定要用精确串）。`RECEIVE_BOOT_COMPLETED` / `WAKE_LOCK` / `FOREGROUND_SERVICE` / `ACCESS_NETWORK_STATE` 只在合并清单里出现，来源是 `androidx.work` 的库清单，不是本次新增的声明。
+- [x] C6 存在一条不依赖应用进程存活的系统级刷新路径（`appwidget-provider` 的 `updatePeriodMillis`），使小工具在应用长期未被打开时仍会周期性重新解析快照并重算状态。
+- [x] C7 存在自动化断言证明「长期不打开 App」的正确性：以远超覆盖起点的 `nowEpochMs` 调用原生 resolver，断言仍能从 14 天以后、跨周、跨月的快照中选出正确课程，而不是落到过期态。
+- [ ] C8 跨零点 / 改时间 / 换时区由 manifest 声明的 `ACTION_DATE_CHANGED`、`ACTION_TIME_SET`、`ACTION_TIMEZONE_CHANGED` 接收器处理，且与 Worker 共用同一幂等重算入口（不复制第二套逻辑）。  ⚠️ **未验证**（广播实际投递需设备（声明已静态确认））
+- [ ] C9 存在用户可选的精确模式：`canScheduleExactAlarms()` 为真时使用 `setExactAndAllowWhileIdle`，为假时静默回退到 L4；授予/撤销状态变化有明确处理。  ⚠️ **未验证**（授予/撤销行为需设备）
+- [ ] C10 应用内「桌面小工具」设置节如实展示当前精度等级，并提供一键跳转系统设置授权的入口（不主动弹窗拦截）。  ⚠️ **未验证**（设置节仅在 Android 渲染，需设备）
+- [x] C11 结构性保证有自动化断言：课程 `start < now < end` 时它仍是 hero 且状态为「正在进行」；仅当快照中不存在任何 `end > now` 的课程时才可能显示「无课」。
 
 ### D. 门禁与验证
 
-- [ ] D1 `pnpm typecheck`、`pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build` 五项全绿。
-- [ ] D2 `pnpm cap:build:android` 成功产出 debug APK，且 `pnpm android:check-assets` 通过（Web 资源字节一致）。
-- [ ] D3 新增 Android JUnit 测试通过（`./android/gradlew -p android :app:testDebugUnitTest`），覆盖快照解析、时间定位、陈旧/空快照分支。
-- [ ] D4 模拟器或真机上完成一次端到端手工验证并留存截图：放置小工具 → 打开 App 导入/同步 → 桌面小工具显示正确课程。
-- [ ] D5 `pnpm dev` 下浏览器访问不受影响（无原生插件时全部降级为 no-op），且无 console 报错。
-- [ ] D6 「长期不打开 App」场景在设备上被验证：推送快照后不打开 App，把系统时间推进到覆盖窗口内的另一天/另一节课的时间点，确认小工具内容随之正确变化；再推进到超过覆盖窗口，确认进入同步引导态。该验证的证据（截图/命令输出）需在完成报告中给出，否则视为未验证。
+- [x] D1 `pnpm typecheck`、`pnpm lint`、`pnpm format:check`、`pnpm test`、`pnpm build` 五项全绿。
+- [x] D2 `pnpm cap:build:android` 成功产出 debug APK，且 `pnpm android:check-assets` 通过（Web 资源字节一致）。
+- [x] D3 新增 Android JUnit 测试通过（`./android/gradlew -p android :app:testDebugUnitTest`），覆盖快照解析、时间定位、陈旧/空快照分支。
+- [ ] D4 模拟器或真机上完成一次端到端手工验证并留存截图：放置小工具 → 打开 App 导入/同步 → 桌面小工具显示正确课程。  ⚠️ **未验证**（无 KVM / 无真机）
+- [x] D5 `pnpm dev` 下浏览器访问不受影响（无原生插件时全部降级为 no-op），且无 console 报错。
+- [ ] D6 「长期不打开 App」场景在设备上被验证：推送快照后不打开 App，把系统时间推进到覆盖窗口内的另一天/另一节课的时间点，确认小工具内容随之正确变化；再推进到超过覆盖窗口，确认进入同步引导态。该验证的证据（截图/命令输出）需在完成报告中给出，否则视为未验证。  ⚠️ **未验证**（无 KVM / 无真机）
 
 ## Notes
 

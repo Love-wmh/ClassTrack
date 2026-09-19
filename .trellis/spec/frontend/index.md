@@ -21,6 +21,7 @@ This directory contains guidelines for frontend development. Fill in each file w
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Native Course Import](./native-course-import.md) | Capacitor/WebView bridge, payload validation, and fallback contract | Implemented |
+| [Android Home-Screen Widget](./android-home-widget.md) | Widget snapshot bridge, five-tier refresh ladder, and the guarantee/staleness contract | Implemented |
 
 ---
 
