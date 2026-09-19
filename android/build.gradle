@@ -10,6 +10,11 @@ buildscript {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
 
+        // Kotlin 与 Compose 编译器插件必须同版本：Kotlin 2.x 起 Compose 编译器随 Kotlin 发布，不再是独立版本。
+        // 这里只能用字面量：buildscript 块先于 `apply from: "variables.gradle"` 求值，拿不到其中的 ext 变量。
+        // 桌面小工具（Jetpack Glance）需要 Kotlin 源码支持，因此本模块从纯 Java 变为 Java + Kotlin。
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20'
+        classpath 'org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.1.20'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }

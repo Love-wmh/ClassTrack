@@ -1,4 +1,8 @@
 apply plugin: 'com.android.application'
+// Kotlin 与 Compose 编译器插件的 classpath 由根 build.gradle 的 buildscript 提供。
+// 桌面小工具用 Jetpack Glance 编写，Glance 是 Kotlin/Compose API，因此本模块不再是纯 Java。
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
     namespace = "com.classtrack.app"
@@ -24,6 +28,17 @@ android {
     }
 }
 
+// Java 与 Kotlin 必须使用同一个 jvmTarget，否则 KGP 直接报 Inconsistent JVM-target compatibility。
+// 用 JVM toolchain 而不是 compileOptions：AGP 8.13 会用 toolchain 覆盖 compileOptions 的
+// source/targetCompatibility，只写 compileOptions 不生效（实测 Java 任务仍是本机 JDK 版本）。
+// 版本取自 variables.gradle 的 jvmTargetVersion，本仓库要求 JDK 21。
+kotlin {
+    jvmToolchain(rootProject.ext.jvmTargetVersion.toInteger())
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.fromTarget(rootProject.ext.jvmTargetVersion.toString())
+    }
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -42,6 +57,9 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // 桌面小工具（Jetpack Glance）与刷新排程（WorkManager）
+    implementation "androidx.glance:glance-appwidget:$glanceAppWidgetVersion"
+    implementation "androidx.work:work-runtime-ktx:$androidxWorkVersion"
 }
 
 apply from: 'capacitor.build.gradle'
