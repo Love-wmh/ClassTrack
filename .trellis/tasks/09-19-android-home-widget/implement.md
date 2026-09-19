@@ -390,6 +390,29 @@ pnpm dev   # 浏览器打开，确认 console 无报错、Network 中无 WidgetS
 - **回滚点**：见 design-appendix「Rollback」表新增的两行（P7 整体回滚 / 只回滚滚动）。
 - **通过判据**：prd B6–B12 全部有设备证据；未验证项显式标注，不得沉默跳过。
 - **提交**：`feat(widget): per-instance styles, scrollable day list and real previews`。
+
+## P8. 保真预览、Bug B 与响应式回炉（2026-09-20 真机回测后追加）
+
+**背景**：P7 交付后真机回测发现三件事 —— (a) 配置页预览与真实小工具完全对不上；(b) 切成「紧凑」后切不回其它样式；(c) 卡片里大片空白、顶部滚动时留下固定白边、hero 标题换行挤掉剩余课程。据此新增 prd R11–R17、design D14（改写）/D15（改写）/D16（新增）。**本阶段不碰** D2 契约、D3 通道、D4 调度、D8 路由。
+
+1. **Bug B：配置陈旧（先修，独立可验）**
+   - `WidgetRenderCache` 增加按实例配置缓存（`publishConfig` / `latestConfig`）；`provideGlance` 与 `WidgetConfigBridge.save` 都发布，`provideContent` 读缓存而不是闭包捕获的 `config`。
+   - 校验：真机上 compact → day_list → next_up 连续回切，每次都有 `style_configured` + `widget_rendered` 日志与截图。
+2. **Java 纯逻辑（可单测）**
+   - 新增 `WidgetDayPlan`（选天规则 R11）与 `WidgetDateLabel`（把 Web 预格式化的 `dayKey` 拆成「10月8日」，**不做日期运算**）。
+   - `WidgetDisplayState` 增加 `nextDayItems`，`WidgetStateResolver` 用 `dayOffset + 1` 计算。
+   - 单测：`WidgetDayPlanTest`（今天优先、明天兜底、长假不列、隐藏后不回退、折叠计数保留、null 输入）、`WidgetDateLabelTest`（补零、脏数据、越界月份）、`WidgetStateResolverTest` 增 2 例。
+3. **渲染层改成响应式（R12/R13/R14/R15）**
+   - `sizeMode = SizeMode.Exact`，删掉 `SUPPORTED_SIZES` 与全部按高度的阈值分支。
+   - 正文改为「行的序列」（`bodyLines` → `List<BodyLine>`），真机装进 `LazyColumn`（整卡一条滚动轴）、预览装进普通 `Column`，`BodyLineView` 两侧共用。
+   - 纵向留白放进序列首尾（不挂在卡片 `padding` 上）；hero 课程名 `maxLines = 1`；紧凑样式不因格子变大而加内容。
+4. **预览改成所见即所得（R16/R17）**
+   - 新增 `WidgetPreviewRenderer`（`GlanceRemoteViews` 渲染真实 `RemoteViews`），配置页用 `applicationContext` 做 `RemoteViews.apply` 并挂进 `FrameLayout`；失败只记 `phase=preview_failed`。
+   - 删除静态 mock `widget_preview_next_up.xml` / `widget_preview_compact.xml`；`activity_widget_config.xml` 的三个 include 换成 `FrameLayout` 容器。
+   - 同步样式：内边距 14/12dp、圆角 20dp、行距 6/4dp，mock（picker 用）与 `widget_preview_surface.xml` 一起改。
+5. **门禁与设备验收**：Android 单测 87 例、Web 五项门禁、`pnpm cap:build:android`、`git diff --check`；真机截图对照三样式预览 + 整卡滚动三联图。
+
+- **提交**：`feat(widget): wysiwyg previews, per-instance config refresh and responsive layout`。
 ---
 
 ## 质量检查（每个阶段后 + 收尾全量）

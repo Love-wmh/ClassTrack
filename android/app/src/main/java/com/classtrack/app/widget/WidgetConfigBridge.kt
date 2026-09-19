@@ -38,6 +38,9 @@ object WidgetConfigBridge {
                 val manager = GlanceAppWidgetManager(appContext)
                 val glanceId = manager.getGlanceIdBy(appWidgetId)
                 WidgetStyleState.write(appContext, glanceId, config)
+                // 先发布再 update：update 只重合成、不重跑 provideGlance，
+                // 合成层必须能读到这份新配置，否则样式切换在画面上不生效。
+                WidgetRenderCache.publishConfig(appWidgetId, config)
                 ClassTrackWidget().update(appContext, glanceId)
                 WidgetDiagnostics.styleConfigured(config.layoutStyleStorageValue(), config.finishedPolicyStorageValue())
             } catch (error: RuntimeException) {

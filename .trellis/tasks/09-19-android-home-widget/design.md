@@ -349,7 +349,7 @@ fun getGlanceIdBy(intent: Intent): GlanceId
 ### 安全边界（必须实现，属于新增攻击面）
 
 1. 该 Activity 必须 `android:exported="true"`（launcher 要能拉起它），因此 `EXTRA_APPWIDGET_ID` 一律按**不可信输入**处理：用 `AppWidgetManager.getAppWidgetInfo(id)` 校验该 id 存在、且其 `provider` 等于本应用的 `ClassTrackWidgetReceiver`；不满足立即 `setResult(RESULT_CANCELED)` + `finish()`，不做任何写入、不返回任何信息。
-2. 配置页**不显示任何课程数据**，只有样式名与静态缩略图 —— 即使被第三方应用启动，也读不到课表。
+2. ~~配置页**不显示任何课程数据**~~ —— **该边界已于 2026-09-19 被用户主动替换**（见 D14「残余风险」）：配置页现在渲染真实课表作为所见即所得的样式预览。保留的缓解、以及为什么不靠白名单 launcher 包名「加固」，都写在 D14 里；不要把它当成遗漏去「修」。
 3. Intent 里只有整数 widget id，不接收 URL、文件路径或任意 payload，也就没有注入面。
 4. 日志沿用 D3 的诊断约定：只记 phase / 枚举 / 布尔，不记课程载荷。
 
@@ -359,21 +359,43 @@ fun getGlanceIdBy(intent: Intent): GlanceId
 
 - **Android 12+**：`android:previewLayout` 指向一份传统 RemoteViews 布局 mock，只能使用白名单类（`FrameLayout` / `LinearLayout` / `TextView` / `ImageView` 等）。**绝不能再出现 `android.view.View`** —— 那正是 2026-09-19 设备验收发现的缺陷 1（`InflateException: Class not allowed to be inflated android.view.View`，桌面显示「Can't load widget」）。mock 展示默认样式（全天课表）。
 - **Android 12 以下**：`android:previewImage` 指向一张**由真机截图裁出的真实预览图**（`res/drawable-nodpi/widget_preview.png`，用 Pillow 从 `adb exec-out screencap` 的截图裁切），而不是现在的 `@mipmap/ic_launcher` —— 后者就是用户报的「没有做好预览」。
-- **配置页缩略图**：三套静态 mock 布局（与 `previewLayout` 同一资源家族）在配置页里各 inflate 一次。不放二进制资源、不放课程数据。
-- **诚实性要求**：mock 是静态资源，会与真实 Glance 渲染漂移。因此 (a) verification.md 必须记录「picker preview 与真机截图对照」的证据；(b) spec 中要写明：改动任一真实样式的视觉时必须同步更新对应 mock，否则预览会撒谎。
+- **配置页缩略图：改为「真实渲染」，静态 mock 已删除**（2026-09-19 需求变更）。原先三套静态 mock 与真实 Glance 渲染是两套代码，真机上直接对不上：预览永远显示示例数据（「今天 周三 · 共 6 节 + 3 行示例课程」），而真实卡片在周末只有两行并留下大片空白。用户明确要求**所见即所得**，于是：
+  - `WidgetPreviewRenderer` 复用同一个 `WidgetContent` 组合，经 `GlanceRemoteViews.compose(context, size, null, Bundle.EMPTY)` 得到真实 `RemoteViews`，配置页用 `RemoteViews.apply` 放进 `FrameLayout`（视觉上按槽宽等比缩小）。
+  - 渲染尺寸取实例的真实格子尺寸（`OPTION_APPWIDGET_MIN_WIDTH/HEIGHT`）。这一点只在 `sizeMode = Exact` 时成立：此前声明固定候选尺寸（`Responsive`）时，真实渲染用的是挑中的那一档（180×140），预览却按格子原始尺寸（286×158）画，于是「预览列出三行课、桌面只剩 hero」（真机实测）。
+  - `widget_preview_next_up.xml` / `widget_preview_compact.xml` **已删除**：两套渲染器要手工同步，正是漂移的来源。`widget_preview_day_list.xml` 只保留给 picker 的 `previewLayout`（那是宿主 inflate 的静态布局，拿不到数据），仍需手工保持同步。
+- **踩过并必须保住的两个坑**（真机复现）：
+  1. **`RemoteViews` 必须用 `applicationContext` inflate**，不能用 Activity：`AppCompatActivity` 的 LayoutInflater 上装着 AppCompat 的视图替换工厂，会把框架控件换成 `AppCompat*`，而 `RemoteViews` 的反射只接受框架类，`apply()` 时抛 `ActionException: view: androidx.appcompat.widget.AppCompatImageView can't use method with RemoteViews: setImageResource(int)` 直接崩掉进程。宿主 launcher 没有这个工厂，所以 Application 上下文才等价于宿主 inflate 出来的布局。
+  2. **预览失败绝不能影响保存样式**：`WidgetPreviewRenderer.render` 捕获 `RuntimeException` 返回 `null`，配置页 `showPreview` 外再包一层捕获 —— 预览只是锦上添花，用户必须始终能改回样式。
+- **诚实性要求**：预览与真实渲染共用同一份「行的序列」与同一个渲染函数（`bodyLines` / `BodyLineView`），**不做第二套渲染代码**；唯一差别是预览用普通 `Column`（`LazyColumn` 靠宿主的 `RemoteViewsService` 填行，没有宿主时会画成空列表）。改样式只需改一处。
+- **残余风险（已接受）**：配置页现在会渲染真实课程数据，而它是 `exported` 的 Activity。任何能猜到有效 `appWidgetId` 的应用都可以拉起它并看到课表。原来的「配置页不显示任何课程数据」边界是为了彻底避免这一类问题，用户在看到「静态 mock 会撒谎」后选择用 WYSIWYG 换掉它。保留的缓解：仍校验 widget id 归属、Intent 不携带任何载荷、日志不含课程内容。**不要**用白名单 launcher 包名来「加固」：configure Intent 只带 id，包名不是可验证的信任根。
 
 ---
 
-## D15. 唯一的实验性 API opt-in（滚动）
+## D15. 实验性 API opt-in：正好两处
 
-- `androidx.glance.appwidget.lazy.LazyColumn` 在 Glance `1.2.0` 的字节码里带 `androidx.glance.ExperimentalGlanceApi` 注解（已实测确认），因此 `ClassTrackWidget.kt` 里会出现**唯一**一处 `@OptIn(ExperimentalGlanceApi::class)`。
-- **为什么接受**：这是官方提供的 opt-in 机制（不是 `@Suppress` 式的压制），并且它是 Glance 里**唯一**能实现 widget 内真实滚动的路径；用户明确要求「格子小了加滚动就能显示全」。底层走平台的 `RemoteViewsService` 集合机制（`GlanceRemoteViewsService` 已在合并清单中），不是私有 hack。
-- **影响面**：只影响 `ClassTrackWidget.kt` 一个文件。检查方式：`grep -rn "OptIn" android/app/src/main` 只应命中该处。注解不得扩散。
+- `androidx.glance.appwidget.lazy.LazyColumn` 带 `androidx.glance.ExperimentalGlanceApi` 注解（已实测确认字节码），因此 `ClassTrackWidget.kt` 里有一处 `@OptIn(ExperimentalGlanceApi::class)`。
+- 配置页预览用的 `GlanceRemoteViews` 带 `androidx.glance.ExperimentalGlanceRemoteViewsApi` 注解，因此 `WidgetPreviewRenderer.kt` 里有一处 `@OptIn(ExperimentalGlanceRemoteViewsApi::class)`（2026-09-19 从静态 mock 改成真实渲染时引入）。
+- **为什么接受**：两处都是官方 opt-in 机制（不是 `@Suppress` 式压制）。前者是 Glance 里**唯一**能实现 widget 内真实滚动的路径（用户明确要求「格子放不下时可以上下滑动看完整天」）；后者是**唯一**能把真实组合渲染成 `RemoteViews` 的公开入口，而所见即所得的预览正是用户点名要的。
+- **影响面与检查方式**：`grep -rn "OptIn" android/app/src/main` 应当正好命中这两处，不得扩散。**注意 `ExperimentalGlanceRemoteViewsApi` 与 `ExperimentalGlanceApi` 是两件事**：前者只服务配置页预览，即使将来被移除也只影响预览（回退路径是恢复静态 mock 布局）。
 - **回退路径**：若某个启动器不支持集合型 widget（滚动退化为不可滑），把列表换回「按 `LocalSize` 计算行数 + `+N 节未显示`」的截断实现即可 —— 纯 Kotlin 改动，不影响 D2 契约、D3 通道、D4 调度与 Java 纯逻辑。
 
 ---
 
+## D16. 响应式：按真实尺寸自适应，不用尺寸档位（2026-09-19 真机回测确立）
+
+**决策**：`sizeMode = SizeMode.Exact`，布局完全由内容与真实可用空间决定，**不声明固定候选尺寸、不写按尺寸分支的阈值**。
+
+- **为什么改掉 `SizeMode.Responsive(4 档)`**：声明档位会让「真实渲染用哪一档」与「配置页拿到的格子尺寸」成为两件事 —— 真机 4×2 上真实渲染按 180×140 裁决、预览按 286×158 画，于是预览列出三行课而桌面只剩 hero。同时档位本身也不可靠：Android 12 以下没有多尺寸集合，`findBestSize` 只会挑最近的一档；用户还能把格子拖成任意大小。改成 `Exact` 后 `LocalSize` 就是真实格子尺寸，预览与真机天然一致（真机日志 `widget_sized 286x158` / `preview_sized 286x158` 相同）。
+- **自适应靠布局而不是算术**：正文是一份行序列（`bodyLines` → `List<BodyLine>`），装进 `LazyColumn` 吃掉卡片剩余高度 —— 格子高就多显示几行、矮就少显示几行并允许滑动。**不要**再回到 `if (availableHeight < N.dp) 不显示列表` 这类阈值：那既是「钉死尺寸」，也制造过「4×2 只剩 hero、下面 45% 全白」。
+- **整张卡片一条滚动轴**：hero、汇总行、课程行都是同一个 `LazyColumn` 的 item，不存在「上方固定 + 下方一小块可滚」的局部滚动区。用户明确否掉了后者：「不要做一个特别小的滚动区域」。
+- **上下留白属于内容**（序列首尾各一个 `Spacer`），不挂在卡片的 `padding` 上：挂在卡片上的纵向内边距在滚动时不动，看起来就是顶部一条固定的白边（用户回测报的就是这个）。
+- **hero 课程名只给一行**（`maxLines = 1`）：真机上两行标题会把卡片上半部分吃光，留给「剩余课程」的位置只剩一丝。用户的原话：「如果课程要换行，留给剩余部分的显示面积就很少」。
+- **紧凑样式不因格子变大而加内容**：它的定位就是只显示一节课（R8），用户也确认「紧凑可以就不显示那么多」。
+
+**权衡**：`Exact` 下每次尺寸变化都要重新组合（`Responsive` 会预先为几档尺寸各组合一次），代价是首次绘制稍贵；换来的是任意尺寸都正确、以及预览与真机不再可能不一致。
+---
+
 ## 附录
 
-D11（长期不打开 App 的保证与失效边界）、D12（精度阶梯的用户可见行为与交付口径）、D13（每实例样式配置与配置页安全边界）、D14（选择器预览）、D15（唯一的实验性 API opt-in）、一致性检查表、Rollback、验证策略与未决事实见 [design-appendix.md](./design-appendix.md)。**D11/D12 是交付口径的强制部分，D13 的安全边界是新增攻击面的强制部分，实现与检查都必须读。**
+D11（长期不打开 App 的保证与失效边界）、D12（精度阶梯的用户可见行为与交付口径）、D13（每实例样式配置与配置页安全边界）、D14（预览：真实渲染与残余风险）、D15（两处实验性 API opt-in）、D16（响应式：按真实尺寸自适应）、一致性检查表、Rollback、验证策略与未决事实见 [design-appendix.md](./design-appendix.md)。**D11/D12 是交付口径的强制部分；D13 的安全边界与 D14 的残余风险是新增攻击面的强制部分；D16 是渲染改动的强制约束（不许回到尺寸档位与阈值），实现与检查都必须读。**
 

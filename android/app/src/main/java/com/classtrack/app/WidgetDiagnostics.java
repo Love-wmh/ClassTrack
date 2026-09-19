@@ -82,6 +82,20 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 记录一次真实合成拿到的格子尺寸。
+     *
+     * 「配置页预览和桌面上不一样」这类问题只能靠尺寸对齐：`SizeMode.Exact` 下这里打的就是真实格子
+     * 大小，配置页预览的 `phase=preview_sized` 应当与它一致（会差一点 launcher 自己的内缩）。
+     * 只记尺寸，不含任何课程内容。
+     *
+     * @param widthDp 实际渲染宽度（dp）。
+     * @param heightDp 实际渲染高度（dp）。
+     */
+    public static void widgetSized(int widthDp, int heightDp) {
+        Log.i(TAG, "phase=widget_sized w=" + Math.max(0, widthDp) + " h=" + Math.max(0, heightDp));
+    }
+
+    /**
      * 记录一次渲染请求命中了多少个 widget 实例。
      *
      * 「刷新了但画面没变」有两种完全不同的原因：没有实例可刷（count=0），或实例拿到了新快照却
@@ -99,6 +113,28 @@ public final class WidgetDiagnostics {
 
     public static void styleReadFailed() {
         Log.w(TAG, "phase=style_read_failed");
+    }
+
+    /**
+     * 配置页的样式预览渲染失败。
+     *
+     * 预览失败只影响配置页少一张示意图，不影响样式是否保存，因此按警告记录、不带任何异常细节。
+     */
+    public static void previewFailed() {
+        Log.w(TAG, "phase=preview_failed");
+    }
+
+    /**
+     * 记录配置页预览用的尺寸。
+     *
+     * 预览与真实小工具必须画在同一个尺寸上，否则预览就是在撒谎。这条日志与 `phase=widget_sized`
+     * 应当只差一点 launcher 自己的内缩（真实卡片会比实例选项报告的格子略小）。
+     *
+     * @param widthDp 预览画布宽度（dp）。
+     * @param heightDp 预览画布高度（dp）。
+     */
+    public static void previewSized(int widthDp, int heightDp) {
+        Log.i(TAG, "phase=preview_sized w=" + Math.max(0, widthDp) + " h=" + Math.max(0, heightDp));
     }
 
     /**

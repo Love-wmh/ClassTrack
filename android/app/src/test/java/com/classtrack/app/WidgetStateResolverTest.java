@@ -163,6 +163,43 @@ public class WidgetStateResolverTest {
     }
 
     /**
+     * 「明天」的课必须单独取出来：今天没课时卡片要靠它把格子填满。
+     *
+     * <p>只取 `dayOffset + 1` 一天，且不包含更后面的日子 —— 否则长假期间会把好几天后的课
+     * 当成「明天有课」显示，这正是用户明确要求避免的误导。
+     */
+    @Test
+    public void nextDayItemsCoverOnlyTomorrow() {
+        long todayEndedStart = NOW_DAY0 - 3 * HOUR_MS;
+        long tomorrowStart = DAY0_END + HOUR_MS;
+        WidgetSnapshot snapshot = schedule(VALID_UNTIL, DAYS_3,
+                occurrence("TODAY", todayEndedStart, todayEndedStart + HOUR_MS, 0),
+                occurrence("TOMORROW_A", tomorrowStart, tomorrowStart + HOUR_MS, 1),
+                occurrence("TOMORROW_B", tomorrowStart + 2 * HOUR_MS, tomorrowStart + 3 * HOUR_MS, 1),
+                occurrence("DAY_AFTER", DAY1_END + HOUR_MS, DAY1_END + 2 * HOUR_MS, 2));
+
+        WidgetDisplayState state = WidgetStateResolver.resolve(snapshot, NOW_DAY0);
+
+        assertEquals("只取 dayOffset=1 的两节", 2, state.getNextDayItems().size());
+        assertEquals("TOMORROW_A", state.getNextDayItems().get(0).getOccurrence().getId());
+        assertEquals("TOMORROW_B", state.getNextDayItems().get(1).getOccurrence().getId());
+        assertFalse("明天的课必然是「还没开始」", state.getNextDayItems().get(0).isFinished());
+        assertEquals("后天及以后的课不进这个列表", WidgetDayItem.Phase.UPCOMING,
+                state.getNextDayItems().get(1).getPhase());
+    }
+
+    @Test
+    public void nextDayItemsAreEmptyWhenTomorrowIsOutsideTheWindow() {
+        long liveStart = NOW_DAY0 - HOUR_MS;
+        WidgetSnapshot snapshot = schedule(VALID_UNTIL, DAYS_1, occurrence("ONLY", liveStart, liveStart + 2 * HOUR_MS, 0));
+
+        WidgetDisplayState state = WidgetStateResolver.resolve(snapshot, NOW_DAY0);
+
+        assertTrue("覆盖窗口在今天结束时应按「明天没课」处理，而不是猜一个窗口外的日期",
+                state.getNextDayItems().isEmpty());
+    }
+
+    /**
      * 快照有效但里面已经没有未结束的课时，必须区分于「课表为空」：
      * 前者是本学期已结束，后者是还没导入课程，UI 文案不同。
      */
@@ -261,6 +298,7 @@ public class WidgetStateResolverTest {
             assertFalse(state.isReady());
             assertNull(state.getHero());
             assertTrue(state.getTodayItems().isEmpty());
+            assertTrue(state.getNextDayItems().isEmpty());
             assertEquals(0, state.getTodayRemainingCount());
             assertEquals(0, state.getTodayFinishedCount());
             assertNull(state.getNextBoundaryEpochMs());
