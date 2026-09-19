@@ -94,6 +94,7 @@
 | 12 | L2 广播已注册 | manifest 中同时存在 `ACTION_DATE_CHANGED`、`ACTION_TIME_SET`、`ACTION_TIMEZONE_CHANGED` 的 intent-filter，且接收器走与 Worker 相同的幂等重算入口 |
 | 13 | L3 可降级 | 代码中存在 `canScheduleExactAlarms()` 判断；未授权时仍走 L4，且不产生异常或用户可见错误 |
 | 14 | 结构性保证成立 | JUnit 断言：一条课程 `start < now < end` 时它仍是 hero 且 `heroState = InProgress`；只有全部 `end <= now` 才可能为 `Empty` |
+| 15 | `Empty` 与 `NoUpcoming` 不混淆 | `WidgetDisplayState.Type` 同时存在 `EMPTY`（未导入课表）与 `NO_UPCOMING`（学期已结束）；解析器在快照有效但无未结束课程时返回后者，UI 文案随之不同 |
 
 ---
 
