@@ -1,0 +1,10 @@
+{"file": ".trellis/tasks/09-19-android-home-widget/design.md", "reason": "D1-D10 全部设计决策、被否决方案、WidgetSnapshotV1 冻结契约与一致性检查表；实现不得偏离 D2 字段定义"}
+{"file": ".trellis/tasks/09-19-android-home-widget/implement.md", "reason": "P0-P6 阶段划分、每阶段改动文件清单、校验命令、通过判据与回滚点"}
+{"file": ".trellis/tasks/09-19-android-home-widget/research/external-glance-widget.md", "reason": "Glance 1.2.0 依赖坐标、widget 组成、provider XML 属性、更新 API 与调度取舍、已知限制"}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "既有 Capacitor 桥接、双 WebView、导航/捕获 allowlist、生命周期与构建门禁契约，本次改动不得违背"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五项可信门禁、禁止模式（any/ts-ignore/eslint-disable）、测试约定与 Android 构建环境说明"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "严格模式、import type、类型组织与边界归一化约定，决定新增 TS 模块的写法"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "新增文件必须放在正确的层（app/lib 放框架无关纯逻辑、app/hooks 放全局 hook、feature 内组件不下沉到 components）"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "全局 hook 的组织方式、订阅外部系统的正确写法（禁止 effect 内同步 setState）"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Zustand 订阅、扁平投影与 semesters 同步约定，新增同步 hook 需遵守"}
+{"file": ".trellis/tasks/09-19-android-home-widget/design-appendix.md", "reason": "D11「长期不打开 App」的保证与失效边界、D12 精度阶梯的用户可见行为与交付口径、14 项一致性检查表、Rollback 与未决事实；D11/D12 是强制交付口径"}
