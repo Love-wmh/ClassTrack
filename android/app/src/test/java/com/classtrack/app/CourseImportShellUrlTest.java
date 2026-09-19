@@ -34,6 +34,13 @@ public class CourseImportShellUrlTest {
     }
 
     @Test
+    public void shellUrlRequiresAnExplicitRootPath() {
+        // A URL without an explicit path is not the loaded boot URL, so it must not gate shell readiness.
+        assertFalse(CourseImportShellUrl.isShellUrl("https://appassets.androidplatform.net?native-shell=1"));
+        assertFalse(CourseImportShellUrl.isShellUrl("https://appassets.androidplatform.net/#native-shell=1"));
+    }
+
+    @Test
     public void originPredicateStillAllowsSameOriginResources() {
         assertTrue(CourseImportShellUrl.isShellOriginUrl("https://appassets.androidplatform.net/assets/app.js"));
         assertTrue(CourseImportShellUrl.isShellOriginUrl("https://appassets.androidplatform.net/index.html"));

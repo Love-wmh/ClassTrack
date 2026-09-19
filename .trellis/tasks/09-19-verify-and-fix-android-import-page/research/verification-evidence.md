@@ -16,7 +16,7 @@
 | A3 桥接就绪，content slot 尺寸上报 | 通过 | `window.CourseImportShell` 暴露 `back`、`cancel`、`ready`、`refreshAcademic`、`requestImport`、`resize`、`retry`、`startAcademic`；academic 可见后 content slot 生效 |
 | A4 academic 加载教务页面 | 通过 | `navigation_started allowed=true url=https://authserver.tjut.edu.cn/authserver/login` 且 `page_finished progress=100`；截图 `/tmp/ct-fix-05-academic.png` 中 CAS 登录表单可交互 |
 | A5 返回/刷新/重试/取消 | 通过（重试未点击） | 刷新后 shell 存活；返回 → `phase=back_pressed` → `phase=cancelled` → `phase=activity_destroyed`；取消同路径；重试在失败态渲染为唯一按钮并有测试覆盖，但未在设备上点击 |
-| A6 旋转/布局不重叠 | 通过 | 横屏截图 `/tmp/ct-fix-07-landscape.png` 中标题、状态卡片与四个按钮完整，无裁切；竖屏 `/tmp/ct-fix-08-portrait.png` |
+| A6 旋转/布局不重叠 | 部分验证（仅旋转） | 横屏截图 `/tmp/ct-fix-07-landscape.png` 中标题、状态卡片与四个按钮完整，无裁切；竖屏 `/tmp/ct-fix-08-portrait.png`。软键盘弹出与系统字体缩放**未验证**，见「未完成与残留」 |
 | A7 无 shell 引导失败与销毁告警 | 通过 | shell 引导的 `console_error level=ERROR`（`TypeError: window.__classTrackNativeState is not a function`）已消除；`grep -ic 'WebView.destroy() called while WebView is still attached'` = 0 |
 
 ### A7 残留（非失败）
