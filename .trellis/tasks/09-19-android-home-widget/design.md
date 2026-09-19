@@ -214,18 +214,27 @@ L3 的价值在于把「首尾相接的两节课之间切错课」这个真实�
 ### 状态模型
 
 ```kotlin
+// 下面用 Kotlin 书写仅为表达力；**P3 的实际实现是 Java 类**（`WidgetDisplayState` 用内部枚举），
+// 因为该阶段刻意不碰 Glance，纯逻辑放在 Java 里能与既有测试风格保持一致。
 sealed interface WidgetDisplayState {
-  data object Missing : WidgetDisplayState      // 从未推送过快照
+  data object Missing : WidgetDisplayState      // 从未推送过快照 / schemaVersion 不匹配
   data object Unavailable : WidgetDisplayState  // 缺少学期开始日期
-  data object Empty : WidgetDisplayState        // 课表为空
-  data object Stale : WidgetDisplayState        // now > validUntilEpochMs
+  data object Empty : WidgetDisplayState        // 课表为空（尚未导入课程）
+  data object Stale : WidgetDisplayState        // now > validUntilEpochMs，或设备时钟被回拨
+  data object NoUpcoming : WidgetDisplayState   // 快照有效，但已无任何未结束的课程（学期已结束）
   data class Ready(
     val hero: Hero,                  // 正在进行 / 接下来
     val todayRemaining: List<Item>,  // 今日剩余（不含 hero）
-    val heroState: HeroState,        // InProgress | Upcoming | UpcomingOtherDay | NoClassToday
+    val heroState: HeroState,        // InProgress | Upcoming | UpcomingOtherDay
+    val nextBoundaryEpochMs: Long,   // 下一次需要重渲染的时刻，由解析器一并算出
   ) : WidgetDisplayState
 }
 ```
+
+**实现期新增的两点（P3 落地后回填）**：
+
+1. **`NoUpcoming` 与 `Empty` 必须分开**：`Empty` 是「还没导入课表」，`NoUpcoming` 是「本学期已结束」。两者对用户的含义完全不同，合并成一个状态会让 UI 在学期末错误地提示「暂无课表数据」。
+2. **`nextBoundaryEpochMs` 由解析器一并算出**，而不是让调度器自己去拼候选集合。这样「下一边界是哪一刻」也落进了可单测的纯函数（`WidgetStateResolverTest` 有 4 个用例专测它），调度器只剩「把时刻交给 AlarmManager / WorkManager」这一件事。
 
 ### 解析纯函数
 
