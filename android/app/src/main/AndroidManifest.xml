@@ -33,6 +33,19 @@
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density" />
 
+        <!--
+            小工具样式配置页（R8）。
+
+            必须 exported="true"：放置 widget 时由 launcher 拉起，之后 widget 内的「样式」入口也会用它。
+            因此 EXTRA_APPWIDGET_ID 一律按不可信输入处理（校验存在性与 provider 归属，否则 RESULT_CANCELED），
+            且页面不渲染任何课程数据 —— 详细边界见 WidgetConfigActivity 的类注释。
+        -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/AppTheme.NoActionBar" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

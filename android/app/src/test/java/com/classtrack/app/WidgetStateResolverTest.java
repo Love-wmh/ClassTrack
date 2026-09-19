@@ -105,7 +105,9 @@ public class WidgetStateResolverTest {
         assertTrue(state.isReady());
         assertEquals("MATH", state.getHero().getId());
         assertEquals(WidgetDisplayState.HeroState.IN_PROGRESS, state.getHeroState());
-        assertTrue(state.getTodayRemaining().isEmpty());
+        assertEquals("进行中的课是今日课表里唯一一行", 1, state.getTodayItems().size());
+        assertTrue("同一节课既在今日课表里、也是 hero，两者不是互斥视图", state.getTodayItems().get(0).isInProgress());
+        assertEquals("除 hero 外今天没有别的课", 0, state.getTodayRemainingCount());
     }
 
     @Test
@@ -131,11 +133,12 @@ public class WidgetStateResolverTest {
 
         assertEquals("TOMORROW", state.getHero().getId());
         assertEquals(WidgetDisplayState.HeroState.UPCOMING_OTHER_DAY, state.getHeroState());
-        assertTrue(state.getTodayRemaining().isEmpty());
+        assertEquals("今日已无未开始的课", 0, state.getTodayRemainingCount());
+        assertEquals("今天上过的课仍留在今日课表里（这是全天样式的基础）", 1, state.getTodayFinishedCount());
     }
 
     @Test
-    public void todayRemainingExcludesEndedInProgressAndHeroItself() {
+    public void todayItemsCoverWholeDayWithPhasesAndCounts() {
         long endedStart = NOW_DAY0 - 3 * HOUR_MS;
         long liveStart = NOW_DAY0 - HOUR_MS;
         long futureStart = NOW_DAY0 + HOUR_MS;
@@ -149,8 +152,14 @@ public class WidgetStateResolverTest {
         WidgetDisplayState state = WidgetStateResolver.resolve(snapshot, NOW_DAY0);
 
         assertEquals("LIVE", state.getHero().getId());
-        assertEquals(1, state.getTodayRemaining().size());
-        assertEquals("LATER", state.getTodayRemaining().get(0).getId());
+        assertEquals("今日课表应包含今天全部三节（含已上完的 ENDED）", 3, state.getTodayItems().size());
+        assertEquals("已上完计数只数 ENDED", 1, state.getTodayFinishedCount());
+        assertEquals("「今天还有 N 节」只数 LATER，且不把 hero 自己算进去", 1, state.getTodayRemainingCount());
+        assertEquals("顺序必须保持时间升序", "ENDED", state.getTodayItems().get(0).getOccurrence().getId());
+        assertTrue("第一行应是已上完", state.getTodayItems().get(0).isFinished());
+        assertTrue("第二行应是进行中", state.getTodayItems().get(1).isInProgress());
+        assertEquals("第三行应是待上", WidgetDayItem.Phase.UPCOMING, state.getTodayItems().get(2).getPhase());
+        assertEquals("明天的课不属于今日课表", 3, state.getTodayItems().size());
     }
 
     /**
@@ -251,7 +260,9 @@ public class WidgetStateResolverTest {
         for (WidgetDisplayState state : states) {
             assertFalse(state.isReady());
             assertNull(state.getHero());
-            assertTrue(state.getTodayRemaining().isEmpty());
+            assertTrue(state.getTodayItems().isEmpty());
+            assertEquals(0, state.getTodayRemainingCount());
+            assertEquals(0, state.getTodayFinishedCount());
             assertNull(state.getNextBoundaryEpochMs());
         }
     }

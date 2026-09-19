@@ -5,7 +5,7 @@ import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
 import com.classtrack.app.WidgetSnapshotParser
 import com.classtrack.app.WidgetSnapshotStore
-import androidx.glance.appwidget.updateAll
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.classtrack.app.WidgetStateResolver
 
 /**
@@ -25,7 +25,11 @@ internal object WidgetRefreshController {
      */
     fun resolveCurrentState(context: Context, nowEpochMs: Long): WidgetDisplayState {
         val snapshotJson = WidgetSnapshotStore.read(context)
-        return WidgetStateResolver.resolve(WidgetSnapshotParser.parse(snapshotJson), nowEpochMs)
+        WidgetDiagnostics.snapshotRead(snapshotJson?.length ?: 0)
+        val state = WidgetStateResolver.resolve(WidgetSnapshotParser.parse(snapshotJson), nowEpochMs)
+        // 发布给合成层：provideGlance 不会随每次 update 重新执行，合成必须能读到最新一次解析结果。
+        WidgetRenderCache.publish(state)
+        return state
     }
 
     /**
@@ -75,7 +79,12 @@ internal object WidgetRefreshController {
      */
     private suspend fun renderAll(context: Context) {
         try {
-            ClassTrackWidget().updateAll(context)
+            val widget = ClassTrackWidget()
+            val glanceIds = GlanceAppWidgetManager(context).getGlanceIds(ClassTrackWidget::class.java)
+            WidgetDiagnostics.renderTargets(glanceIds.size)
+            for (glanceId in glanceIds) {
+                widget.update(context, glanceId)
+            }
         } catch (error: RuntimeException) {
             // 渲染失败不该让调用方（可能是广播接收器）崩溃；下一次排程仍会重试。
             WidgetDiagnostics.refreshFailed()

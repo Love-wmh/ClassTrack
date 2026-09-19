@@ -358,6 +358,38 @@ pnpm dev   # 浏览器打开，确认 console 无报错、Network 中无 WidgetS
 - **通过判据**：`prd.md` 的 A/B/C/D 全部勾选；任一未通过项必须显式记录为「未完成」或「已降级」，不得沉默跳过。
 - **提交**：`chore(widget): verify widget end-to-end`（若只有文档改动）或与最后一段功能改动合并。
 
+
+---
+
+## P7. 样式可选、滚动与预览（2026-09-19 需求变更后追加）
+
+**背景**：用户实测后指出两个问题 —— (a) 小工具只显示一节课：因为它只显示「hero + 今日剩余」（`todayRemaining` 天然排除 hero 与已上完项），且 `maxRemainingRows` 在 `height < 110dp` 时为 0，而 provider 的 `minHeight=60dp` 会让 Android 12 以下由 `findBestSize()` 回退到最小档；(b) 选择器预览用的是 App 图标。据此新增 prd R8/R9/R10、改写 R1/R4/R5。**本阶段不碰** D2 契约、D3 通道、D4 调度、D8 路由。
+
+**目标**：三种样式（全天课表 / 接下来 / 紧凑）× 三种「已上完的课」策略（灰显 / 不显示 / 折叠）按 widget 实例可选；列表真实可滚动；选择器与配置页都有真实预览。
+
+1. **Java 纯逻辑先做（可单测，不碰 Glance）**
+   - `WidgetDisplayState.Ready` 增加 `todayItems`（含 `phase`）、`todayRemainingCount`、`todayFinishedCount`；`WidgetStateResolver` 按 design D7 步骤 6–8 计算。
+   - 新增 `WidgetStyleConfig`：`LayoutStyle`（`DAY_LIST` / `NEXT_UP` / `COMPACT`）与 `FinishedPolicy`（`SHOW_DIM` / `HIDE` / `COLLAPSE`）的解析与默认值；非法值回退默认、不抛异常。
+   - 新增 `WidgetDayListPolicy`：输入 `todayItems` + `FinishedPolicy`，输出「要渲染的行 + 折叠计数」。纯函数，三策略各有用例。
+   - 单测覆盖：todayItems 含已上完项、`phase` 三态、跨零点后 todayItems 切到新一天、三策略输出、非法配置回退、紧凑样式下策略无效果。
+   - 校验：`./android/gradlew -p android :app:testDebugUnitTest`
+2. **Kotlin 渲染层**
+   - 三样式按 design D7 的表格实现；列表用 `androidx.glance.appwidget.lazy.LazyColumn` + `GlanceModifier.defaultWeight()`；`@OptIn(ExperimentalGlanceApi::class)` 只出现在 `ClassTrackWidget.kt`（design D15）。
+   - 按 `LocalSize` 自适应：高度不足时省略汇总行 / 只留 hero。
+   - 汇总行加「样式」入口 → `WidgetConfigActivity`（携 `EXTRA_APPWIDGET_ID`）；主体点击行为保持不变。
+3. **配置页与每实例状态**
+   - `WidgetConfigActivity` + 布局 + 状态读写（`updateAppWidgetState` / `currentState` + `PreferencesGlanceStateDefinition`）；`onDeleted` 清理该实例的键。
+   - 安全边界按 design D13 实现并逐条自查：widgetId 归属校验、默认 `RESULT_CANCELED`、不渲染任何课程数据、不接收额外 payload。
+4. **provider XML 与预览资源**
+   - 加 `android:configure`、`android:widgetFeatures="reconfigurable"`、`android:previewLayout`；`previewImage` 换成真实预览图；`targetCellWidth/Height = 4x3`、`minWidth/minHeight = 110dp`。
+   - 三套静态 mock 布局：只能用 RemoteViews 白名单类，**不得出现 `android.view.View`**（P6 缺陷 1 的复发防线）。
+5. **设备验收（prd B6–B12）**：重点是 (a) 选择器预览截图、(b) 三种样式各一张截图、(c) **真实手势滑动**证明列表可滚（`dumpsys` 看到集合结构不算）、(d) 三种已上完策略各一张截图、(e) 从 widget 重开配置页、(f) 缩到 2x2 不崩。
+   - 预览图生成：`adb exec-out screencap -p > /tmp/x.png` → Pillow 裁剪 → `android/app/src/main/res/drawable-nodpi/widget_preview.png`。
+6. **门禁**：五项 Web 门禁 + Android 单测 + `pnpm cap:build:android` + `pnpm android:check-assets` 全绿（Web 侧本次不改代码，但仍必须重跑以证明没有连带回归）。
+
+- **回滚点**：见 design-appendix「Rollback」表新增的两行（P7 整体回滚 / 只回滚滚动）。
+- **通过判据**：prd B6–B12 全部有设备证据；未验证项显式标注，不得沉默跳过。
+- **提交**：`feat(widget): per-instance styles, scrollable day list and real previews`。
 ---
 
 ## 质量检查（每个阶段后 + 收尾全量）

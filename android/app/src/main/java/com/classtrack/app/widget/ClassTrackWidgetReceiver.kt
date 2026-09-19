@@ -50,6 +50,18 @@ class ClassTrackWidgetReceiver : GlanceAppWidgetReceiver() {
         WidgetBoundaryAlarms.cancel(context.applicationContext)
     }
 
+    /**
+     * 实例被删除：清掉它的样式配置。
+     *
+     * `appWidgetId` 会被系统复用，残留的键会让后添加的实例莫名继承上一个实例的样式。
+     */
+    override fun onDeleted(context: Context, appWidgetIds: IntArray) {
+        super.onDeleted(context, appWidgetIds)
+        for (appWidgetId in appWidgetIds) {
+            WidgetConfigBridge.clear(context.applicationContext, appWidgetId)
+        }
+    }
+
     /** 尺寸变化时也续一次边界链，保证响应式布局能按新高度重排。 */
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)

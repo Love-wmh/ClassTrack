@@ -7,7 +7,8 @@
 
 - 沙盒关闭后环境恢复（`~/.gradle` 可写、**`/dev/kvm` 存在**、DNS 正常、无代理），因此**回归与设备端验收都在真实环境下完成**。
 - 设备端验收发现并修复了 **3 个静态检查无法发现的真实缺陷**（见 §2）。其中两个是我自己引入的，一个会让小工具**反复显示空白**、一个会让点击**渲染 404**。
-- 最终状态：`prd.md` 中除 **B2（2x1 紧凑像素布局）为部分验证**外，其余验收项全部有证据。
+- 最终状态：本轮（P7 需求变更）新增的 **B6–B11 已验证**；**B12（最小 2x2 尺寸的像素布局）为部分验证**（缩放句柄无法用 adb 合成手势抓取，原因与旧 B2 相同），与旧 B2 一样记录了复验方式。
+- **P7 设备实测还发现并修复了 1 个真缺陷**：`provideGlance` 只执行一次，`update`/`updateAll` 只重新合成、不重跑 `provideGlance`，导致**闭包里的旧状态被反复使用** —— 实测「把系统时间从 17:00 推到 18:00，小工具仍显示上一节为『正在进行』」。修复为 `WidgetRenderCache`（进程内可观察容器，合成阶段读最新解析结果），见 §3.5-3.6。
 
 ## 1. 回归测试（沙盒关闭后，使用项目文档里的原生命令）
 
@@ -99,6 +100,42 @@ java.lang.NullPointerException: Attempt to invoke virtual method
 | **N3** 隐私 | 真机快照内容检查：`status/entries/dayEndEpochMs` 等字段齐全，**教师、`courseId`、`classId` 三个哨兵值均未出现**；`logcat -s ClassTrack.Widget` 全程只有阶段名、字节数与白名单枚举值，无课程内容 |
 | **N4** 不回归 | `pnpm cap:build:android` 的 `check-android-assets` 通过（246 assets / 28 references 字节一致） |
 
+### 3.5 P7 需求变更后的二次设备验收（样式 / 滚动 / 配置页 / 预览 / 每实例配置）
+
+需求变更（用户实测后提出）：三种样式可选、列表可滚动、每实例配置页、真实预览。本轮在同一个 `Medium_Phone` 模拟器上二次验收（APK 重新构建安装，进程重启后取证）。
+
+| 项 | 证据 |
+|---|---|
+| **B8** 三种样式各自渲染 | 同一快照下：实例 A 设为「全天课表」（汇总行「今天 周六 · 共 N 节」+ 全天列表 + ● 高亮进行中那一行）；实例 B 设为「接下来」（hero 卡片「正在进行 / 课程01 / 20:10 - 20:30 · X001」+ 下方全天列表）；再设为「紧凑」（只显示 hero + 「今天还有 8 节」）。三者各自渲染正确 |
+| **B9** 列表真实可滚动 | 注入 12 节当天课程后，4x3 格子只显示约 5 行；在列表区域内 `input swipe 540 890 540 660` 连续两次，首行从「课程01(20:10)」滚到「课程04(21:25)」再到「课程05(21:50)」——**原生集合型 widget 的真实滚动**，不是截断 |
+| **B10** 三种「已上完的课」策略 | ① 灰显保留：时间推进后已上完的课仍在列表（`今天 周六 · 共 8 节` 不变、行还在）；② 不显示：总数从 7 → 6（已上完行消失）；③ 折叠：总数为 4 且底部出现 **「已上完 1 节」**（18:30-19:30 的课折叠成计数，不占行） |
+| **B11** 样式入口重开配置页 + 与主体点击互不干扰 | ① 点 widget 内「样式」→ `topResumedActivity=...WidgetConfigActivity`；② 点 widget 主体 → `topResumedActivity=...MainActivity` 且 WebView `path=/`（课表首页，B4 回归通过） |
+| **B6** 选择器预览 | 选择器命中 ClassTrack：预览页显示「4 × 3 / 4 wide by 3 high」与更新后的描述「在桌面上显示今天一整天的课程…」；`LauncherAppWidgetHostView` 的区域由 launcher **live 渲染我们的 widget**（uiautomator 能读到我们渲染的文本节点），不是 App 图标。`previewLayout` mock 与 `previewImage` 两个兜底资源均已编入 APK（aapt 验证） |
+| **B7** 每实例配置 + 设置入口 + 取消不落地 | ① 配置页保存后 `style_configured style=next_up finished=collapse`，该实例立即变样式、**其它实例不受影响**（同数据两种样式并排实拍）；② 配置按实例持久化在 Glance 状态（`appWidget-4/5.preferences_pb`）；③ 删除实例后对应状态文件被 `onDeleted` 清理（`appWidget-4.preferences_pb` 消失）；④ 在配置页选新样式后按「取消」→ 无新 `style_configured`、实例样式不变 |
+| **B12** (部分) | 最小尺寸像素未验证（原因同旧 B2）；但「小尺寸下可滚动显示全部」已被 B9 覆盖，配置页在紧凑样式下禁用了无关选项 |
+| 配置页安全 | 用不存在的 `--ei appwidget_id 9999` 从外部启动 `WidgetConfigActivity`：页面未显示（直接 `RESULT_CANCELED` 退出）、日志 `phase=config_rejected reason=invalid_widget_id`、无任何写入（Glance 状态文件无新增键） |
+| 配置页「紧凑」诚实性 | 选「紧凑」后，「已上完的课」三个单选被禁用（`enabled=false`）且出现「『紧凑』样式不显示课程列表，所以这个选项对它没有效果」 |
+| 放置时 configure 弹窗 | **部分验证**：`android:configure` 属性 + `widgetFeatures=reconfigurable` 都已编入 APK（aapt 验证）；真机上「长按 widget → Settings」能通过系统正确拉起 `WidgetConfigActivity`（与放置时同一套系统机制）。Pixel Launcher 全屏 picker 的拖放自动 configure 流程本次未能捕获（adb 合成拖拽与真实手势有差异），记录为残余风险（见 §4） |
+
+### 3.6 P7 发现并修复的真缺陷：`provideGlance` 只执行一次，旧状态闭包导致时间推进后画面不变
+
+**现象**（Android 17 / SDK 37 模拟器，可稳定复现）：
+
+```
+把系统时间从 17:00 推到 18:00（第一节课 15:20 已结束），
+widget 仍显示「高数（进行中）」且 ● 还停在那一行 —— "要上课了却显示不上课"
+logcat：只有 phase=refresh_requested trigger=time_change，
+没有新的 widget_rendered
+```
+
+**根因**：Glance 只在会话建立时执行一次 `provideGlance`；之后的 `update` / `updateAll` 只重新合成 `provideContent`，而闭包里捕获的是那次 `provideGlance` 的 `state`。所以「数据变了、时间变了，推了刷新，画面却停在上一帧」。
+
+**修复**（`WidgetRenderCache.kt`）：所有刷新路径（L1–L5）收敛到 `resolveCurrentState` → 把最新解析结果发布进进程内可观察容器（Compose `mutableStateOf` + `Snapshot.withMutableSnapshot`）；`provideContent` 里读 `WidgetRenderCache.latest()`。合成每次都会重跑（实测 `update` 后 launcher 持有的 `RemoteViews` 对象确实变化），因此总能拿到最新结果；进程重启后由 `provideGlance` 重新播种。
+
+**修复后复验**：时间推到 18:00 → ● 从「改过的物理(16:20-17:20)」移到「数据结构(17:25-18:25)」；推到 20:00 → ● 移到「线性代数(19:35-20:35)」；推到 19:00 → 「紧凑」实例的 hero 从「改过的物理」切到「英语」、计数从 5 → 4。**全程未重新打开 App**，也未重启进程。
+
+**为何旧版（P4/P6）没有暴露**：当时只有「接下来 + 今日剩余」一种形态，且验收靠日志（`refresh_requested`）而非像素；本轮加入全天列表后，「时间推进但画面不变」变得肉眼可见。这条缺陷影响范围与修复都已落入 §4 的复验清单。
+
 ## 4. 未验证项 / 残余风险
 
 | 项 | 未验证内容 | 原因 | 复验方式 |
@@ -107,6 +144,10 @@ java.lang.NullPointerException: Attempt to invoke virtual method
 | — | 桌面圆角在不同 launcher / Android 版本上的裁剪表现 | 只在模拟器 Pixel Launcher 上看过 | 真机多 launcher 抽查；异常时去掉 `cornerRadius(16.dp)`（不影响信息正确性） |
 | — | 超大字体缩放（`fontScale ≥ 1.5`）下的表现 | 未改过 `fontScale` | 设置里调到最大字号看是否截断（当前用 `maxLines` 截断，不会破坏布局） |
 | — | 定位到「首尾相接两节课」的真实数据下的切换 | 测试数据里两节课之间有空档 | 导入含相邻课的课表，跨过交界秒验证 |
+| **B12** | 最小约 2x2 尺寸的实际像素布局 | 该 launcher 的缩放句柄无法用合成手势抓取（同旧 B2 原因） | 真机手动缩到最小，确认不溢出、不崩溃、仍可读；滚动已由 B9 覆盖 |
+| — | **放置时 configure 自动弹窗**（Android 14+ Pixel Launcher 全屏 picker） | adb 拖放手势与真实手势有差异，本次未捕获到「拖放完成→配置页自动弹出」的瞬间；`configure` + `reconfigurable` 已由 aapt 与系统 Settings 路径证实 | 真机手动从选择器放置一次，确认放置即弹配置页；取消时 launcher 不留下实例 |
+| — | `previewLayout` mock 与真实渲染的漂移 | mock 是静态 XML（含示例课程），真实渲染随数据/时刻变化 | 改动任一真实样式视觉时同步更新 mock（已在 spec 强制） |
+| — | 滚动在被其它 launcher（非 Pixel）的表现 | 只在 Pixel Launcher 验证过 | 真机多 launcher 抽查；异常时按 design D15 回退为截断 |
 
 ### 观察到但**无法归因于本次改动**的一次崩溃
 
