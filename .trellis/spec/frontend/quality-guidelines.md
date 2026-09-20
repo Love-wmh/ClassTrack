@@ -112,6 +112,13 @@ Android Studio 直接启动时，必须打开仓库内的 `android/` 目录，�
 
 网络不畅时有两个入库的逃生通道：gradle 发行版可从华为云预置到 wrapper dists 目录；依赖镜像可复制 `scripts/gradle-mirrors.init.gradle` 到 `~/.gradle/init.d/`（华为云中央仓库优先、阿里云 Google Maven 其次、官方仓库兜底）。注意华为云**没有**可用的 Google Maven 镜像（实测返回 HTML）。
 
-Android 测试版由 `.github/workflows/android-beta.yml` 自动发布（merge 进 `master` 且改动涉及 `android/**`、`app/**`、`scripts/**`、`package.json`、`pnpm-lock.yaml` 时触发，也可手动 dispatch）：跑 `pnpm cap:sync:android`、原生单元测试、编译 APK、用 `CLASS_TRACK_ANDROID_APK_PATH` 指向**本次要发布的那个包**做资产一致性校验，然后创建 `android-beta-<run_number>` 预发布并把 APK 挂上（保留最近 10 个）。签名凭据只从 Secrets 读（`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`），`android/app/build.gradle` 只在四个变量齐备时注册 `signingConfigs.release`；缺任一变量则工作是发 debug 包并在日志里告警，**不要**把签名密钥或 `android/local.properties` 提交进仓库。版本号由 `CLASSTRACK_VERSION_CODE` / `CLASSTRACK_VERSION_NAME` 注入（取 Actions 的 run_number），保证测试机可覆盖安装。
+Android 发布由 `.github/workflows/android-release.yml` 自动完成，两条轨道同一个 job，用工作流级 `IS_STABLE`（`startsWith(github.ref, 'refs/tags/v')`）分流 —— 注意 `env` 上下文在 job 级 `if` 里不可用，只能写在 step 级 `if`：
+
+- **测试版**：merge 进 `master` 且改动可能影响 APK 时触发（`app/**`、`public/**`、`android/**`、`scripts/**`、`.github/**`，加上决定产物内容/打包方式的根配置；纯文档改动不发版），也可手动 dispatch。产物挂到 `android-beta-<run_number>` 预发布上，保留最近 10 个。
+- **正式版**：推送 `v<major>.<minor>.<patch>` tag 时触发（GitHub 对 tag push **不评估路径过滤**，所以 tag 永远能触发）。发布前校验该 tag 指向 `master` 上的提交、且签名 Secrets 齐备，任一不满足即失败；正式版不参与测试版的数量清理。
+
+两条轨道都跑 `pnpm cap:sync:android`、原生单元测试、编译 APK，并用 `CLASS_TRACK_ANDROID_APK_PATH` 指向**本次要发布的那个包**做资产一致性校验。签名凭据只从 Secrets 读（`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`），`android/app/build.gradle` 只在四个变量齐备时注册 `signingConfigs.release`；测试版缺变量时退回 debug 包并告警，正式版缺变量时直接失败。**不要**把签名密钥或 `android/local.properties` 提交进仓库。
+
+versionName 按轨道取值（测试版 `1.0.<run_number>-beta`，正式版取 tag 去掉 `v`），versionCode 两条轨道统一用 `run_number`：它在两条轨道之间单调递增，测试机才能一路覆盖安装（beta → 正式版 → beta）。
 
 生产镜像是两阶段构建（Node 22 + pnpm 构建 → nginx 托管 `build/client`，监听 3000）：`docker build -t classtrack .` 与 `docker run --rm -p 3000:3000 classtrack`。SPA 深层路由回退 `index.html`，`sw.js`/manifest/`index.html` 均为 `no-cache`，哈希资产长缓存。`pnpm start` 是 SSR 模式的模板残留脚本，本项目 `ssr: false` 下必然失败，不要使用。

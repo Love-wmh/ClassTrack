@@ -126,10 +126,27 @@ pnpm cap:install:android
 - 下载 `ClassTrack-beta-latest.apk`（这个文件名永远指向最新测试版）或带版本号的那个；
 - 版本号形如 `1.0.<构建号>-beta`，构建号单调递增，因此可以直接覆盖安装上一个测试版。
 
-发布流程在 `.github/workflows/android-beta.yml`：merge 进 `master` 且改动涉及 App 产物时自动跑（也可在 Actions 页手动触发），
-编译、跑原生单元测试、校验 APK 内 Web 资源与 `build/client` 字节一致，然后把 APK 挂到预发布版本上，只保留最近 10 个。
-配好 `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
-四个仓库 Secrets 后会自动切换成签名 release 包；未配置时发的是 debug 包（日志里会有警告）。
+发布流程在 `.github/workflows/android-release.yml`，两条轨道：
+
+- **测试版**（prerelease）：merge 进 `master` 且改动可能影响 APK 时自动跑（也可在 Actions 页手动触发）。
+  触发路径见 `on.push.paths`：`app/**`、`public/**`、`android/**`、`scripts/**`、`.github/**`，
+  以及决定产物内容或打包方式的根配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`capacitor.config.ts`、
+  `vite.config.ts`、`react-router.config.ts`、`tsconfig.json`、`index.html`）。纯文档（`docs/**`、`.trellis/**`、`README`）改动不发版。
+  跑完编译、原生单元测试、APK 内 Web 资源与 `build/client` 的字节一致性校验后，把 APK 挂到预发布版本上，只保留最近 10 个。
+- **正式版**（非 prerelease，标记 Latest）：推送形如 `v1.2.3` 的 tag 时自动跑。
+
+  ```bash
+  git tag v1.2.3 && git push origin v1.2.3
+  ```
+
+  版本号取 tag 去掉前缀 `v`；工作流要求该 tag 指向 `master` 上的提交，且**必须**用签名包，
+  否则直接失败 —— 正式版不会发未签名包。
+
+两条轨道的 versionCode 都取自 Actions 的 `run_number`，它在两条轨道之间单调递增，
+因此测试机能一路覆盖安装（beta → 正式版 → beta）。
+
+签名凭据只从 Secrets 读：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`。
+四个都配好之前，测试版发的是 debug 包（日志里会有警告），正式版则会被上面的校验直接拦下。
 
 ### 启动生产服务
 
