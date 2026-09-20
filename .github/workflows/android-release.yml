@@ -4,14 +4,19 @@ name: Android Release
 #
 #   测试版（prerelease，不占用 Latest）：
 #     - 自动：merge 进 master 且改动可能影响 APK 时（路径过滤见 on.push.paths）
-#     - 手动：Actions → Android Release → Run workflow（可附一句说明）
+#     - 手动：Actions → Android Release → Run workflow（release_kind 保持 beta，可附一句说明）
 #     - 版本号：1.0.<序号>-beta，标签 android-beta-<序号>（序号 = 已有测试版标签的最大值 + 1），
 #       只保留最近 10 个
 #
 #   正式版（非 prerelease，标记 Latest）：
-#     - 自动：push 形如 v1.2.3 的 tag（GitHub 对 tag push 不评估路径过滤）
-#     - 版本号：取 tag 去掉前缀 v；标签就是该 tag；不参与测试版的数量清理
-#     - 必须配好签名 Secrets 且 tag 指向 master 上的提交，否则直接失败
+#     - **只能手动触发**：Actions → Android Release → Run workflow → release_kind 选 stable、
+#       并填写版本号（如 1.2.0）。tag push 不会触发发布 —— 发布步骤自己创建 tag v<版本号>。
+#     - 版本号：来自 dispatch 输入；tag 就是 v<版本号>；不参与测试版的数量清理
+#     - 发布前必须满足：该提交在 master 上、版本号形如 X.Y.Z、tag v<版本号> 尚不存在
+#
+# 两条轨道都必须发**签名**包：仓库 Secrets 里没有签名凭据时工作流直接失败，不再回退 debug 包
+# （debug 与 release 签名不同，装过 debug 包的测试机无法原地升级、只能卸载重装，会丢数据）。
+# 签名凭据与本地出签名包的配置见 README「发布与签名」段。
 #
 # 版本号规则：
 # - versionName 按轨道取值：测试版 1.0.<序号>-beta，正式版取 tag 去掉前缀 v。
@@ -28,8 +33,21 @@ name: Android Release
 on:
   workflow_dispatch:
     inputs:
+      release_kind:
+        description: '发布类型：beta = 测试版（预发布）；stable = 正式版（标记 Latest，需填版本号）'
+        required: true
+        default: beta
+        type: choice
+        options:
+          - beta
+          - stable
+      version:
+        description: '仅 stable 需要：版本号，形如 1.2.0（发布时会创建 tag v1.2.0）'
+        required: false
+        default: ''
+        type: string
       note:
-        description: 本次测试版的补充说明（可选，会写进 release 正文）
+        description: 补充说明（可选，会写进 release 正文）
         required: false
         default: ''
         type: string
@@ -52,8 +70,6 @@ on:
       - 'react-router.config.ts'
       - 'tsconfig.json'
       - 'index.html'
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 # 同一分支/标签上只保留最新任务：后一次先到先发，避免旧 commit 的包覆盖新包。
 concurrency:
@@ -65,8 +81,8 @@ permissions:
   contents: write
 
 env:
-  # tag push 走正式版轨道，master push 与手动 dispatch 走测试版轨道。
-  IS_STABLE: ${{ startsWith(github.ref, 'refs/tags/v') }}
+  # 只有手动 dispatch 并显式选择 stable 才走正式版轨道；master push 与默认 dispatch 都是测试版。
+  IS_STABLE: ${{ inputs.release_kind == 'stable' }}
 
 jobs:
   release:
@@ -118,35 +134,39 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           set -euo pipefail
-          if [ -n "${KEYSTORE_BASE64}" ]; then
-            printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "$RUNNER_TEMP/classtrack-release.jks"
-            echo "store_file=$RUNNER_TEMP/classtrack-release.jks" >> "$GITHUB_OUTPUT"
-            echo "signed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::未配置 ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD，本次发布 debug APK；补上这四个 Secrets 后即自动切换为签名 release 包。"
+          # 没有签名凭据就直接失败：debug 包与 release 包签名不同，测试机无法原地升级，
+          # 只能卸载重装（丢数据），所以两条轨道都不允许再回退 debug 包。
+          if [ -z "${KEYSTORE_BASE64}" ]; then
+            echo "::error::缺少签名 Secrets：ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD。配置方法见 README「发布与签名」段。"
+            exit 1
           fi
+          printf '%s' "${KEYSTORE_BASE64}" | base64 -d > "$RUNNER_TEMP/classtrack-release.jks"
+          echo "store_file=$RUNNER_TEMP/classtrack-release.jks" >> "$GITHUB_OUTPUT"
+
+      # 签名三项（storePassword / keyPassword / keyAlias）由 build.gradle 直接读环境变量；
+      # 这里先断言都存在，避免构建到一半才发现签名配置没注册。
 
       - name: 校验正式版发布条件
         if: env.IS_STABLE == 'true'
         env:
-          SIGNED: ${{ steps.signing.outputs.signed }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          # 触发用的 tag 模式见 on.push.tags；这里再校验一次格式，避免各种过滤语义差异把
-          # v1.2.3-rc 之类的前缀式标签当成正式版发布。
-          if ! printf '%s' "${GITHUB_REF_NAME}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::tag ${GITHUB_REF_NAME} 不是 v<major>.<minor>.<patch> 形式，拒绝发布正式版"
+          # 版本号来自手动 dispatch 输入（tag 不再触发发布，发布时由工作流创建 tag）。
+          VERSION="${INPUT_VERSION#v}"
+          if ! printf '%s' "${VERSION}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::正式版需要形如 1.2.0 的版本号（当前输入：${INPUT_VERSION:-空}）"
             exit 1
           fi
-          # 只从 master 上的提交发布正式版，避免把分支上的试验 tag 变成 Latest 版本。
+          # 只从 master 上的提交发布正式版，避免把某个分支的试验提交变成 Latest 版本。
           git fetch --no-tags origin master
           if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
-            echo "::error::tag ${GITHUB_REF_NAME} 指向的提交不在 master 上，拒绝发布正式版"
+            echo "::error::本次运行的提交不在 master 上，拒绝发布正式版"
             exit 1
           fi
-          if [ "${SIGNED}" != "true" ]; then
-            echo "::error::正式版必须使用签名包：请配置 ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD 四个 Secrets"
+          # 已发布的正式版不许被覆盖。
+          if git ls-remote --exit-code --tags origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::tag v${VERSION} 已存在，请换一个版本号"
             exit 1
           fi
 
@@ -154,14 +174,15 @@ jobs:
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           # epoch 秒单调递增，测试机因此可以一路覆盖安装（beta → 正式版 → beta）。
           echo "code=$(date +%s)" >> "$GITHUB_OUTPUT"
 
           if [ "${IS_STABLE}" = "true" ]; then
-            echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "name=${INPUT_VERSION#v}" >> "$GITHUB_OUTPUT"
+            echo "tag=v${INPUT_VERSION#v}" >> "$GITHUB_OUTPUT"
           else
             # 已有测试版标签里的最大序号 + 1；与 run_number 无关，重命名 workflow 也不会撞名。
             LAST_INDEX="$(gh release list --limit 100 --json tagName \
@@ -195,13 +216,17 @@ jobs:
           set -euo pipefail
           echo "版本号：${CLASSTRACK_VERSION_NAME}（versionCode=${CLASSTRACK_VERSION_CODE}）"
 
-          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
-            ./android/gradlew -p android :app:assembleRelease
-            APK=android/app/build/outputs/apk/release/app-release.apk
-          else
-            ./android/gradlew -p android :app:assembleDebug
-            APK=android/app/build/outputs/apk/debug/app-debug.apk
-          fi
+          # 三个签名相关环境变量必须齐备，否则 build.gradle 不会注册 signingConfigs.release，
+          # assembleRelease 产出的是未签名包、下面的路径也就取不到。
+          for name in CLASSTRACK_KEYSTORE_FILE CLASSTRACK_KEYSTORE_PASSWORD CLASSTRACK_KEY_ALIAS CLASSTRACK_KEY_PASSWORD; do
+            if [ -z "$(printenv "$name" || true)" ]; then
+              echo "::error::环境变量 ${name} 为空，无法产出签名包"
+              exit 1
+            fi
+          done
+
+          ./android/gradlew -p android :app:assembleRelease
+          APK=android/app/build/outputs/apk/release/app-release.apk
           test -f "$APK"
           # 资源一致性必须校验「本次要发布的那个包」——脚本默认只看 debug 包，因此显式传入路径。
           CLASS_TRACK_ANDROID_APK_PATH="$APK" pnpm android:check-assets
@@ -210,14 +235,13 @@ jobs:
       - name: 发布
         env:
           GH_TOKEN: ${{ github.token }}
-          SIGNED: ${{ steps.signing.outputs.signed }}
           NOTE: ${{ inputs.note }}
           VERSION: ${{ steps.version.outputs.name }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
 
-          # TAG 由「计算版本号与标签」步骤给出（测试版是自动迭代的序号，正式版是推送的 tag）。
+          # TAG 由「计算版本号与标签」步骤给出（测试版是自动迭代的序号，正式版是 v<手动输入的版本号>）。
           # 这里只为生成「本次改动」列表找上一个同轨道标签；没有则为空。
           if [ "${IS_STABLE}" = "true" ]; then
             PREV="$(git tag -l 'v[0-9]*' --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)"
@@ -234,19 +258,13 @@ jobs:
             CHANGES="$(git log --pretty='- %s (%h)' -20 || true)"
           fi
 
-          if [ "${SIGNED}" = "true" ]; then
-            SIGN_TEXT="签名 release 包（v2 签名），可直接覆盖安装上一个版本。"
-          else
-            SIGN_TEXT="debug 包：仓库尚未配置发布签名 Secrets。若测试机上已装过签名 release 包，需要先卸载再安装。"
-          fi
-
           {
             echo "ClassTrack Android **${VERSION}**"
             echo
             echo "- commit: \`$(git rev-parse --short HEAD)\`"
-            echo "- 包类型：${SIGN_TEXT}"
+            echo "- 包类型：签名 release 包，可直接覆盖安装上一个版本（数据保留）。"
             if [ "${IS_STABLE}" = "true" ]; then
-              echo "- 由 tag \`${TAG}\` 触发，对应 \`master\` 上的正式版本。"
+              echo "- 正式版：手动触发发布，对应 \`master\` 上的提交，已创建 tag \`${TAG}\`。"
             else
               echo "- 下载 \`ClassTrack-beta-latest.apk\` 永远指向本页这个包。"
             fi
@@ -265,11 +283,11 @@ jobs:
           cp "${{ steps.build.outputs.apk }}" "${ASSET}"
 
           if [ "${IS_STABLE}" = "true" ]; then
-            # 正式版的 tag 已由推送创建：--verify-tag 让 gh 在找不到该 tag 时直接失败，
-            # 而不是把它指到默认分支的 HEAD 上。
+            # 正式版是手动触发的，tag 尚不存在：由 gh 按 --target 指向本次运行的提交来创建，
+            # 这样「发布」与「打 tag」一步完成，不需要人工 git tag && git push。
             gh release create "$TAG" \
               --latest \
-              --verify-tag \
+              --target "${{ github.sha }}" \
               --title "ClassTrack Android ${VERSION}" \
               --notes-file "$RUNNER_TEMP/notes.md" \
               "${ASSET}"

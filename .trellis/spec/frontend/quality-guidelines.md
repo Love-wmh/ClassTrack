@@ -116,9 +116,9 @@ Android Studio 直接启动时，必须打开仓库内的 `android/` 目录，�
 Android 发布由 `.github/workflows/android-release.yml` 自动完成，两条轨道同一个 job，用工作流级 `IS_STABLE`（`startsWith(github.ref, 'refs/tags/v')`）分流 —— 注意 `env` 上下文在 job 级 `if` 里不可用，只能写在 step 级 `if`：
 
 - **测试版**：merge 进 `master` 且改动可能影响 APK 时触发（`app/**`、`public/**`、`android/**`、`scripts/**`、`.github/**`，加上决定产物内容/打包方式的根配置；纯文档改动不发版），也可手动 dispatch。产物挂到 `android-beta-<序号>` 预发布上（序号 = 已有测试版标签的最大值 +1），保留最近 10 个。
-- **正式版**：推送 `v<major>.<minor>.<patch>` tag 时触发（GitHub 对 tag push **不评估路径过滤**，所以 tag 永远能触发）。发布前校验该 tag 指向 `master` 上的提交、且签名 Secrets 齐备，任一不满足即失败；正式版不参与测试版的数量清理。
+- **正式版**：**只能手动触发** —— `workflow_dispatch` 时 `release_kind=stable` 并填写版本号；tag push 不再触发任何发布，`v<版本号>` 由发布步骤自己创建。发布前校验本次运行的提交在 `master` 上、版本号形如 `X.Y.Z`、`tag v<版本号>` 尚不存在，任一不满足即失败；正式版不参与测试版的数量清理。
 
-两条轨道都跑 `pnpm cap:sync:android`、原生单元测试、编译 APK，并用 `CLASS_TRACK_ANDROID_APK_PATH` 指向**本次要发布的那个包**做资产一致性校验。签名凭据只从 Secrets 读（`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`），`android/app/build.gradle` 只在四个变量齐备时注册 `signingConfigs.release`；测试版缺变量时退回 debug 包并告警，正式版缺变量时直接失败。**不要**把签名密钥或 `android/local.properties` 提交进仓库。
+两条轨道都跑 `pnpm cap:sync:android`、原生单元测试、`assembleRelease`、并用 `CLASS_TRACK_ANDROID_APK_PATH` 指向**本次要发布的那个包**做资产一致性校验。**两条轨道都必须发签名包**：缺签名 Secrets 时工作流直接失败，不回退 debug 包 —— debug 与 release 签名不同，测试机无法原地升级、只能卸载重装并丢数据（2026-09-20 用户实测反馈）。签名凭据只从 Secrets 读（`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`），`android/app/build.gradle` 只在四个环境变量齐备时注册 `signingConfigs.release`，因此编译步骤会先断言这四个环境变量非空。生成与上传方式见 README「发布与签名」段。**不要**把签名密钥或 `android/local.properties` 提交进仓库。
 
 versionName 按轨道取值（测试版 `1.0.<序号>-beta`，正式版取 tag 去掉 `v`）；versionCode 两条轨道统一取构建时刻的 epoch 秒，它跨轨道、跨 workflow 重命名都单调递增，测试机才能一路覆盖安装（beta → 正式版 → beta）。
 

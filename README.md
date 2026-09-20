@@ -128,26 +128,78 @@ pnpm cap:install:android
 
 发布流程在 `.github/workflows/android-release.yml`，两条轨道：
 
-- **测试版**（prerelease）：merge 进 `master` 且改动可能影响 APK 时自动跑（也可在 Actions 页手动触发）。
+- **测试版**（prerelease）：merge 进 `master` 且改动可能影响 APK 时自动跑（也可在 Actions 页手动触发，`release_kind` 保持 `beta`）。
   触发路径见 `on.push.paths`：`app/**`、`public/**`、`android/**`、`scripts/**`、`.github/**`，
   以及决定产物内容或打包方式的根配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`capacitor.config.ts`、
   `vite.config.ts`、`react-router.config.ts`、`tsconfig.json`、`index.html`）。纯文档（`docs/**`、`.trellis/**`、`README`）改动不发版。
   跑完编译、原生单元测试、APK 内 Web 资源与 `build/client` 的字节一致性校验后，把 APK 挂到预发布版本上，只保留最近 10 个。
-- **正式版**（非 prerelease，标记 Latest）：推送形如 `v1.2.3` 的 tag 时自动跑。
+- **正式版**（非 prerelease，标记 Latest）：**只能手动触发** —— Actions → Android Release → Run workflow →
+  `release_kind` 选 `stable` 并填写版本号（如 `1.2.0`）。tag **由工作流自己创建**（`v1.2.3`），不需要手工打 tag；
+  推送 tag 不会触发任何发布。
 
-  ```bash
-  git tag v1.2.3 && git push origin v1.2.3
-  ```
-
-  版本号取 tag 去掉前缀 `v`；工作流要求该 tag 指向 `master` 上的提交，且**必须**用签名包，
-  否则直接失败 —— 正式版不会发未签名包。
+  发布前工作流会校验：本次运行的提交在 `master` 上、版本号形如 `X.Y.Z`、`tag v<版本号>` 尚不存在。
 
 两条轨道的 versionCode 都取构建时刻的 epoch 秒：跨轨道、跨 workflow 重命名都单调递增，
 因此测试机能一路覆盖安装（beta → 正式版 → beta）。**不要改回 `run_number`** —— 它按 workflow
 各自计数，重命名 workflow 文件就会归零并与已有标签撞名（2026-09-20 实测过一次发布失败）。
 
-签名凭据只从 Secrets 读：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`。
-四个都配好之前，测试版发的是 debug 包（日志里会有警告），正式版则会被上面的校验直接拦下。
+### 发布与签名
+
+**两条轨道都只发签名包**：没有签名凭据时工作流直接失败，不会回退 debug 包。
+原因很实在——debug 包与 release 包签名不同，Android 不允许互相覆盖安装，测试机只能卸载重装（App 数据会丢，得重新导入）。
+
+签名凭据只从 4 个仓库 Secrets 读，`android/app/build.gradle` 在四个都齐备时才注册 `signingConfigs.release`：
+
+| Secret | 内容 |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | 密钥库文件（`.jks` / `.keystore`）的 base64 全文 |
+| `ANDROID_KEYSTORE_PASSWORD` | 密钥库口令 |
+| `ANDROID_KEY_ALIAS` | 密钥别名（本项目用 `classtrack`） |
+| `ANDROID_KEY_PASSWORD` | 该别名对应私钥的口令（PKCS12 密钥库通常与库口令相同） |
+
+生成密钥库并上传（本仓库当前使用的密钥库在本机 `~/.classtrack-secrets/classtrack-release.jks`，
+口令在同目录 `keystore-password.txt`，两者都已 `chmod 600`，**请自行备份到密码管理器**）：
+
+```bash
+# 1) 生成密钥库（一次性；4096-bit RSA，有效期约 27 年）
+keytool -genkeypair -keystore classtrack-release.jks -storetype PKCS12 \
+  -alias classtrack -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=ClassTrack, OU=Android, O=ClassTrack, L=Tianjin, ST=Tianjin, C=CN"
+
+# 2) 上传为仓库 Secrets（从文件读，不经命令行参数，避免出现在进程列表里）
+base64 -w0 classtrack-release.jks | gh secret set ANDROID_KEYSTORE_BASE64
+gh secret set ANDROID_KEYSTORE_PASSWORD < 口令文件
+gh secret set ANDROID_KEY_PASSWORD < 口令文件
+printf '%s' classtrack | gh secret set ANDROID_KEY_ALIAS
+gh secret list   # 确认四个都在
+```
+
+也可以走网页：仓库 → **Settings → Secrets and variables → Actions → New repository secret**。
+任何时候都不要把密钥库或口令提交进仓库（`.gitignore` 已排除 `*.jks` / `*.keystore`）。
+
+**本地出签名包**（与 CI 等价）：
+
+```bash
+export CLASSTRACK_KEYSTORE_FILE=~/.classtrack-secrets/classtrack-release.jks
+export CLASSTRACK_KEYSTORE_PASSWORD=$(cat ~/.classtrack-secrets/keystore-password.txt)
+export CLASSTRACK_KEY_ALIAS=classtrack
+export CLASSTRACK_KEY_PASSWORD=$(cat ~/.classtrack-secrets/keystore-password.txt)
+export CLASSTRACK_VERSION_CODE=$(date +%s)      # 必须比已装的版本大
+export CLASSTRACK_VERSION_NAME=1.0.0-local
+pnpm cap:sync:android && ./android/gradlew -p android :app:assembleRelease
+# 产物：android/app/build/outputs/apk/release/app-release.apk
+```
+
+核对签名方（指纹可与 `keytool -list -v` 的 SHA256 对照）：
+
+```bash
+~/Android/Sdk/build-tools/36.0.0/apksigner verify --print-certs \
+  android/app/build/outputs/apk/release/app-release.apk
+```
+
+**首次切到签名包会有一次性的卸载**：此前用 debug 签名的测试包无法被覆盖安装，需要先在 App 里
+「数据管理 → 导出数据」保存备份，卸载旧包、装上第一个签名包后再导入备份。此后所有测试版与正式版共用同一把密钥，
+**升级安装不再冲突、数据保留**。
 
 ### 启动生产服务
 
