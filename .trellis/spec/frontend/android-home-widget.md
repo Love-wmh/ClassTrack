@@ -132,7 +132,31 @@ WidgetStateResolver.resolve(WidgetSnapshot, nowEpochMs)
 - **Native pure logic (`WidgetSnapshotParserTest`, `WidgetStateResolverTest`)**: parser rejects malformed/short/oversized/wrong-version payloads and skips only the corrupt entry; resolver covers `MISSING`/`UNAVAILABLE`/`EMPTY`/`STALE`/`NO_UPCOMING`; boundary selection; the "adjacent classes switch exactly at the shared boundary" case; and that a class with `start < now < end` stays the hero with `IN_PROGRESS`.
 - **Day-selection and label logic (`WidgetDayPlanTest`, `WidgetDateLabelTest`)**: today wins over tomorrow; tomorrow only when today is empty; no rows at all when neither day has classes (long holidays); a day whose rows are all hidden by the finished policy must **not** fall back to tomorrow; `collapse` keeps its count even when no row is visible; `resolve(null, null, null)` degrades to an empty plan. `WidgetDateLabel` must split Web's pre-formatted `dayKey` into 「10月8日」 and reject out-of-range or malformed keys with an empty string — never guess a date.
 - **Cross-layer (`WidgetSnapshotCrossLayerTest`)**: feed a fixture produced by the real Web builder into the native parser and resolver. Assert the right course is selected 42 days later with zero renders in between, the window end behaves, sensitive sentinel values never appear in the payload, and `dayOffset`/`dayEndEpochMs` semantics agree. Fixture: `android/app/src/test/resources/widget-snapshot-v1.json`. Assertions must derive their timestamps **from the snapshot** — never hardcode epochs, since a fixture generated in UTC+8 has different absolute values than one generated in UTC.
-- **Device (not runnable in a KVM-less sandbox)**: placing the widget, 4x2 vs 2x1 layout, dark/light, click-through, time-change broadcasts actually arriving, exact-alarm behaviour after grant/revoke, reboot resilience, and a long-run "never open the app" check. Record the exact blocker rather than claiming these; see `.trellis/tasks/*/verification.md` for the pattern.
+- **Device (本机可用：`/dev/kvm` 存在，`Medium_Phone` 模拟器 + adb 即可)**: 已实测通过的有放置（**拖放放下即自动弹配置页**，取消不留实例）、缩放到 provider 下限、最小尺寸下两套样式的像素布局、点击穿透打开 App、时间推进后的边界切换、精确闹钟授权/撤销、重启存活。仍未覆盖：多 launcher / OEM ROM、`fontScale ≥ 1.5`、真实相邻课跨边界。取证手法见下一节；逐项证据见 `.trellis/tasks/*/verification.md`。
+
+**用 adb 驱动 launcher 的两个可复用手法**（合成手势与真实手势差异会导致误判，这里是实测可行的写法）：
+
+```bash
+# 1) 缩放实例：长按实例让四角出现缩放手柄，再拖某个手柄。
+#    手柄坐标从截图换算（1080x2400 截图 displayed 900x2000 → ×1.2 得设备像素）。
+adb shell input swipe 300 800 300 800 1200          # 长按实例空白处（别按到卡片上的按钮）
+adb shell input swipe 516 644 760 644 900           # 拖右中手柄向右 = 加宽 1 格
+#    注意：拖出「合法格子」才会产生新的 phase=widget_sized；拖到非法方向（低于 minWidth/minHeight）
+#    不会有任何日志，看起来像"手柄抓不到"，其实是被 launcher 回弹。
+
+# 2) 从选择器拖放放置：input swipe 会被 picker 当成滚动，必须自己控制时序。
+adb shell input motionevent DOWN 400 900            # 落在选择器里的 widget 预览上
+sleep 2                                              # 长按，等 launcher 进入拖放态
+for y in 940 1060 1180 1300 1400; do adb shell input motionevent MOVE 540 $y; sleep 0.25; done
+adb shell input motionevent UP 540 1400              # 落在桌面空白格 → 放置完成并弹出 WidgetConfigActivity
+
+# 3) 判定"有没有留下实例"别靠截图：数 dumpsys 里的条目数
+adb shell dumpsys appwidget | grep -c 'com.classtrack.app/com.classtrack.app.widget'   # provider + 每个实例各一条
+```
+
+**尺寸下限由 provider 声明决定**：`res/xml/class_track_widget_info.xml` 的 `minWidth/minHeight=110dp`，在 Pixel Launcher 上就是 2×2 格；文案里的「2x1 / Compact」指的是**紧凑样式**，不是格子尺寸，讨论尺寸问题时不要把两者混在一起。
+
+**日志读法**：每次 `phase=widget_sized` 之后常紧跟另一条 `widget_sized`（高度 = 配置页预览画布高度、宽度不受约束，如 `w=850 h=169`），那是宿主侧预览/缩放代理的渲染，**不是**桌面实例尺寸；桌面实例尺寸要与截图量测互相印证（`w=179 h=210` ↔ 2×2 格）。
 
 ### 7. Wrong vs Correct
 

@@ -85,7 +85,7 @@ java.lang.NullPointerException: Attempt to invoke virtual method
 | **B3** 进行中课程被标记，且自动切换 | 「正在进行」标签在真机渲染正确；把时间推到 20:10（课程结束时刻）后，两个实例都自动切到「接下来 · 第 3-4 节 / 大学物理 / 21:10 - 22:50 · 教二105」，「今日剩余」随之消失 —— **全程未打开 App** |
 | **B4** 点击打开 App 且跳到课表页 | 用小工具完全等价的 Intent（`MainActivity` + `classstrack_widget_route`）冷启动后：`topResumedActivity=com.classtrack.app/.MainActivity`、`path="/"`、`is404=false`、`isSchedule=true`。另测**白名单**：extra 传 `/evil-route` 时 `path="/"`、无 404，即被拒绝 |
 | **B5** 深色/浅色可读 | 浅色：白底深字 + 蓝色标签；`cmd uimode night yes` 后自动切到 `values-night` 配色（深底浅字），两个实例都正常渲染且可读 |
-| **B2** 尺寸适配 | **部分验证**：已在 250×200dp 下渲染 hero + 今日剩余列表；调试探针在真机上读到了 `LocalSize=250.0x200.0`，证明尺寸驱动分支有效；**2x1 紧凑尺寸的实际像素布局未验证**（该 launcher 的缩放句柄无法用合成手势抓取，长按只弹出 Settings 菜单） |
+| **B2** 尺寸适配 | **已验证**（2026-09-20 第四轮，API 37 模拟器 + Pixel Launcher）：见 §6。把实例缩到最小 2×2（179×210dp）后，「紧凑」与「全天课表」两套样式都渲染正常、无溢出无裁切无崩溃；配置页预览与桌面卡片逐像素一致（同一个尺寸 179×108） |
 | **C1** 推送后同一次推送内刷新 | 日志显示 `phase=snapshot_stored bytes=15128` → 同一秒内 `phase=refresh_requested trigger=plugin_push` 与 `trigger=widget_update`，且桌面内容随推送立即变化 |
 | **C2** 落盘成功才 resolve | 真机上 `snapshot_stored` 与随后刷新成对出现；插件四条失败路径各自 `reject` 具名错误码（代码审查 + 单测） |
 | **C3** 无数据/过期显示引导态 | 清空 WebView 的课表数据后重载，原生收到 `status=empty`，两个实例都显示「暂无课表数据，打开 ClassTrack 导入」，不猜课程 |
@@ -112,10 +112,10 @@ java.lang.NullPointerException: Attempt to invoke virtual method
 | **B11** 样式入口重开配置页 + 与主体点击互不干扰 | ① 点 widget 内「样式」→ `topResumedActivity=...WidgetConfigActivity`；② 点 widget 主体 → `topResumedActivity=...MainActivity` 且 WebView `path=/`（课表首页，B4 回归通过） |
 | **B6** 选择器预览 | 选择器命中 ClassTrack：预览页显示「4 × 3 / 4 wide by 3 high」与更新后的描述「在桌面上显示今天一整天的课程…」；`LauncherAppWidgetHostView` 的区域由 launcher **live 渲染我们的 widget**（uiautomator 能读到我们渲染的文本节点），不是 App 图标。`previewLayout` mock 与 `previewImage` 两个兜底资源均已编入 APK（aapt 验证） |
 | **B7** 每实例配置 + 设置入口 + 取消不落地 | ① 配置页保存后 `style_configured style=next_up finished=collapse`，该实例立即变样式、**其它实例不受影响**（同数据两种样式并排实拍）；② 配置按实例持久化在 Glance 状态（`appWidget-4/5.preferences_pb`）；③ 删除实例后对应状态文件被 `onDeleted` 清理（`appWidget-4.preferences_pb` 消失）；④ 在配置页选新样式后按「取消」→ 无新 `style_configured`、实例样式不变 |
-| **B12** (部分) | 最小尺寸像素未验证（原因同旧 B2）；但「小尺寸下可滚动显示全部」已被 B9 覆盖，配置页在紧凑样式下禁用了无关选项 |
+| **B12** | **已验证**（2026-09-20 第四轮）：最小格子由 provider 的 `minWidth/minHeight=110dp` 决定，实测就是 2×2（179×210dp）；同一坐标向右能长大（2→3 列）而向左到 1 列完全无响应，确认是 launcher 下限而不是手势抓不到。最小尺寸下两套样式都正常，详见 §6 |
 | 配置页安全 | 用不存在的 `--ei appwidget_id 9999` 从外部启动 `WidgetConfigActivity`：页面未显示（直接 `RESULT_CANCELED` 退出）、日志 `phase=config_rejected reason=invalid_widget_id`、无任何写入（Glance 状态文件无新增键） |
 | 配置页「紧凑」诚实性 | 选「紧凑」后，「已上完的课」三个单选被禁用（`enabled=false`）且出现「『紧凑』样式不显示课程列表，所以这个选项对它没有效果」 |
-| 放置时 configure 弹窗 | **部分验证**：`android:configure` 属性 + `widgetFeatures=reconfigurable` 都已编入 APK（aapt 验证）；真机上「长按 widget → Settings」能通过系统正确拉起 `WidgetConfigActivity`（与放置时同一套系统机制）。Pixel Launcher 全屏 picker 的拖放自动 configure 流程本次未能捕获（adb 合成拖拽与真实手势有差异），记录为残余风险（见 §4） |
+| 放置时 configure 弹窗 | **已验证**（2026-09-20 第四轮）：用 `input motionevent` 在 picker 里长按 2 秒再分步拖动后释放，launcher 放置完成即自动拉起 `WidgetConfigActivity`；点「取消」后实例数回到放置前（`dumpsys appwidget` 3 → 2），桌面不留实例。详见 §6 |
 
 ### 3.6 P7 发现并修复的真缺陷：`provideGlance` 只执行一次，旧状态闭包导致时间推进后画面不变
 
@@ -140,12 +140,12 @@ logcat：只有 phase=refresh_requested trigger=time_change，
 
 | 项 | 未验证内容 | 原因 | 复验方式 |
 |---|---|---|---|
-| **B2** | 2x1（Compact）的实际像素布局不溢出 | 模拟器 launcher 的缩放句柄无法用 `adb shell input` 合成手势抓取（长按只弹 Settings 菜单） | 在真机桌面上手动把实例缩到 2 格宽，确认只显示课程名与时间、且不溢出 |
+| ~~**B2**~~ | ✅ 2026-09-20 第四轮已验证（最小 2×2 下两套样式均无溢出，见 §6） | — | — |
 | — | 桌面圆角在不同 launcher / Android 版本上的裁剪表现 | 只在模拟器 Pixel Launcher 上看过 | 真机多 launcher 抽查；异常时去掉 `cornerRadius(16.dp)`（不影响信息正确性） |
 | — | 超大字体缩放（`fontScale ≥ 1.5`）下的表现 | 未改过 `fontScale` | 设置里调到最大字号看是否截断（当前用 `maxLines` 截断，不会破坏布局） |
 | — | 定位到「首尾相接两节课」的真实数据下的切换 | 测试数据里两节课之间有空档 | 导入含相邻课的课表，跨过交界秒验证 |
-| **B12** | 最小约 2x2 尺寸的实际像素布局 | 该 launcher 的缩放句柄无法用合成手势抓取（同旧 B2 原因） | 真机手动缩到最小，确认不溢出、不崩溃、仍可读；滚动已由 B9 覆盖 |
-| — | **放置时 configure 自动弹窗**（Android 14+ Pixel Launcher 全屏 picker） | adb 拖放手势与真实手势有差异，本次未捕获到「拖放完成→配置页自动弹出」的瞬间；`configure` + `reconfigurable` 已由 aapt 与系统 Settings 路径证实 | 真机手动从选择器放置一次，确认放置即弹配置页；取消时 launcher 不留下实例 |
+| ~~**B12**~~ | ✅ 2026-09-20 第四轮已验证（最小即 2×2；缩放下限与最小尺寸布局都取证，见 §6） | — | — |
+| ~~放置时 configure 自动弹窗~~ | ✅ 2026-09-20 第四轮已验证（拖放放下即弹配置页、取消不留实例，见 §6） | — | — |
 | — | `previewLayout` mock 与真实渲染的漂移 | mock 是静态 XML（含示例课程），真实渲染随数据/时刻变化 | 改动任一真实样式视觉时同步更新 mock（已在 spec 强制） |
 | — | 滚动在被其它 launcher（非 Pixel）的表现 | 只在 Pixel Launcher 验证过 | 真机多 launcher 抽查；异常时按 design D15 回退为截断 |
 
@@ -243,11 +243,11 @@ node /tmp/wv-eval.mjs @/tmp/seed.js && node /tmp/wv-eval.mjs "location.reload()"
 
 ### 仍未验证 / 已知限制
 
-- **B12（最小 2×2 像素布局）**：模拟器 launcher 的缩放句柄无法用合成手势拖动，仍只有 110×110 档的日志证据
-  （`widget_sized w=110 h=110`，布局自适应不发散），没有真机手势截图。
-- **「拖放放置时 configure 自动弹窗」**：Pixel Launcher 全屏 picker 下未能捕获该时序。
+- ~~**B12（最小 2×2 像素布局）**~~：2026-09-20 第四轮已补上（见 §6.2、§6.3）；缩放下限/最小尺寸布局都有截图与日志。
+- ~~**「拖放放置时 configure 自动弹窗」**~~：2026-09-20 第四轮已补上（见 §6.4）；取消路径同样取证。
 - **`preview_sized 286×158` 与真机卡片量测 240×138 dp 的差值**来自 launcher 自身的内缩，属已知差异；
   预览与真机的**内容裁决**已一致。
+- 仍未覆盖：多 launcher / OEM ROM、超大字体缩放（`fontScale ≥ 1.5`）、首尾相接两节课的真实数据切换（同 §4 表格里剩下那几行）。
 
 ---
 
@@ -295,3 +295,66 @@ node /tmp/wv-eval.mjs @/tmp/seed.js && node /tmp/wv-eval.mjs "location.reload()"
 - Android 单测 **87 例全绿**（默认样式用例已改写）。
 - 资源层校验：`strings.xml` / provider XML / 新 mock 布局 XML 均通过解析；`glance_list.xml` 覆盖生效。
 - 真机回归：整卡点击恢复；样式切换、刷新链路与日志无异常（无 `FATAL` / `ActionException`）。
+
+---
+
+## 2026-09-20 第四轮真机回测：缩放下限、最小尺寸布局与拖放放置
+
+模拟器 `Medium_Phone`（Android 37，Pixel Launcher，1080×2400 @420dpi → 411×914 dp），卸载重装 debug APK 后复跑。本轮把此前标为「部分验证 / 未捕获」的三项做完。
+
+### 6.1 缩放手柄是能抓到的（推翻此前的结论）
+
+此前记录「长按只弹 Settings 菜单、抓不到缩放句柄」，实际是**只看到了弹出菜单**：长按实例后卡片四角会同时出现紫色缩放手柄（截图 `w-lp-2col.png`），手柄位置可由截图换算（displayed × 1.2 = 设备像素）。拖动用 `adb shell input swipe <手柄x> <手柄y> <目标x> <目标y> 900` 即可，实测合法拖动都生效：
+
+| 操作 | `phase=widget_sized` 实测 |
+| --- | --- |
+| 4 列 → 向右收起 | `w=179 h=210`（2×2） |
+| 同一坐标向右拖出 | `w=276 h=210`（3 列） |
+| 再拖回 | `w=179 h=210` |
+
+### 6.2 缩放下限 = provider 声明的 110dp
+
+`android/app/src/main/res/xml/class_track_widget_info.xml` 声明 `minWidth/minHeight=110dp`，在这台 launcher 上就是 **2×2 格**。证据不是"拖不动"，而是一对有对照的操作：
+
+- 同一坐标**向右**拖：2 列 → 3 列，日志立刻出现新的 `widget_sized`（合法）；
+- 同一坐标**向左**拖到 1 列：**完全没有新的 `widget_sized`**（非法，launcher 回弹），并且 `dumpsys appwidget` 的实例数不变。
+
+所以「2×1」在本尺寸档位下不是合法格子，最小档就是 2×2；`B2` 里说的 2x1 指的是**紧凑样式**（样式名），不是格子尺寸 —— 两者此前被混在一起描述。
+
+### 6.3 最小尺寸下的两套样式（B2 / B12）
+
+实例固定为最小 2×2（179×210dp），逐一切换样式并截图放大检查：
+
+| 样式 | 最小尺寸下的表现 | 证据 |
+| --- | --- | --- |
+| 紧凑 | 标题行 `接下来 · 9月21日 周一` + `样式`、课名一行（`maxLines=1` 省略号，设计如此）、`08:00 - 09:40 · 28-A203`、`明天 3 节` + `样式`；下方留白，无溢出、无裁切 | `research/android-emulator-widget-compact-min.png` |
+| 全天课表 | 表头 `明天 周一 · 共 3 节` + 3 行课（时间 / 课名 / 教室）全部显示，无溢出、无裁切 | `research/android-emulator-widget-daylist-min.png` |
+
+两次切换都走完整链路：`phase=style_configured style=day_list` → `phase=snapshot_read` → `phase=widget_rendered`，无 `FATAL` / `ActionException`。
+
+**配置页与桌面一致性**：配置页在实例真实尺寸上渲染真实 Glance 组合（日志 `phase=preview_sized w=179 h=108`），截图上预览内容与桌面卡片逐像素一致 —— R10 的「预览不许撒谎」在小尺寸下同样成立。
+
+### 6.4 拖放放置时自动弹配置页
+
+`input swipe` 在 picker 里会被当成滚动，必须用 `input motionevent` 自己做「长按 → 分步移动 → 抬起」：
+
+```bash
+adb shell input motionevent DOWN 400 900      # 落在 ClassTrack 预览上
+sleep 2                                        # 长按，等 launcher 进入拖放
+for y in 940 1060 1180 1300 1400; do adb shell input motionevent MOVE 540 $y; sleep 0.25; done
+adb shell input motionevent UP 540 1400        # 落在桌面空白格
+```
+
+结果：`topResumedActivity` 直接变成 `com.classtrack.app/.widget.WidgetConfigActivity` —— **放置完成即弹配置页**，这项从「未捕获」变为已验证。
+
+**取消路径**：点「取消」后 `topResumedActivity` 回到 launcher，`dumpsys appwidget` 里 classtrack 的条目数 3 → 2（放置中新增的实例被回收），桌面不留实例。过程中日志出现一条 `phase=style_write_failed` 警告 —— 实例已被回收、样式写不进去属预期，且**只有警告、没有崩溃**，与「样式写入失败不许影响退出」的设计一致。
+
+### 6.5 一处日志读法（避免后来人误判）
+
+每次 `widget_sized` 之后常常紧跟另一条 `widget_sized`（本轮实测 `w=419 h=108`、`w=850 h=169`），它的高度等于**配置页预览画布**的高度、宽度不受约束，和桌面实例的真实尺寸无关（真实实例是对应的 `w=179 h=210` / `w=373 h=321`）。判断桌面卡片尺寸时以 `preview_sized` 之外、与截图量测吻合的那条为准。
+
+### 6.6 本轮状态
+
+- 设备：`emulator-5554`，Pixel Launcher，实例 id=5（2×2，紧凑样式），与验证前一致。
+- 截图：`research/android-emulator-widget-*.png`。
+- 未改动任何代码，因此不需要重跑构建门禁；上一轮的 87 例 Android 单测与五项 Web 门禁结论仍然有效。
