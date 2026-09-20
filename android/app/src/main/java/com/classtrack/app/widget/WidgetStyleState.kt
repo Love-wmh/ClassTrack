@@ -10,7 +10,7 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.classtrack.app.WidgetStyleConfig
 
 /**
- * 每个 widget 实例的展示配置（样式 + 已上完的课怎么处理）的读写。
+ * 每个 widget 实例的展示配置（布局样式 + 已上完的课怎么处理 + 大格子表现）的读写。
  *
  * 用 Glance 官方状态容器（`PreferencesGlanceStateDefinition`）而不是自建 SharedPreferences 键：
  * 它天然按 `GlanceId` 分片，能在实例被删除时精准清理，不会因为 `appWidgetId` 被复用而让新实例
@@ -22,6 +22,7 @@ import com.classtrack.app.WidgetStyleConfig
 internal object WidgetStyleState {
     private val layoutStyleKey = stringPreferencesKey(WidgetStyleConfig.KEY_LAYOUT_STYLE)
     private val finishedPolicyKey = stringPreferencesKey(WidgetStyleConfig.KEY_FINISHED_POLICY)
+    private val wideLayoutKey = stringPreferencesKey(WidgetStyleConfig.KEY_WIDE_LAYOUT)
 
 
     /**
@@ -33,7 +34,11 @@ internal object WidgetStyleState {
      */
     suspend fun read(context: Context, glanceId: GlanceId): WidgetStyleConfig {
         val preferences = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
-        return WidgetStyleConfig.parse(preferences[layoutStyleKey], preferences[finishedPolicyKey])
+        return WidgetStyleConfig.parse(
+            preferences[layoutStyleKey],
+            preferences[finishedPolicyKey],
+            preferences[wideLayoutKey]
+        )
     }
 
     /**
@@ -48,6 +53,7 @@ internal object WidgetStyleState {
         updateAppWidgetState(context, glanceId) { preferences ->
             preferences[layoutStyleKey] = config.layoutStyleStorageValue()
             preferences[finishedPolicyKey] = config.finishedPolicyStorageValue()
+            preferences[wideLayoutKey] = config.wideLayoutStorageValue()
         }
     }
 
@@ -62,8 +68,10 @@ internal object WidgetStyleState {
     suspend fun clear(context: Context, appWidgetId: Int) {
         val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
         updateAppWidgetState(context, glanceId) { preferences ->
+            // 三个键都要删：`appWidgetId` 会被系统复用，漏删一个就会让新实例继承旧样式。
             preferences.remove(layoutStyleKey)
             preferences.remove(finishedPolicyKey)
+            preferences.remove(wideLayoutKey)
 
         }
     }

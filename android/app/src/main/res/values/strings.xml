@@ -32,6 +32,7 @@
     <string name="widget_today_remaining_count">今天还有 %1$d 节</string>
     <string name="widget_next_other_day_line">下一节 · %1$s %2$s %3$s</string>
     <string name="widget_style_entry">样式</string>
+    <string name="widget_sections_suffix">第%1$s节</string>
 
     <!-- 没有任何可展示课程时的引导文案：五种原因必须分开，避免误导用户 -->
     <string name="widget_prompt_sync">打开 ClassTrack 同步课表到桌面</string>
@@ -66,6 +67,14 @@
     <string name="widget_config_finished_hide">不显示</string>
     <string name="widget_config_finished_collapse">折叠成一行计数</string>
     <string name="widget_config_finished_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
+    <string name="widget_config_wide_section">大格子表现</string>
+    <string name="widget_config_wide_adaptive">跟随尺寸</string>
+    <string name="widget_config_wide_adaptive_desc">字号与间距随格子大小一起放大；小格子上与以前完全一致。</string>
+    <string name="widget_config_wide_dense">信息加密</string>
+    <string name="widget_config_wide_dense_desc">在放大的基础上，课名放宽到两行，课程行补「第几节」，汇总行补当天已上完的节数。</string>
+    <string name="widget_config_wide_two_column">双栏</string>
+    <string name="widget_config_wide_two_column_desc">左栏放当前或接下来的一节课，右栏放当天课表；格子不够宽时自动保持单栏。</string>
+    <string name="widget_config_wide_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
     <string name="widget_config_confirm">确定</string>
     <string name="widget_config_cancel">取消</string>
 

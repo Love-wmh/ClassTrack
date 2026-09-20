@@ -53,8 +53,27 @@ public final class WidgetDiagnostics {
      * @param layoutStyle 样式存储值。
      * @param finishedPolicy 已上完策略存储值。
      */
-    public static void styleConfigured(String layoutStyle, String finishedPolicy) {
-        Log.i(TAG, "phase=style_configured style=" + safeStyle(layoutStyle) + " finished=" + safeFinishedPolicy(finishedPolicy));
+    public static void styleConfigured(String layoutStyle, String finishedPolicy, String wideLayout) {
+        Log.i(TAG, "phase=style_configured style=" + safeStyle(layoutStyle) + " finished=" + safeFinishedPolicy(finishedPolicy)
+                + " wide=" + safeWideLayout(wideLayout));
+    }
+
+    /**
+     * 记录一次渲染用到的排版度量。
+     *
+     * <p>`scale` 是「度量相对基准放大到几成」，以百分数整数表示（131 = 1.31 倍），`dual` 表示这一帧
+     * 是否真的分了栏 —— 「选了双栏但没分栏」有两种完全不同的原因（尺寸不够 / 渲染坏了），这条日志
+     * 让它们在 logcat 里就能分开，不必猜。
+     *
+     * <p>与其它诊断一样：只有数值与白名单枚举，不含任何课程内容。
+     *
+     * @param scalePercent 缩放百分比（100 表示与基准一致）。
+     * @param wideLayout 「大格子表现」存储值。
+     * @param dual 这一帧是否分了两栏。
+     */
+    public static void layoutMetrics(int scalePercent, String wideLayout, boolean dual) {
+        Log.i(TAG, "phase=layout_metrics scale=" + Math.max(0, scalePercent) + " wide=" + safeWideLayout(wideLayout)
+                + " dual=" + dual);
     }
 
     /**
@@ -176,6 +195,23 @@ public final class WidgetDiagnostics {
             case "show_dim":
             case "hide":
             case "collapse":
+                return value;
+            default:
+                return "unknown";
+        }
+    }
+
+    /**
+     * 与 {@link #safeStyle} 同理：「大格子表现」值只允许白名单内的固定枚举进入日志。
+     *
+     * @param value 候选表现值。
+     * @return 白名单内的值；否则返回 `unknown`。
+     */
+    private static String safeWideLayout(String value) {
+        switch (value == null ? "" : value) {
+            case "adaptive":
+            case "dense":
+            case "two_column":
                 return value;
             default:
                 return "unknown";

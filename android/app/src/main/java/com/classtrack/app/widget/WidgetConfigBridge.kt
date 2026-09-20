@@ -42,7 +42,11 @@ object WidgetConfigBridge {
                 // 合成层必须能读到这份新配置，否则样式切换在画面上不生效。
                 WidgetRenderCache.publishConfig(appWidgetId, config)
                 ClassTrackWidget().update(appContext, glanceId)
-                WidgetDiagnostics.styleConfigured(config.layoutStyleStorageValue(), config.finishedPolicyStorageValue())
+                WidgetDiagnostics.styleConfigured(
+                    config.layoutStyleStorageValue(),
+                    config.finishedPolicyStorageValue(),
+                    config.wideLayoutStorageValue()
+                )
             } catch (error: RuntimeException) {
                 // 写失败不能让配置页崩掉：用户看到的是样式没变，而不是应用退出。
                 WidgetDiagnostics.styleWriteFailed()
