@@ -209,6 +209,32 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 
 [OK] **Completed**
 
+## Session 7: 手机端课表整周铺满与双指缩放（含 Android 模拟器真机验收）
+<!-- trellis-session: v=2 fp=29d220dac26aa9ea -->
+
+**Date**: 2026-09-20
+**Task**: 手机端课表整周铺满与双指缩放（含 Android 模拟器真机验收）
+**Branch**: `feat/mobile-schedule-week-grid`
+
+### Summary
+
+手机端（<768px）课表从 min-w-[760px] 横向溢出改为整周 7 天自适应：1x 下 412px 视口无横向滚动（scrollWidth=clientWidth=394，列宽 52px；360px 视口 44px），课名去掉 line-clamp-2 完整换行，节次列按课程数据推导显示起止时间（可见 10 条），表头显示月份。新增 1x/1.5x/2x 三档缩放，只改列宽不改字号：≥1.5x 出现教室、2x 出现教师与备注，2x 列宽 108px 且容器出现横向滚动；手势期间只写 --schedule-zoom CSS 变量、松手才提交一次 React 状态，档位不持久化。新增 useScheduleZoom hook 与 13 条纯函数用例（节次时间推导/单双周/档位吸附与裁剪），桌面端由 md: 与 useIsMobile 门控保持零改动。桌面 Chrome 断言、五项门禁（13 files / 67 tests）与 cap:sync 资产校验全部通过。本轮补做 Android 模拟器（API 37 WebView）真机验收：assembleDebug 出包安装后，整周铺满、触摸双击、档位按钮、双指捏合吸附、单指横滑、点课程块弹窗、换周、底栏不遮挡全部实测通过。真机暴露并修复一个桌面断言漏掉的缺陷：一次双击会同时触发我们的 pointerup 判定与浏览器合成的 dblclick，两次切换互相抵消导致“双击没反应”，已在 toggleZoom 上加 400ms 去抖。另外把 .trellis/** 补进 eslint.config.js 的 ignores（文档声称已排除但实际只排除了 prettier），并把 Trellis 脚本的自动提交主题改成中文以免被本仓库 commitlint 拦下。残余风险：未在物理真机/OEM 定制 WebView 上复验；表头与导航空白区的页面级双指缩放未处理。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `86fbdb0` | docs(schedule): 补充移动端课表整周可见任务的规划与基线 |
+| `f8437dc` | feat(schedule): 补充节次时间推导与缩放档位纯函数 |
+| `3bb1474` | feat(schedule): 手机端课表整周铺满并可完整显示课名 |
+| `32f7700` | feat(schedule): 手机端课表支持双指缩放到 1x~2x |
+| `39df123` | fix(schedule): 修掉真机上双击缩放被双重触发抵消的问题 |
+| `045d8d7` | chore(lint): 把 .trellis 纳入 eslint ignores |
+
+### Status
+
+[OK] **Completed**
+
 
 ## Session 8: 桌面小工具真机回测收尾：缩放下限、最小尺寸布局与拖放放置
 <!-- trellis-session: v=2 fp=7ce2892ab7d5f1dc -->

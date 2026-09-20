@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~233 | Active |
+| `journal-1.md` | ~259 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -30,6 +30,7 @@
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
 | 8 | 2026-09-20 | 桌面小工具真机回测收尾：缩放下限、最小尺寸布局与拖放放置 | `dca7ae4`, `a7f808e` | `master` |
+| 7 | 2026-09-20 | 手机端课表整周铺满与双指缩放（含 Android 模拟器真机验收） | `86fbdb0`, `f8437dc`, `3bb1474`, `32f7700`, `39df123`, `045d8d7` | `feat/mobile-schedule-week-grid` |
 | 6 | 2026-09-19 | Fix native shell 404 white screen and verify on emulator | `a2fccfd` | `fix/native-import-white-screen-ui` |
 | 5 | 2026-09-19 | Protect Android native import from stale shell assets | `e1a10a3` | `fix/native-import-white-screen-ui` |
 | 4 | 2026-09-18 | 修复应用内导入白屏与 UI 风格 | `dd7e2e3` | `fix/native-import-white-screen-ui` |
