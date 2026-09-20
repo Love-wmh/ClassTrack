@@ -9,5 +9,8 @@
     <color name="widget_text_primary">#FF1C1C1E</color>
     <color name="widget_text_secondary">#FF4B5563</color>
     <color name="widget_text_muted">#FF6B7280</color>
+    <!-- 浅色模式的主卡分层：比卡片白底略暗一档的冷灰，用来把「现在这节课」和课表分开。
+         只有双栏左卡会用到它（单栏不套子卡片），因此这里是不透明色，不做透明度渐入。 -->
+    <color name="widget_surface_card">#FFF2F4F8</color>
     <color name="widget_accent">#FF2563EB</color>
 </resources>

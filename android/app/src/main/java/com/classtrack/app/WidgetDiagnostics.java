@@ -144,6 +144,15 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 渲染缓存发布时与其它快照撞车（冲突重试后仍未成功，已退回普通赋值）。
+     *
+     * 这是**可自愈**的情况：写进去的值仍然是最新解析结果，只是没能参与事务合并。按警告记录，
+     * 不带任何异常堆栈与内容。
+     */
+    public static void renderCacheConflict() {
+        Log.w(TAG, "phase=render_cache_conflict");
+    }
+    /**
      * 记录配置页预览用的尺寸。
      *
      * 预览与真实小工具必须画在同一个尺寸上，否则预览就是在撒谎。这条日志与 `phase=widget_sized`

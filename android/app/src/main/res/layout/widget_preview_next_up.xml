@@ -16,6 +16,11 @@
   这份 mock 是**静态的**：改动真实渲染的视觉时必须同步更新它（以及 scripts/generate-widget-preview.py
   生成的示意图），否则预览会撒谎（见 design.md D14）。文案来自 @string/widget_preview_*，是示例课程，
   不是任何用户数据。
+
+  **什么时候会失效**（画的是「4×3 默认样式、scale = 1」）：这份 mock 只有在
+  `WidgetLayoutMetrics.W_REF/H_REF` 仍是 4×3 标定尺寸（373×321dp）**且** `MIN_SCALE` 仍是 1.0 时才成立
+  —— 那两条保证 4×3 上 `scale = 1.0`、每个度量都等于改动前的写死常量。动了标定基准、把下限降到 1.0 以下、
+  或改了默认样式/默认「大格子表现」，都必须重新画这份 mock。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"

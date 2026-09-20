@@ -93,6 +93,42 @@ public class WidgetLayoutMetricsTest {
         }
     }
 
+    /** 缩放算出来的 5.24dp / 20.96sp 在视觉上是脏的：所有输出都必须落在网格上。 */
+    @Test
+    public void everyMetricFallsOnAGrid() {
+        float[][] sizes = {{179f, 210f}, {373f, 321f}, {733f, 419f}, {1100f, 700f}, {600f, 520f}};
+        for (float[] size : sizes) {
+            WidgetLayoutMetrics metrics = WidgetLayoutMetrics.resolve(size[0], size[1]);
+            for (float sp : new float[] {metrics.getTitleSp(), metrics.getBodySp(), metrics.getCaptionSp()}) {
+                assertEquals("字号必须落在 0.5sp 上：" + sp, 0f, Math.abs(sp * 2f - Math.round(sp * 2f)), EPSILON);
+            }
+            for (float dp : new float[] {metrics.getHorizontalPaddingDp(), metrics.getVerticalPaddingDp(),
+                    metrics.getCardRadiusDp(), metrics.getRowGapDp(), metrics.getRowGapFirstDp(),
+                    metrics.getHeroGapDp(), metrics.getTimeColumnDp(), metrics.getMarkerColumnDp(),
+                    metrics.getSectionsColumnDp(), metrics.getStyleEntryPaddingDp(), metrics.getHeroInnerPaddingDp(),
+                    metrics.getDualGapDp()}) {
+                assertEquals("间距必须落在 1dp 上：" + dp, 0f, Math.abs(dp - Math.round(dp)), EPSILON);
+            }
+        }
+    }
+
+    /** 双栏左栏宽度必须落在「读得通」的舒适区间里，而不是卡片宽度的固定百分比。 */
+    @Test
+    public void dualHeaderKeepsAComfortableWidth() {
+        assertEquals(252f, WidgetLayoutMetrics.resolve(733f, 419f).getDualHeaderWidthDp(), 2f);
+        assertEquals("极窄的双栏卡片保底 220dp", 220f, WidgetLayoutMetrics.resolve(534f, 315f).getDualHeaderWidthDp(), EPSILON);
+        assertEquals("极宽的卡片上限 360dp", 360f, WidgetLayoutMetrics.resolve(2000f, 900f).getDualHeaderWidthDp(), EPSILON);
+    }
+
+    /** 双栏左卡的内部留白随尺寸放大，但尺度保守（大格子上不该被内边距吃掉内容区）。 */
+    @Test
+    public void dualCardKeepsInnerPaddingConservative() {
+        assertEquals(14f, WidgetLayoutMetrics.resolve(373f, 321f).getHeroInnerPaddingDp(), EPSILON);
+        assertEquals(16f, WidgetLayoutMetrics.resolve(733f, 419f).getHeroInnerPaddingDp(), EPSILON);
+        assertEquals(12f, WidgetLayoutMetrics.resolve(373f, 321f).getDualGapDp(), 1f);
+        assertEquals(14f, WidgetLayoutMetrics.resolve(733f, 419f).getDualGapDp(), 1f);
+    }
+
     /** 分栏判据的两侧：宽度下限与宽高比下限各测一次。 */
     @Test
     public void dualColumnRequiresBothWidthAndAspectRatio() {

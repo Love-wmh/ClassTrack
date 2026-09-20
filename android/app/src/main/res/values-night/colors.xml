@@ -5,5 +5,8 @@
     <color name="widget_text_primary">#FFF5F5F7</color>
     <color name="widget_text_secondary">#FFD1D5DB</color>
     <color name="widget_text_muted">#FF9CA3AF</color>
+    <!-- 深色模式的主卡分层：比卡片底更亮一档，方向与浅色模式相反、作用相同。
+         只有双栏左卡会用到它（单栏不套子卡片），因此这里是不透明色，不做透明度渐入。 -->
+    <color name="widget_surface_card">#FF2C2C31</color>
     <color name="widget_accent">#FF60A5FA</color>
 </resources>

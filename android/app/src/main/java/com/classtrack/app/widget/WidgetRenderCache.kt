@@ -2,6 +2,8 @@ package com.classtrack.app.widget
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.runtime.snapshots.SnapshotApplyConflictException
+import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
 import com.classtrack.app.WidgetStyleConfig
 
@@ -24,19 +26,49 @@ import com.classtrack.app.WidgetStyleConfig
  * `provideGlance` 自己读到的值。
  */
 internal object WidgetRenderCache {
+    /** 撞上并发快照时的最大尝试次数（含首次）。 */
+    private const val PUBLISH_ATTEMPTS = 3
+
     private val latest = mutableStateOf<WidgetDisplayState?>(null)
 
     /** 每个实例最近一次发布的配置，key = appWidgetId。 */
     private val latestConfigs = mutableStateOf<Map<Int, WidgetStyleConfig>>(emptyMap())
 
     /**
-     * 发布最新解析结果。
+     * 在可变快照里写一次，**绝不抛出**。
+     *
+     * 刷新可能发生在广播接收器 / WorkManager 的后台线程上，所以写入要包一层 Snapshot 让合成阶段
+     * 观察到变化。但 `Snapshot.withMutableSnapshot` 的 `apply()` 在撞上并发快照时会抛
+     * `SnapshotApplyConflictException`，而这个写入点会在**配置页每点一次选项**时被触发
+     * （`renderPreviews` → `resolveCurrentState` → `publish`，同时主线程正在做 `RemoteViews.apply`
+     * 的真实合成）。平板实测：未捕获时配置页直接 `FATAL EXCEPTION` 崩掉 —— 用户连样式都改不回来。
+     *
+     * 这个容器是「尽力而为的最新值」，因此这里的契约是「必须写进去、绝不抛出」：先重试有限次，
+     * 仍失败就退回普通赋值。普通赋值同样会通知观察者，只是不参与事务合并；失败那次的可变快照
+     * 已被丢弃，所以回退不会留下半写状态。
+     *
+     * @param write 真正写值的动作。
+     */
+    private inline fun publishSafely(write: () -> Unit) {
+        repeat(PUBLISH_ATTEMPTS) { attempt ->
+            try {
+                Snapshot.withMutableSnapshot(write)
+                return
+            } catch (conflict: SnapshotApplyConflictException) {
+                if (attempt == PUBLISH_ATTEMPTS - 1) {
+                    WidgetDiagnostics.renderCacheConflict()
+                }
+            }
+        }
+        write()
+    }
+
+    /** 发布最新解析结果。
      *
      * @param state 刚解析出的状态。
      */
     fun publish(state: WidgetDisplayState) {
-        // 刷新可能发生在广播接收器 / WorkManager 的后台线程上；包一层 Snapshot 让合成阶段能观察到变化。
-        Snapshot.withMutableSnapshot { latest.value = state }
+        publishSafely { latest.value = state }
     }
 
     /**
@@ -46,9 +78,7 @@ internal object WidgetRenderCache {
      * @param config 该实例最新配置。
      */
     fun publishConfig(appWidgetId: Int, config: WidgetStyleConfig) {
-        Snapshot.withMutableSnapshot {
-            latestConfigs.value = latestConfigs.value + (appWidgetId to config)
-        }
+        publishSafely { latestConfigs.value = latestConfigs.value + (appWidgetId to config) }
     }
 
     /** @return 最近一次解析结果；从未解析过时为 `null`。 */

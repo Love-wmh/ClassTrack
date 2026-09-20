@@ -18,6 +18,17 @@ package com.classtrack.app;
  *       「高度小于 N 就不显示某区块」的分支 —— 放大只是算术，不是分支。</li>
  * </ol>
  *
+ * <p>2026-09-20 第二轮（真机比对后）补了两件事：
+ *
+ * <ol>
+ *   <li>**度量落网格**：字号落 0.5sp、其余落 1dp。缩放算出来的 5.24dp / 20.96sp 这种「程序员间距」
+ *       在视觉上是脏的，落网格后才像设计稿；</li>
+ *   <li>**双栏的排布参数**：左卡宽度、两区间距与卡内留白也在这里算（见 {@link #getDualHeaderWidthDp()}、
+ *       {@link #getDualGapDp()}、{@link #getHeroInnerPaddingDp()}）。子卡片**只存在于双栏**：产品负责人
+ *       在真机对比后明确否掉了单栏下的主卡化 —— 只有「一整列就是一张卡」的双栏才需要它，单栏保持
+ *       「卡片上就是一段文字」。</li>
+ * </ol>
+ *
  * <p>纯函数：不碰 Android，可被 JUnit 直接覆盖（见 {@code WidgetLayoutMetricsTest}）。
  */
 public final class WidgetLayoutMetrics {
@@ -59,16 +70,43 @@ public final class WidgetLayoutMetrics {
     private static final float BASE_TIME_COLUMN_DP = 44f;
     private static final float BASE_MARKER_COLUMN_DP = 12f;
     private static final float BASE_STYLE_ENTRY_PADDING_DP = 8f;
-    private static final float BASE_SECTIONS_COLUMN_DP = 38f;
+    /**
+     * 「信息加密」时「第几节」那一列的宽度。
+     *
+     * <p>按最长的现实取值定：`第11-12节` 在 11sp 下约 52dp，取 64dp 留出余量。定得太窄会真真切切地
+     * 把节次截成「第9-1…」（平板实测过），所以这个数字不是装饰性的。
+     */
+    private static final float BASE_SECTIONS_COLUMN_DP = 64f;
+
+    /** 字号落网格的步长（sp）：半磅是这套字号下肉眼能分辨的最小一档。 */
+    private static final float SP_STEP = 0.5f;
+
+    /** 其余度量落网格的步长（dp）。 */
+    private static final float DP_STEP = 1f;
+
+    /** 双栏时左栏（主卡）占正文宽度的比例，以及它的下限/上限（dp）。 */
+    private static final float DUAL_HEADER_SHARE = 0.36f;
+    private static final float DUAL_HEADER_MIN_DP = 220f;
+    private static final float DUAL_HEADER_MAX_DP = 360f;
+
+    /** 双栏两区之间的留白（dp，随内边距尺度缩放）。 */
+    private static final float DUAL_GAP_DP = 12f;
+
+    /** 双栏左卡的内部留白（dp，随内边距尺度缩放）。 */
+    private static final float HERO_INNER_PADDING_DP = 14f;
 
     private final float scale;
     private final float padScale;
     private final boolean dualColumn;
+    private final float widthDp;
+    private final float heightDp;
 
-    private WidgetLayoutMetrics(float scale, float padScale, boolean dualColumn) {
+    private WidgetLayoutMetrics(float scale, float padScale, boolean dualColumn, float widthDp, float heightDp) {
         this.scale = scale;
         this.padScale = padScale;
         this.dualColumn = dualColumn;
+        this.widthDp = widthDp;
+        this.heightDp = heightDp;
     }
 
     /**
@@ -80,7 +118,7 @@ public final class WidgetLayoutMetrics {
      */
     public static WidgetLayoutMetrics resolve(float widthDp, float heightDp) {
         if (!isUsable(widthDp) || !isUsable(heightDp)) {
-            return new WidgetLayoutMetrics(MIN_SCALE, 1f, false);
+            return new WidgetLayoutMetrics(MIN_SCALE, 1f, false, 0f, 0f);
         }
         // 两边比值取小的那个：纸面上限由更紧的那个维度决定。
         float raw = Math.min(widthDp / W_REF, heightDp / H_REF);
@@ -89,7 +127,7 @@ public final class WidgetLayoutMetrics {
         float padScale = (float) Math.sqrt(scale);
         // 分栏要求：足够宽 + 够横。两个判据都是几何可行性下限，与设备类型无关。
         boolean dual = widthDp >= DUAL_MIN_WIDTH_DP && widthDp >= heightDp * DUAL_MIN_ASPECT;
-        return new WidgetLayoutMetrics(scale, padScale, dual);
+        return new WidgetLayoutMetrics(scale, padScale, dual, widthDp, heightDp);
     }
 
     /**
@@ -98,6 +136,30 @@ public final class WidgetLayoutMetrics {
      */
     private static boolean isUsable(float value) {
         return !Float.isNaN(value) && !Float.isInfinite(value) && value > 0f;
+    }
+
+    /**
+     * 把数值落到 step 的整数倍上（四舍五入）。
+     *
+     * <p>落网格不会破坏「连续」这条要求：它只是量化，仍然单调不减，也仍然没有任何「按尺寸选档位」的
+     * 分支。收益是 5.24dp 这类间距变成 5dp，行与行之间看起来是设计过的。
+     *
+     * @param value 待量化的数值。
+     * @param step 步长（正数）。
+     * @return 量化后的数值。
+     */
+    private static float snap(float value, float step) {
+        return Math.round(value / step) * step;
+    }
+
+    /**
+     * @param value 待夹取的数值。
+     * @param min 下限。
+     * @param max 上限。
+     * @return 夹取后的数值。
+     */
+    private static float clamp(float value, float min, float max) {
+        return Math.min(Math.max(value, min), max);
     }
 
     /** @return 统一缩放因子，恒在 [{@link #MIN_SCALE}, {@link #MAX_SCALE}] 内。 */
@@ -112,69 +174,90 @@ public final class WidgetLayoutMetrics {
 
     /** @return hero 课名字号（sp）。 */
     public float getTitleSp() {
-        return BASE_TITLE_SP * scale;
+        return snap(BASE_TITLE_SP * scale, SP_STEP);
     }
 
     /** @return 正文字号（sp）。 */
     public float getBodySp() {
-        return BASE_BODY_SP * scale;
+        return snap(BASE_BODY_SP * scale, SP_STEP);
     }
 
     /** @return 说明字号（sp）。 */
     public float getCaptionSp() {
-        return BASE_CAPTION_SP * scale;
+        return snap(BASE_CAPTION_SP * scale, SP_STEP);
     }
 
     /** @return 卡片横向内边距（dp）。 */
     public float getHorizontalPaddingDp() {
-        return BASE_HORIZONTAL_PADDING_DP * padScale;
+        return snap(BASE_HORIZONTAL_PADDING_DP * padScale, DP_STEP);
     }
 
     /** @return 卡片纵向内边距（dp）。 */
     public float getVerticalPaddingDp() {
-        return BASE_VERTICAL_PADDING_DP * padScale;
+        return snap(BASE_VERTICAL_PADDING_DP * padScale, DP_STEP);
     }
 
     /** @return 卡片圆角（dp）。 */
     public float getCardRadiusDp() {
-        return BASE_CARD_RADIUS_DP * padScale;
+        return snap(BASE_CARD_RADIUS_DP * padScale, DP_STEP);
     }
 
     /** @return 首行课程与汇总行之间的行距（dp）。 */
     public float getRowGapFirstDp() {
-        return BASE_ROW_GAP_FIRST_DP * scale;
+        return snap(BASE_ROW_GAP_FIRST_DP * scale, DP_STEP);
     }
 
     /** @return 其余行之间的行距（dp）。 */
     public float getRowGapDp() {
-        return BASE_ROW_GAP_DP * scale;
+        return snap(BASE_ROW_GAP_DP * scale, DP_STEP);
     }
 
     /** @return hero 区块与下方课表之间的间距（dp）。 */
     public float getHeroGapDp() {
-        return BASE_HERO_GAP_DP * scale;
+        return snap(BASE_HERO_GAP_DP * scale, DP_STEP);
     }
 
     /** @return 课程行的时间列宽（dp）。 */
     public float getTimeColumnDp() {
-        return BASE_TIME_COLUMN_DP * scale;
+        return snap(BASE_TIME_COLUMN_DP * scale, DP_STEP);
     }
 
     /** @return 「正在上」标记列宽（dp）。 */
     public float getMarkerColumnDp() {
-        return BASE_MARKER_COLUMN_DP * scale;
+        return snap(BASE_MARKER_COLUMN_DP * scale, DP_STEP);
     }
 
     /** @return 「样式」入口的左内边距（dp）。 */
     public float getStyleEntryPaddingDp() {
-        return BASE_STYLE_ENTRY_PADDING_DP * padScale;
+        return snap(BASE_STYLE_ENTRY_PADDING_DP * padScale, DP_STEP);
+    }
+
+    /** @return 双栏左卡（「现在这节课」那张卡）的内部留白（dp）。 */
+    public float getHeroInnerPaddingDp() {
+        return snap(HERO_INNER_PADDING_DP * padScale, DP_STEP);
+    }
+
+    /**
+     * @return 双栏左卡的宽度（dp）。
+     *
+     * <p>取「正文宽度的一个比例」再夹进舒适区间，而不是死板的百分比：极窄的双栏卡片保底 220dp
+     * （再窄课名就要逐字换行），极宽的卡片封顶 360dp（再宽的话一行会被拉得太长、读起来费劲）。
+     */
+    public float getDualHeaderWidthDp() {
+        float contentWidth = Math.max(0f, widthDp - 2 * getHorizontalPaddingDp());
+        return snap(clamp(contentWidth * DUAL_HEADER_SHARE, DUAL_HEADER_MIN_DP, DUAL_HEADER_MAX_DP), DP_STEP);
+    }
+
+    /** @return 双栏两区之间的留白（dp）。 */
+    public float getDualGapDp() {
+        return snap(DUAL_GAP_DP * padScale, DP_STEP);
     }
 
     /**
      * @return 「信息加密」时节次列的宽度（dp）；不加密时这一列不参与布局。
      */
     public float getSectionsColumnDp() {
-        return BASE_SECTIONS_COLUMN_DP * scale;
+        return snap(BASE_SECTIONS_COLUMN_DP * scale, DP_STEP);
     }
 
     /**
