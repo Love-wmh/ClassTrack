@@ -257,3 +257,41 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: 小工具大格子适配：双栏左卡吃满纵向 + 修掉配置页快照冲突崩溃
+<!-- trellis-session: v=2 fp=36628113e0124e3b -->
+
+**Date**: 2026-09-20
+**Task**: 小工具大格子适配：双栏左卡吃满纵向 + 修掉配置页快照冲突崩溃
+**Branch**: `feat/widget-adaptive-space`
+
+### Summary
+
+子卡片只保留在双栏（真机比对后产品决定），双栏左卡用 fillMaxHeight + 弹性 Spacer 两端对齐吃满整列；新增度量落网格与双栏排布参数，删除只服务于单栏主卡化的三个度量；正文列表抽成共用 CourseList（OptIn 仍各一处）；修掉配置页重渲预览与后台发布撞 Snapshot.apply() 导致的进程崩溃（平板实测 3 次 FATAL → 压测 0 次）。
+
+### Main Changes
+
+- android/app/src/main/java/com/classtrack/app/widget/ClassTrackWidget.kt：HeroSection/HeroCard 分离，HeroHeading/HeroDetail 共用；CourseList 抽取
+- android/app/src/main/java/com/classtrack/app/WidgetLayoutMetrics.java：snap() 落网格、双栏排布参数、删除 fillFraction/heroHeightDp/heroSurfaceAlpha
+- android/app/src/main/java/com/classtrack/app/widget/WidgetRenderCache.kt：publishSafely 冲突重试 + 退回普通赋值
+- .trellis/spec/frontend/android-home-widget.md：D16 收窄式修订、子卡片只在双栏、不要给文本容器估算高度
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `471af70` | feat(widget): 双栏左卡重做为主卡，并修掉配置页快照冲突崩溃 |
+
+### Testing
+
+- [OK] ./android/gradlew -p android testDebugUnitTest（111 用例全绿）；pnpm cap:build:android + asset check 通过
+- [OK] 手机 2×2 与改动前基线逐像素相同（差异包围盒 None）；平板 4×3 三档截图 + phase=layout_metrics 取证
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 任务归档；后续可选：信息加密叠加双栏、fontScale≥1.5 的实测、OEM 平板 ROM 复验

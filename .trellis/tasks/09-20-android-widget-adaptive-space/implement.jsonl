@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/design.md", "reason": "本次的唯一技术依据：D1 度量模型与标定常量、D2 对 D16 的收窄修订、D3 行判决下沉到 Java、D4 第三键配置、D5 双栏结构与回退、D7 日志、D9 兼容性"}
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/implement.md", "reason": "阶段顺序 P0..P7、要改的文件清单、每阶段完成判据与回滚点"}
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/env-setup.md", "reason": "本机环境实测：沙盒两种状态的判据与绕法、Medium_Tablet 建法与启动参数、构建安装命令、既有取证手法"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "widget 契约全文；「responsive by construction」那一条本次按 design D2 修订，点击穿透、日志白名单、预览一致性、initialLayout 白名单都是硬约束"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五项可信门禁、禁止模式、中文注释与提交主题约定、Android 构建环境说明"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用优先的判断依据：新度量与行判决应复用既有纯 Java 分层（WidgetDayPlan / WidgetDayListPolicy）而不是另起一套"}
+{"file": ".trellis/tasks/archive/2026-09/09-19-android-home-widget/design-appendix.md", "reason": "上一任务的 D11..D17 与一致性检查表、Rollback 与未决事实；D16 的原文与理由在这里，本次修订必须与它对齐"}
+{"file": ".trellis/tasks/archive/2026-09/09-19-android-home-widget/env-setup.md", "reason": "受限沙盒下 gradle / 安卓用户目录的必要绕法（可写 GRADLE_USER_HOME、代理密码、ANDROID_USER_HOME），本次 env-setup E1 直接引用"}
