@@ -1,12 +1,16 @@
 package com.classtrack.app;
 
 import android.app.AlarmManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 
+import com.classtrack.app.widget.ClassTrackWidgetReceiver;
 import com.classtrack.app.widget.WidgetRefreshBridge;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -67,6 +71,67 @@ public class WidgetSnapshotPlugin extends Plugin {
     public void consumePendingRoute(PluginCall call) {
         JSObject result = new JSObject();
         result.put("route", WidgetPendingRoute.consumePendingRoute());
+        call.resolve(result);
+    }
+
+    /**
+     * 应用内「添加到桌面」：请求 launcher 放置一个本应用的小工具实例。
+     *
+     * <p>**尺寸提示是尽力而为**：`extras` 里带上目标格子的 `OPTION_APPWIDGET_MIN_WIDTH/HEIGHT`，但
+     * Android 只规定这些 key 存在，并未规定 launcher 会采纳；实测结论与文案降级写在 spec 里。因此无论
+     * 尺寸提示是否生效，**样式与「大格子表现」都仍然一键设好**（走 [WidgetPendingPreset]）。
+     *
+     * <p>支持性由 `AppWidgetManager.isRequestPinAppWidgetSupported()` 决定，为假时不发起请求、不留下槽位，
+     * 直接返回 `{supported:false}`，由 Web 侧展示「手动添加」的图文说明。
+     */
+    @PluginMethod
+    public void requestPinWidget(PluginCall call) {
+        String presetId = call.getString("preset");
+        WidgetPreset preset = WidgetPreset.parse(presetId);
+        if (preset == null) {
+            WidgetDiagnostics.pinResult(false, false);
+            call.reject("预设无效", "INVALID_PAYLOAD");
+            return;
+        }
+
+        WidgetDiagnostics.pinRequested(preset.getId());
+
+        Context context = getContext();
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        boolean supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager.isRequestPinAppWidgetSupported();
+        if (!supported) {
+            // 不支持就不要留下槽位：否则用户下次从桌面手动放置时会被塞进这次选的预设。
+            WidgetPendingPreset.clear();
+            WidgetDiagnostics.pinResult(false, false);
+            JSObject unsupported = new JSObject();
+            unsupported.put("supported", false);
+            unsupported.put("requested", false);
+            call.resolve(unsupported);
+            return;
+        }
+
+        WidgetPendingPreset.set(preset.getId(), System.currentTimeMillis());
+
+        Bundle extras = new Bundle();
+        extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, Math.round(preset.getWidthDp()));
+        extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, Math.round(preset.getHeightDp()));
+
+        boolean requested;
+        try {
+            requested = manager.requestPinAppWidget(
+                    new ComponentName(context, ClassTrackWidgetReceiver.class), extras, null);
+        } catch (RuntimeException error) {
+            // 个别 ROM 在这里抛（例如 launcher 未实现该 API）：按「没发起」如实返回，不崩。
+            requested = false;
+        }
+        if (!requested) {
+            WidgetPendingPreset.clear();
+        }
+
+        WidgetDiagnostics.pinResult(true, requested);
+        JSObject result = new JSObject();
+        result.put("supported", true);
+        result.put("requested", requested);
         call.resolve(result);
     }
 

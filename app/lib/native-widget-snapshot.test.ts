@@ -19,6 +19,13 @@ describe('桌面小工具插件封装', () => {
     expect(await widgetSnapshotPlugin.requestExactAlarmPermission()).toEqual({ launched: false, exact: false })
   })
 
+  it('Web 上「添加到桌面」如实返回不支持，而不是假装成功', async () => {
+    expect(await widgetSnapshotPlugin.requestPinWidget({ preset: 'phone_standard' })).toEqual({
+      supported: false,
+      requested: false,
+    })
+  })
+
   it('pushSnapshot 在 Web 上以 UNAVAILABLE 明确失败，而不是静默成功', async () => {
     await expect(widgetSnapshotPlugin.pushSnapshot({ snapshotJson: '{}' })).rejects.toThrow('当前环境不支持桌面小工具')
   })

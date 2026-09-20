@@ -58,6 +58,8 @@
 
     <!-- 配置页（放置时或从 widget 内的「样式」入口打开） -->
     <string name="widget_config_title">小工具样式</string>
+    <!-- 应用内「添加到桌面」按预设打开配置页时的提示。文案里只出现格子的尺寸与「可修改」，不承诺任意尺寸都完美。 -->
+    <string name="widget_config_preset_hint">已按推荐预设预填（推荐 %1$s 格子）。放好后可以随意改，拖到别的尺寸也能用。</string>
     <string name="widget_config_intro">样式按这个小工具实例单独保存，桌面上可以放多个样式不同的实例。</string>
     <string name="widget_config_layout_section">布局样式</string>
     <string name="widget_config_layout_day_list">全天课表</string>

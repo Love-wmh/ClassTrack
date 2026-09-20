@@ -31,6 +31,17 @@
             android:textSize="13sp" />
 
         <TextView
+            android:id="@+id/widget_config_preset_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:background="@color/widget_preset_hint_background"
+            android:padding="10dp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/widget_config_layout_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

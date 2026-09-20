@@ -77,6 +77,54 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 记录一次「添加到桌面」的请求（只记白名单枚举）。
+     *
+     * @param preset 预设标识；不在白名单内归 `unknown`。
+     */
+    public static void pinRequested(String preset) {
+        Log.i(TAG, "phase=pin_requested preset=" + safePreset(preset));
+    }
+
+    /**
+     * 记录一次「添加到桌面」的结果。
+     *
+     * @param supported 系统/launcher 是否支持一键添加。
+     * @param requested 是否真的发起了请求。
+     */
+    public static void pinResult(boolean supported, boolean requested) {
+        Log.i(TAG, "phase=pin_result supported=" + supported + " requested=" + requested);
+    }
+
+    /**
+     * 记录配置页按预设预填了一次选项。
+     *
+     * @param preset 预设标识；不在白名单内归 `unknown`。
+     */
+    public static void presetApplied(String preset) {
+        Log.i(TAG, "phase=preset_applied preset=" + safePreset(preset));
+    }
+
+    /**
+     * 预设标识的白名单化：只放行已知的五个值，其余归 `unknown`。
+     *
+     * @param value 原始标识。
+     * @return 可直接写进日志的值。
+     */
+    private static String safePreset(String value) {
+        String parsed = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+        switch (parsed) {
+            case "phone_minimal":
+            case "phone_standard":
+            case "phone_wide":
+            case "tablet_dual":
+            case "tablet_wide":
+                return parsed;
+            default:
+                return "unknown";
+        }
+    }
+
+    /**
      * 记录一次「铺满」求解的结果（只记数值，**不记任何课程内容**）。
      *
      * <p>字号上界由格子尺寸给（格子越大字号越大），实际字号会被收到「内容刚好放下」处 —— 这条日志把

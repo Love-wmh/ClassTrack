@@ -13,4 +13,6 @@
          只有双栏左卡会用到它（单栏不套子卡片），因此这里是不透明色，不做透明度渐入。 -->
     <color name="widget_surface_card">#FFF2F4F8</color>
     <color name="widget_accent">#FF2563EB</color>
+    <!-- 预设预填提示条的底：浅色模式下是很淡的品牌蓝，只用来把「这是系统替你选的」和普通说明区分开。 -->
+    <color name="widget_preset_hint_background">#1A2563EB</color>
 </resources>

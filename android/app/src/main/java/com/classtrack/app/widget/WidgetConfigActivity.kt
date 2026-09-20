@@ -18,6 +18,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.classtrack.app.R
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
+import com.classtrack.app.WidgetPendingPreset
 import com.classtrack.app.WidgetStyleConfig
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var wideGroup: RadioGroup
     private lateinit var wideSection: TextView
     private lateinit var wideHint: TextView
+    private lateinit var presetHint: TextView
     private lateinit var previewDayList: FrameLayout
     private lateinit var previewNextUp: FrameLayout
     private lateinit var previewCompact: FrameLayout
@@ -87,6 +89,7 @@ class WidgetConfigActivity : AppCompatActivity() {
         wideGroup = findViewById(R.id.widget_config_wide_group)
         wideSection = findViewById(R.id.widget_config_wide_section)
         wideHint = findViewById(R.id.widget_config_wide_hint)
+        presetHint = findViewById(R.id.widget_config_preset_hint)
         previewDayList = findViewById(R.id.widget_config_preview_day_list)
         previewNextUp = findViewById(R.id.widget_config_preview_next_up)
         previewCompact = findViewById(R.id.widget_config_preview_compact)
@@ -142,9 +145,21 @@ class WidgetConfigActivity : AppCompatActivity() {
                 WidgetStyleConfig.defaults()
             }
 
-            layoutGroup.check(layoutRadioId(stored.layoutStyle))
-            finishedGroup.check(finishedRadioId(stored.finishedPolicy))
-            wideGroup.check(wideRadioId(stored.wideLayout))
+            // 应用内「添加到桌面」带过来的预设：**只在本次配置流程里预选**，用户改了就按用户改的存。
+            // 一次性消费（读取即清），因此不会影响之后新增的实例。
+            val preset = WidgetPendingPreset.consume(System.currentTimeMillis())
+            val effective = if (preset == null) {
+                stored
+            } else {
+                WidgetDiagnostics.presetApplied(preset.getId())
+                presetHint.text = getString(R.string.widget_config_preset_hint, preset.getCellLabel())
+                presetHint.visibility = View.VISIBLE
+                WidgetStyleConfig(preset.getLayoutStyle(), stored.finishedPolicy, preset.getWideLayout())
+            }
+
+            layoutGroup.check(layoutRadioId(effective.layoutStyle))
+            finishedGroup.check(finishedRadioId(effective.finishedPolicy))
+            wideGroup.check(wideRadioId(effective.wideLayout))
             updateFinishedSectionState()
             updateWideSectionState()
         }

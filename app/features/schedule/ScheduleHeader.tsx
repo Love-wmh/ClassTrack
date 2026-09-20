@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, CheckCircle2, CircleAlert } from 'lucide-react'
 import ConfirmDialog from '~/components/dialog/ConfirmDialog'
+import WidgetPinEntry from './WidgetPinEntry'
 import { Button } from '~/components/ui/button'
 
 type ScheduleHeaderProps = {
@@ -45,16 +46,16 @@ export default function ScheduleHeader({
   return (
     <>
       <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid grid-cols-[2.5rem_2.5rem_1fr_1fr] items-center gap-2 sm:flex">
+        <div className="grid grid-cols-[2.25rem_2.25rem_1fr_1fr_2.25rem] items-center gap-1.5 sm:flex sm:gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => onWeekChange(Math.max(1, currentWeek - 1))}
             disabled={currentWeek <= 1}
             aria-label="上一周"
-            className="h-10 w-10 bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground disabled:opacity-40"
+            className="h-9 w-9 bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground disabled:opacity-40"
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeft className="size-4" />
           </Button>
           <Button
             variant="ghost"
@@ -62,14 +63,14 @@ export default function ScheduleHeader({
             onClick={() => onWeekChange(Math.min(maxWeek, currentWeek + 1))}
             disabled={currentWeek >= maxWeek}
             aria-label="下一周"
-            className="h-10 w-10 bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground disabled:opacity-40"
+            className="h-9 w-9 bg-card text-muted-foreground shadow-xs hover:bg-muted hover:text-foreground disabled:opacity-40"
           >
-            <ChevronRight className="size-5" />
+            <ChevronRight className="size-4" />
           </Button>
           <Button
             variant="ghost"
             onClick={() => setConfirmAction('attended')}
-            className="h-10 min-w-0 bg-emerald-50 px-2 font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900 sm:px-3.5"
+            className="h-9 min-w-0 bg-emerald-50 px-2 text-sm font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900 sm:px-3"
           >
             <CheckCircle2 className="size-4 sm:mr-1.5" />
             全部已上
@@ -77,21 +78,24 @@ export default function ScheduleHeader({
           <Button
             variant="ghost"
             onClick={() => setConfirmAction('unattended')}
-            className="h-10 min-w-0 bg-rose-50 px-2 font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 sm:px-3.5"
+            className="h-9 min-w-0 bg-rose-50 px-2 text-sm font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 sm:px-3"
           >
             <CircleAlert className="size-4 sm:mr-1.5" />
             全部未上
           </Button>
+          {/* 应用内「添加到桌面」：只在 Android 原生渲染（见组件注释）。放在动作组同一行，
+              不额外占一行高度 —— 顶栏本来就是这次要压缩的地方。 */}
+          <WidgetPinEntry />
         </div>
 
         <div className="grid grid-cols-2 items-center gap-2 sm:flex">
-          <span className="flex h-10 items-center justify-center rounded-md bg-card px-3.5 text-foreground shadow-xs">
+          <span className="flex h-9 items-center justify-center rounded-md bg-card px-3 text-foreground shadow-xs">
             第 {currentWeek} 周
           </span>
           <Button
             variant="ghost"
             onClick={() => onWeekChange(currentRealWeek)}
-            className="h-10 bg-card px-3.5 font-medium text-foreground shadow-xs hover:bg-muted"
+            className="h-9 bg-card px-3 text-sm font-medium text-foreground shadow-xs hover:bg-muted"
           >
             返回本周
           </Button>
