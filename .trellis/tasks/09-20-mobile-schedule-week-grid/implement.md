@@ -68,7 +68,7 @@ pnpm typecheck
 - `app/features/schedule/ScheduleTable.tsx`
   - props 增加 `sectionTimes: Record<number, SectionTime>`。
   - 滚容器加 `data-schedule-scroll`、`[touch-action:pan-x_pan-y]`、`overflow-y-auto`。
-  - 内层网格：手机端 `min-w-[calc(100%*var(--schedule-zoom,1))]` + `grid-cols-[2.25rem_repeat(7,minmax(0,1fr))]`；桌面端 `md:min-w-[760px]` + `md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]`。**不要在手机端保留 `min-w-[760px]`**。
+  - 内层网格：手机端 `min-w-[calc(100%*var(--schedule-zoom,1))]` + `grid-cols-[2rem_repeat(7,minmax(0,1fr))]`（实测回填：2.25rem 会让 360px 视口列宽掉到 43px，收到 2rem 后为 44px）；桌面端 `md:min-w-[760px]` + `md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]`。**不要在手机端保留 `min-w-[760px]`**。行高同步改为 `grid-rows-[2.25rem_repeat(12,minmax(2.75rem,1fr))]`（给节号+两行时间一个下限）。
   - `style={{ '--schedule-zoom': zoom }}`（P2 先固定为常量 `1`，P4 接入 hook）。
   - 节次列表头单元格：显示 `format(getDayDate(firstWeekStartDate, currentWeek, 1), 'M月')`，date 为空时回退 `节`。
   - 节次行单元格：节号 + 最多两行时间（`sectionTimes[section]?.start / .end`，`text-[9px] leading-3 tabular-nums text-muted-foreground`），缺失时不渲染该行。
@@ -147,8 +147,8 @@ EOF
 
 ## P5. 桌面端回归与全量门禁
 
-- [ ] 1440×900 截图与 `research/baseline-desktop-1440.png` 逐项对比：7 列、`min-w-[760px]` 生效、课名 `line-clamp-2`、教室显示、无缩放控件、无手势影响。
-- [ ] 手机端回归：点击课程块打开详情弹窗、`<`/`>` 换周、键盘左右键换周、底部导航不遮挡课表。
+- [x] 1440×900 截图与 `research/baseline-desktop-1440.png` 逐项对比：7 列、`min-w-[760px]` 生效、课名 `line-clamp-2`、教室显示、无缩放控件、无手势影响（实测列宽 154、`min-width = 760px`、18/18 课名 clamp=2、可见节次时间 0、控件不在 DOM）。
+- [x] 手机端回归：点击课程块打开详情弹窗、`<`/`>` 换周、键盘左右键换周、底部导航不遮挡课表（桌面 Chrome 与 Android 模拟器各跑一遍，见 `verification.md` E3/F 段）。
 - [ ] 五项门禁：
 
 ```bash
@@ -159,16 +159,17 @@ pnpm test
 pnpm build
 ```
 
-- [ ] `pnpm cap:sync:android` 无报错（Android 资产与 `build/client` 一致性由 `scripts/check-android-assets.js` 保证）。
+- [x] `pnpm cap:sync:android` 无报错（Android 资产与 `build/client` 一致性由 `scripts/check-android-assets.js` 保证）。
 
 **通过判据（对应 E1~E4）**：五项门禁全绿；桌面端截图与基线一致；真机验收明确标注为「由产品负责人在测试版 APK 上执行」的残余风险，不声称已验证。
 
 ## P6. Spec 更新与收尾
 
-- [ ] 新增 `.trellis/spec/frontend/mobile-schedule-layout.md`：移动端课表契约（整周自适应、信息分级档位、节次时间推导规则、桌面端边界、缩放不持久化、`data-schedule-scroll` / `--schedule-zoom` / `data-schedule-zoom-control` 供测试挂钩的约定）。
-- [ ] 在 `.trellis/spec/frontend/index.md` 的 Guidelines Index 增加一行指向该 spec，状态 `Implemented`。
-- [ ] `verification.md` 记录每项验收的真实证据（命令输出、截图路径、实测数值）与「未验证项 + 阻塞原因」。
-- [ ] 提交：`feat(schedule): 手机端课表整周可见并支持双指缩放`（中文主题），正文列改动与验证命令。
+- [x] 新增 `.trellis/spec/frontend/mobile-schedule-layout.md`：移动端课表契约（整周自适应、信息分级档位、节次时间推导规则、桌面端边界、缩放不持久化、`data-schedule-scroll` / `--schedule-zoom` / `data-schedule-zoom-control` 供测试挂钩的约定）。
+- [x] 在 `.trellis/spec/frontend/index.md` 的 Guidelines Index 增加一行指向该 spec，状态 `Implemented`。
+- [x] `verification.md` 记录每项验收的真实证据（命令输出、截图路径、实测数值）与「未验证项 + 阻塞原因」。
+- [x] 提交：`feat(schedule): 手机端课表整周可见并支持双指缩放`（中文主题），正文列改动与验证命令。
+- [x] 真机（Android 模拟器）验收：见 `verification.md` F 段；过程中发现并修复「双击被 `dblclick` 与 `pointerup` 双重触发抵消」的真机缺陷。
 
 ## 阶段依赖与顺序
 

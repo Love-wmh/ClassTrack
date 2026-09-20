@@ -172,7 +172,9 @@ export function useScheduleZoom(): {
 
 **为什么 1x 必须精确等于 1**：`min-width: calc(100% * var(--schedule-zoom))` 在 `var` 为 1 时恰好不溢出，这是 A1「无横向滚动」的机理；`clampZoom` 的下界就是 1。
 
-**双击**：鼠标走 `onDoubleClick`（1x ↔ 2x）；触摸端 `dblclick` 在部分 WebView 不一定派发，因此另外用 `pointerType === 'touch'` 的两次 `pointerup` 做判定（间隔 < 320ms、位移 < 24px）。该判定写成 hook 内部的小工具函数，不引第三方手势库（N1）。
+**双击**：鼠标走 `onDoubleClick`（1x ↔ 2x）；触摸端另外用 `pointerType === 'touch'` 的两次 `pointerup` 做判定（间隔 < 320ms、位移 < 24px）作为兜底。
+
+**真机修证（2026-09-20，Android 37 模拟器实测）**：Android WebView 在第二次抬起后**同时**派发我们的 `pointerup` 判定与浏览器合成的 `dblclick`，两条路径各切换一次档位、相互抵消，表现为“真机双击没反应”（桌面 Chrome 只派发 `dblclick`，所以 Web 侧断言曾经全绿却漏掉了它）。修法是在 `toggleZoom` 上加 400ms 去抖窗口，窗口内的第二次调用直接返回，两条路径保留其一即可。
 
 **控件**：`ScheduleTable` 内、滚容器外层右下角浮层（`absolute bottom-2 right-2 z-30`，由 `isMobile &&` 条件渲染，桌面端不进 DOM）渲染 `− 档位 +`，到边界时对应按钮 `disabled`。浮层覆盖区是右下角最后几节，通常为空；这是为换取“不加高手机端表头”的取舍，记入已知限制。
 

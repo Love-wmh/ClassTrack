@@ -11,6 +11,9 @@
 | 浏览器断言 | `agent-browser`（Chrome via CDP），视口 412×915 DPR2、360×800 DPR2、1440×900 DPR1 |
 | 数据 | `research/seed-schedule-fixture.js`（18 门课、第 3 周、含 21 字超长课名与单双周课） |
 | 截图 | `research/after-mobile-412.png`、`research/after-mobile-360.png`、`research/after-desktop-1440.png`、`research/after-mobile-412-zoom2.png` |
+| 真机环境 | Android 模拟器 `Medium_Phone`（API 37，Android System WebView），`adb` + CDP（`webview_devtools_remote` 转发到 `tcp:9222`），设备视口 411×914 @ dpr 2.625 |
+| 真机产物 | `pnpm cap:sync:android` exit 0、`pnpm android:check-assets` 通过（247 assets、index sha256 一致）、`./android/gradlew -p android assembleDebug` BUILD SUCCESSFUL、`adb install -r -t` Success |
+| 真机截图 | `research/android-emulator-1x.png`、`research/android-emulator-2x.png` |
 
 ## A. 整周可见（1x）
 
@@ -57,13 +60,51 @@
 | E1 五项门禁 | `typecheck` / `lint` / `format:check` / `test` / `build` 全部 exit 0；`vitest` **13 files / 67 tests passed** | ✅ |
 | E2 纯逻辑用例 | `app/features/schedule/utils.test.ts` 13 条：节次时间推导（跨节/单节/众数/并列/空输入）、单双周、缩放裁剪与吸附、分级；全部不依赖 `new Date()` | ✅ |
 | E3 手机端交互回归 | 点课程块 → 详情弹窗显示 `毛泽东思想和中国特色社会主义理论体系概论 / 第 3 周 · 第 1-2 节 / 王芳 / 28-A203`，Esc 关闭；`上一周` → 第 2 周；键盘 → 第 3、4 周；底栏 `navTop 850 ≥ tableBottom 838`，缩放浮层在课表范围内 | ✅ |
-| E4 Android 资产同步 | **未执行**（见未验证项） | ⏳ |
+| E4 Android 资产同步 | `pnpm cap:sync:android` exit 0；`pnpm android:check-assets` 通过（247 assets、28 处 index 引用、index sha256 一致）；`assembleDebug` 出包并安装到模拟器 | ✅ |
+
+## F. Android 真机（模拟器）验收
+
+在 API 37 模拟器上安装 debug APK，通过 CDP 驱动真实触摸事件（`Input.dispatchTouchEvent`）与 `adb shell input tap` 验证；截图见 `research/android-emulator-1x.png` / `-2x.png`。
+
+| 项 | 实测 | 判定 |
+| --- | --- | --- |
+| 1x 整周铺满（A1/A3） | `scrollWidth 394 = clientWidth 394`（无横向滚动）、7 个 `[data-day-head]` 各 52px、`8月` 表头与节次时间（可见 10 条）均渲染 | ✅ |
+| 课名完整（B1） | 18 个课程块 `clampedNames = 0`，`毛泽东思想和中国特色社会主义理论体系概论` 在 1x 完整换行 | ✅ |
+| 单双周徽标（B4） | `[data-course-parity]` 2 个，均为 `单周` | ✅ |
+| 手势不被系统截走（N5/D1 前置） | `touch-action` 计算值 `pan-x pan-y`；捏合过程中 `visualViewport.scale` 始终为 1（未被系统接管做页面缩放） | ✅ |
+| 双指捏合放大（D1） | 间距 100 → 240（CDP 真实触摸）→ `zoom=2`、`tier=full`、`scrollWidth 788 > 394`、列宽 52 → 108、课名字号仍 `11px` | ✅ |
+| 双指捏合缩小（D1） | 间距 240 → 100 → `zoom=1`、`tier=compact` | ✅ |
+| 档位按钮（D2） | 真机点 `+`：1x → 1.5x（`standard`，教室 2 个）→ 2x（`full`，教师 3 个，`+` disabled）；点 `−` 回到 1.5x | ✅ |
+| 双击切换（D3） | 真机双击空位：1x → 2x → 1x（双向） | ✅（修复后，见下） |
+| 单指横滑（D4） | `adb shell input swipe` → 2x 下 `scrollLeft 0 → 107` | ✅ |
+| 点课程块与弹窗（E3） | 真机点课程块 → 弹窗 `毛泽东思想和中国特色社会主义理论体系概论 / 第 3 周 · 第 1-2 节 / 王芳`；点弹窗外关闭 | ✅ |
+| 换周（E3） | 真机点 `上一周`：第 3 周 → 第 2 周 → 第 1 周 | ✅ |
+| 底栏不遮挡（E3） | `tableBottom 814 ≤ navTop 826`；缩放浮层 90×34 完全落在课表内 | ✅ |
+
+### 真机发现并修复的缺陷
+
+**双击在真机上“没反应”**（桌面 Chromium 的断言全绿却漏掉）。用带时间戳的事件日志定位到：Android WebView 在一次双击后会派发 `pointerdown/pointerup/click` **两次**（间隔 31ms），并在第二次抬起后合成 `dblclick`。于是我们的 `pointerup` 双击判定与 `dblclick` 处理各切换一次档位，两次切换相互抵消（2x → 1x → 2x），表现为“点了没变化”。
+
+修复：`useScheduleZoom` 的 `toggleZoom` 增加 400ms 去抖窗口，窗口内的第二次调用直接返回，两条触发路径保留其一。修复后真机双击 1x ↔ 2x 双向稳定通过；`pnpm typecheck / lint / test` 仍全绿，重新出包安装后复验通过。隐患已写入 `.trellis/spec/frontend/mobile-schedule-layout.md` 的 Common Mistakes 与 `design.md` D8。
+
+### 复现方式（供后续回归）
+
+```bash
+./android/gradlew -p android assembleDebug
+adb install -r -t android/app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.classtrack.app/.MainActivity
+# App 重启后 socket 名会变，必须重新转发
+SOCK=$(adb shell cat /proc/net/unix | grep -o 'webview_devtools_remote[^ ]*' | head -1 | tr -d '\r')
+adb forward tcp:9222 localabstract:$SOCK
+# 然后经 CDP 灌种子数据、Page.reload，再用 Input.dispatchTouchEvent / adb input tap 驱动
+```
+
+**注意**：`adb shell input tap` 的坐标是**设备像素**，必须用 CSS 坐标 × devicePixelRatio（本机 2.625）；用 CSS 坐标直接点会落到课表格子里。
 
 ## 未验证项与原因
 
-1. **真机 Android WebView 验收未执行**：本机无 adb 设备，且 Gradle 环境此前已记录为受限（见 `.trellis/tasks/09-19-android-home-widget/env-setup.md`）。手势与 `touch-action` 的真实行为需要产品负责人在测试版 APK 上确认。风险点：双指手势期间 WebView 是否仍会平移（已用 `touch-action: pan-x pan-y` 排除原生 pinch-zoom，并用 `preventDefault` 兜底，但真机行为未验）。
-2. **`pnpm cap:sync:android` 未执行**：同上（`pnpm build` 已通过，资产内容正确性由 CI 的 `scripts/check-android-assets.js` 保障）。
-3. **页面级双指缩放未处理**：在表头/导航空白区双指仍会缩放整个 App（本次范围不含 `root.tsx` 的 viewport 修改），若真机复现需另开任务加 `maximum-scale`。
+1. **物理真机（非模拟器）未验**：本次在 API 37 模拟器的 Android System WebView 上完成触控验收（见 F 段），已覆盖手势、`touch-action`、`preventDefault` 与合成 `dblclick` 等此前只能靠桌面 Chrome 推测的行为；但 OEM 定制 WebView（国产 ROM）与不同触摸采样率下的手感仍建议在真机上再过一遍。
+2. **页面级双指缩放未处理**：在表头/导航空白区双指仍会缩放整个 App（本次范围不含 `root.tsx` 的 viewport 修改），若真机复现需另开任务加 `maximum-scale`。
 
 ## 已知限制（交付口径）
 

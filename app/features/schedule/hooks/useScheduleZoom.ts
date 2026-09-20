@@ -20,6 +20,15 @@ const DOUBLE_TAP_INTERVAL_MS = 320
 /** 触摸端双击判定的最大位移，避免把连续两次拖动误判成双击。 */
 const DOUBLE_TAP_MOVE_TOLERANCE_PX = 24
 
+/**
+ * 双击切换的去抖窗口。
+ *
+ * 同一次双击在真机上会走两条路径：我们自己的两次 `pointerup` 判定，以及浏览器在第二次
+ * 抬起后合成的 `dblclick`（Android WebView 实测会派发）。两条都触发就会切换两次、
+ * 相互抵消，因此在窗口内只允许切换一次。
+ */
+const DOUBLE_TAP_TOGGLE_DEBOUNCE_MS = 400
+
 function distanceBetween(first: PointerPosition, second: PointerPosition) {
   return Math.hypot(first.x - second.x, first.y - second.y)
 }
@@ -43,7 +52,15 @@ export function useScheduleZoom() {
   const gestureRef = useRef<GestureState | null>(null)
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null)
 
-  const toggleZoom = () => setZoom((current) => (current === ZOOM_MIN ? ZOOM_MAX : ZOOM_MIN))
+  const lastToggleRef = useRef(0)
+
+  const toggleZoom = () => {
+    const now = Date.now()
+    if (now - lastToggleRef.current < DOUBLE_TAP_TOGGLE_DEBOUNCE_MS) return
+
+    lastToggleRef.current = now
+    setZoom((current) => (current === ZOOM_MIN ? ZOOM_MAX : ZOOM_MIN))
+  }
 
   const setLiveZoom = (next: number, centerClientX?: number) => {
     const grid = gridRef.current

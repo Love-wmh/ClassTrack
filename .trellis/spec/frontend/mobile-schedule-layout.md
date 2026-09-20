@@ -53,6 +53,20 @@ export function getDetailLevel(zoom: number): 'compact' | 'standard' | 'full'
 - 滚容器必须有 `[touch-action:pan-x_pan-y]`：排除 WebView 自带的 pinch-zoom，同时保留单指滚动。
 - 双指手势外，触摸端的双击用两次 `pointerup` 的间隔与位移自行判定（部分 WebView 不派发 `dblclick`）；鼠标走 `onDoubleClick`。
 - `setPointerCapture` 必须包 try/catch：合成的 pointer 事件（自动化断言）没有真实指针，捕获会抛异常，但不影响手势本身。
+- **双击切换必须去抖**：Android WebView 实测会在第二次抬起后同时派发我们自己的 `pointerup` 判定与浏览器合成的 `dblclick`，两条都触发就会切换两次、相互抵消（表现为“双击没反应”）。`toggleZoom` 用 400ms 窗口内的第二次调用直接返回。
+- 缩放控件用 `isMobile &&` 条件渲染而不是 `md:hidden`：桌面端要求“不渲染”（见 PRD D6），仅靠 CSS 隐藏会让 `document.querySelector('[data-schedule-zoom-control]')` 仍然命中。
+
+**在模拟器上验证触控**（真机行为只有真机才验得出来）：
+
+```bash
+# 1) 打开 App 后取 WebView 的 devtools socket 并转发（App 重启后 socket 名会变）
+SOCK=$(adb shell cat /proc/net/unix | grep -o 'webview_devtools_remote[^ ]*' | head -1 | tr -d '\r')
+adb forward tcp:9222 localabstract:$SOCK
+# 2) 用 CDP 灌 localStorage（复用 research/seed-schedule-fixture.js）后 Page.reload
+# 3) 用 CDP Input.dispatchTouchEvent 派发双指手势；用 adb shell input tap 验证真实点按
+#    注意 adb input tap 用的是设备像素：CSS px × devicePixelRatio（Medium_Phone 上是 2.625）
+```
+
 
 ---
 
