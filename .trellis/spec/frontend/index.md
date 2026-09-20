@@ -22,6 +22,7 @@ This directory contains guidelines for frontend development. Fill in each file w
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 | [Native Course Import](./native-course-import.md) | Capacitor/WebView bridge, payload validation, and fallback contract | Implemented |
 | [Android Home-Screen Widget](./android-home-widget.md) | Widget snapshot bridge, five-tier refresh ladder, and the guarantee/staleness contract | Implemented |
+| [Mobile Schedule Layout](./mobile-schedule-layout.md) | 手机端课表契约：整周 7 天自适应铺满、1x~2x 只改列宽的信息分级、节次时间推导规则与自动化测试挂钩 | Implemented |
 
 ---
 

@@ -25,27 +25,34 @@
 **决策**：手机端去掉 `min-w-[760px]`，桌面端保留。
 
 ```tsx
-<div
-  data-schedule-scroll
-  className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain rounded-md border border-border bg-card shadow-xs [touch-action:pan-x_pan-y]"
->
+<div className="relative flex min-h-0 flex-1 flex-col">
   <div
-    ref={gridRef}
-    data-zoom-tier={detailLevel}
-    className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2.25rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(0,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
-    style={{ '--schedule-zoom': committedZoom } as CSSProperties}
+    ref={scrollRef}
+    data-schedule-scroll
+    {...containerProps}
+    className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain rounded-md border border-border bg-card shadow-xs [touch-action:pan-x_pan-y]"
   >
+    <div
+      ref={gridRef}
+      data-schedule-grid
+      data-zoom-level={zoom}
+      data-zoom-tier={detailLevel}
+      className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(2.75rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
+      style={{ '--schedule-zoom': String(zoom) } as CSSProperties}
+    >
 ```
 
 **为什么用百分比 `min-width` 而不是 `width`**：`min-width: calc(100% * var(--zoom))` 让 1x 时网格宽度恰好等于容器宽度（无横向滚动），大于 1x 时才出现滚动宽度；比例基准是“容器可用宽度”，不依赖任何测得像素。百分比在 `overflow` 容器里对子元素解析的是容器的 padding box 宽度，不会与子元素自身宽度形成循环。
 
-**列宽推导**：412px 视口 → 页面 `px-3`（24px）+ 边框 2px → 可用 386px；节次列 36px → 350px / 7 ≈ 50px/列。360px 视口 → 约 42px/列（仍 ≥ 3 字/行，满足 A3）。两者都不需要横向滚动。
+**列宽推导（实测值）**：412px 视口 → 页面 `px-2`（16px）+ 边框 2px → 可用 394px；节次列 2rem（32px）→ 362 / 7 ≈ **52px/列**。360px 视口 → 342 - 32 = 310 / 7 ≈ **44px/列**（满足 A3 的 ≥44px）。两者都不需要横向滚动。
+
+**手机端内边距从 `px-3` 收到 `px-2`**：这不是审美偏好，而是上面 44px 列宽下限的必要条件——用 `px-3` 时 360px 视口只有 43px/列。桌面端由 `sm:px-5` 覆盖，不受影响。
 
 **未采纳**：把 7 列改成横向滚动的 2~3 天窗口。用户明确要求 1x 整周一眼看全，滚动的价值交给放大档位。
 
 ## D2. 行高保持 12 行等分视口（不改成内容自适应）
 
-**决策**：继续用 `grid-rows-[2.25rem_repeat(12,minmax(0,1fr))]`，行高随视口高度均分。
+**决策**：继续用 `grid-rows-[2.25rem_repeat(12,minmax(2.75rem,1fr))]`，行高随视口高度均分，但给每行一个 2.75rem 的下限（节号 + 两行 9px 时间的高度），视口过矮（横屏）时网格高于容器、由滚容器竖向滚动兜底。
 
 **理由**：2 节块在 412×915 上约 116px 高、50px 宽，11px 中文按 3~4 字/行计算，21 字的课名约 6 行 = 90px，能完整放下；也就是说**纵向空间不是瓶颈，宽度才是**（这正是用户说的“手机高度明显大于宽度”）。
 
@@ -103,13 +110,13 @@ export function deriveSectionTimes(classes: Class[]): Record<number, SectionTime
 
 - 输入用**整个学期**的 `classes`（而非 `weekClasses`），只在本周出现的节次也能拿到时间；在 `SchedulePage` 里 `useMemo(() => deriveSectionTimes(classes), [classes])` 算好后作为 `sectionTimes` prop 传入 `ScheduleTable`。
 - 渲染：节号一行，下面最多两行时间（`08:00` / `09:40`），`text-[9px] leading-3 text-muted-foreground`；`start`/`end` 缺失就不渲染该行，因此未使用的节次（如 11/12）只显示节号。
-- 节次列在手机端宽度 2.25rem（36px），`08:00` 用等宽数字（`tabular-nums`）在 9px 下约 26px，放得下。
+- 节次列在手机端宽度 2rem（32px），`08:00` 用等宽数字（`tabular-nums`）在 9px 下约 26px，放得下。
 
 **已知限制**：2 节块只能推导出“第 1 节 08:00 开始”“第 2 节 09:40 结束”，中间的 `08:45 / 08:55` 无法从数据得到。这是数据源限制，不是实现缺陷；在设计的验收里不作为失败项。
 
 ## D6. 表头：节次列显示月份
 
-节次列表头单元格由 `节` 改为当前显示周的月份（`format(getDayDate(firstWeekStartDate, currentWeek, 1), 'M月')`），跨月周取周一所在月份。桌面端同样显示（不违反 R9：桌面端只是多一个字符，网格结构与列宽不变）。
+节次列表头单元格在**手机端**显示当前显示周的月份（`format(getDayDate(firstWeekStartDate, currentWeek, 1), 'M月')`，跨月周取周一所在月份），桌面端保持原来的 `节`（`md:hidden` / `hidden md:inline` 两个 span 切换），这样 A2 的桌面截图对比不受影响。
 
 ## D7. 缩放：只改宽度的分档缩放（1x / 1.5x / 2x）
 
@@ -129,9 +136,9 @@ export function getDetailLevel(zoom: number): ScheduleDetailLevel
 
 | 档位 | 列宽（412px 视口） | 课程块显示 |
 | --- | --- | --- |
-| 1x | ≈50px | 课名（不截断）+ 单双周徽标 + 状态色条/图标 |
-| 1.5x | ≈75px | 追加教室 |
-| 2x | ≈100px | 追加教师与备注 |
+| 1x | 52px（实测） | 课名（不截断）+ 单双周徽标 + 状态色条/图标 |
+| 1.5x | 80px（实测） | 追加教室 |
+| 2x | 108px（实测） | 追加教师与备注；容器出现横向滚动（394 → 788px） |
 
 **为什么缩放只改列宽、不改字号**：`zoom`/`transform: scale` 会等比放大字号与列宽，换行位置不变，信息不增加（就是用户否掉的“纯放大镜”）。只改列宽时，同样字号在更宽的列里换行更少，长课名占的行数下降，腾出的行高正好容纳教室/教师——这才是“放大后信息变多”。
 
@@ -167,14 +174,14 @@ export function useScheduleZoom(): {
 
 **双击**：鼠标走 `onDoubleClick`（1x ↔ 2x）；触摸端 `dblclick` 在部分 WebView 不一定派发，因此另外用 `pointerType === 'touch'` 的两次 `pointerup` 做判定（间隔 < 320ms、位移 < 24px）。该判定写成 hook 内部的小工具函数，不引第三方手势库（N1）。
 
-**控件**：`ScheduleTable` 内、滚容器右上角浮层（`absolute bottom-2 right-2 z-30 md:hidden`）渲染 `− 1x +`，`−`/`+` 失效时 `disabled`。浮层覆盖区是右下角最后几节，通常为空；这是为换取“不加高手机端表头”的取舍，记入已知限制。
+**控件**：`ScheduleTable` 内、滚容器外层右下角浮层（`absolute bottom-2 right-2 z-30`，由 `isMobile &&` 条件渲染，桌面端不进 DOM）渲染 `− 档位 +`，到边界时对应按钮 `disabled`。浮层覆盖区是右下角最后几节，通常为空；这是为换取“不加高手机端表头”的取舍，记入已知限制。
 
 ## D9. 桌面端零改动的边界
 
 | 能力 | 手机端 (<768px) | 桌面端 (≥768px) |
 | --- | --- | --- |
 | 网格最小宽度 | 无（`100% * zoom`） | 保持 `min-w-[760px]` |
-| 列宽/字号 | 新节次列 2.25rem，课名 11px | 保持 4rem 节次列、14px 课名 |
+| 列宽/字号 | 新节次列 2rem，课名 11px | 保持 4rem 节次列、14px 课名 |
 | 课名行数 | 不截断 | 保持 `line-clamp-2` |
 | 教室 | 仅 ≥1.5x | 一直显示（现状） |
 | 教师/备注 | 仅 2x | 教师不显示、备注保持现状 |
@@ -267,6 +274,7 @@ agent-browser screenshot /tmp/shots/after-mobile-412.png
 | `data-section-row` | 每个节次行单元格 | 读节号与其时间文案 |
 | `data-course-cell` | 课程块按钮 | 读字号、块高、点击回归 |
 | `data-course-name` | 课程块内课名元素 | 断言 `textContent` 完整且 `webkit-line-clamp: none` |
+| `data-course-parity` | 课程块内单双周徽标 | 断言 1x 可见、桌面端不渲染（用可见性而非 textContent，避免与备注文案混淆） |
 | `data-schedule-zoom-control` | 缩放浮层 | 断言桌面端不渲染、手机端可见 |
 
 反例（不要这样做）：用 `textContent.includes('毛泽东思想和中国特色')` 定位课程块、用 `:nth-child(3)` 定位列 —— 文案会改写、列顺序会被响应式调整。
