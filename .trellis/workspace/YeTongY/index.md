@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
-- **Last Active**: 2026-09-19
+- **Total Sessions**: 8
+- **Last Active**: 2026-09-20
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~210 | Active |
+| `journal-1.md` | ~233 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-09-20 | 桌面小工具真机回测收尾：缩放下限、最小尺寸布局与拖放放置 | `dca7ae4`, `a7f808e` | `master` |
 | 6 | 2026-09-19 | Fix native shell 404 white screen and verify on emulator | `a2fccfd` | `fix/native-import-white-screen-ui` |
 | 5 | 2026-09-19 | Protect Android native import from stale shell assets | `e1a10a3` | `fix/native-import-white-screen-ui` |
 | 4 | 2026-09-18 | 修复应用内导入白屏与 UI 风格 | `dd7e2e3` | `fix/native-import-white-screen-ui` |

@@ -208,3 +208,26 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Status
 
 [OK] **Completed**
+
+
+## Session 8: 桌面小工具真机回测收尾：缩放下限、最小尺寸布局与拖放放置
+<!-- trellis-session: v=2 fp=7ce2892ab7d5f1dc -->
+
+**Date**: 2026-09-20
+**Task**: 桌面小工具真机回测收尾：缩放下限、最小尺寸布局与拖放放置
+**Branch**: `master`
+
+### Summary
+
+在 Medium_Phone（API 37 + Pixel Launcher）上把 09-19-android-home-widget 剩下的三项真机验证做完并归档该任务。① 推翻此前「缩放手柄抓不到」的结论：长按实例后四角出现紫色缩放手柄（弹出 Settings 菜单只是同一操作的另一半），input swipe 拖手柄即可；同一坐标向右能从 2 列长大到 3 列并立刻出现新的 phase=widget_sized，向左到 1 列则完全无响应 —— 证明是 provider 声明的 minWidth/minHeight=110dp 下限（= 2×2 格），不是手势失效；此前把「紧凑样式」的 2x1 与格子尺寸混为一谈了。② 最小 2×2（179×210dp）下逐一切换「紧凑」与「全天课表」：两套样式都无溢出、无裁切、无崩溃；配置页在实例真实尺寸上渲染真实 Glance 组合（preview_sized 179×108）并与桌面卡片逐像素一致。③ 拖放放置：input swipe 会被 picker 当滚动，改用 input motionevent 做「长按 2s → 分步 MOVE → UP」，放下后 launcher 自动拉起 WidgetConfigActivity；点取消后 dumpsys appwidget 条目数回到放置前、桌面不留实例，过程中仅有预期内的 style_write_failed 警告、无崩溃。另外记下日志读法：每条 widget_sized 之后常紧跟一条宿主预览/缩放代理的渲染（宽度不受约束），不是桌面实例尺寸，需与截图量测互证。本轮无代码改动，故未重跑构建门禁；证据（截图与数值）已写入该任务 verification.md 的第四轮章节，并把 motionevent 三段式、手柄拖动与 dumpsys 判据固化进 spec 与项目 skill。归档时又踩到一次「Trellis 脚本自动提交主题是英文被 commitlint 拦下」，已把该修复从课表分支移植到 master（e88e5a4）。另有独立的 CI 改动：发布流程改为双轨自动触发（补齐路径过滤 + tag 发正式版），修掉 workflow 重命名后 run_number 归零导致的标签冲突，已实测发出 android-beta-2。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dca7ae4` | docs(widget): 补完真机残留三项验证：缩放下限、最小尺寸布局与拖放放置 |
+| `a7f808e` | chore(task): 归档 09-19-android-home-widget |
+
+### Status
+
+[OK] **Completed**
