@@ -39,4 +39,4 @@ The goal is to help AI assistants and new team members understand how YOUR proje
 
 ---
 
-**Language**: All documentation should be written in **English**.
+**语言**：所有文档一律用**中文**书写。
