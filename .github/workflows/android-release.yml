@@ -5,15 +5,22 @@ name: Android Release
 #   测试版（prerelease，不占用 Latest）：
 #     - 自动：merge 进 master 且改动可能影响 APK 时（路径过滤见 on.push.paths）
 #     - 手动：Actions → Android Release → Run workflow（可附一句说明）
-#     - 版本号：1.0.<run_number>-beta，标签 android-beta-<run_number>，只保留最近 10 个
+#     - 版本号：1.0.<序号>-beta，标签 android-beta-<序号>（序号 = 已有测试版标签的最大值 + 1），
+#       只保留最近 10 个
 #
 #   正式版（非 prerelease，标记 Latest）：
 #     - 自动：push 形如 v1.2.3 的 tag（GitHub 对 tag push 不评估路径过滤）
 #     - 版本号：取 tag 去掉前缀 v；标签就是该 tag；不参与测试版的数量清理
 #     - 必须配好签名 Secrets 且 tag 指向 master 上的提交，否则直接失败
 #
-# 版本号规则：versionName 按轨道取值，versionCode 一律用 run_number —— 它在两条轨道之间
-# 单调递增，测试机才能一路覆盖安装（beta → 正式版 → beta）。
+# 版本号规则：
+# - versionName 按轨道取值：测试版 1.0.<序号>-beta，正式版取 tag 去掉前缀 v。
+# - versionCode 一律取 epoch 秒。**不要用 run_number**：它是「每个 workflow 各自计数」的，
+#   重命名 workflow 文件（本仓库 2026-09-20 就把 android-beta.yml 改名为 android-release.yml）
+#   会让它归零，于是新 workflow 的 run_number=1 与既有 android-beta-1 撞名、发布直接失败；
+#   而且重命名后新序号可能小于测试机已安装的版本，覆盖安装会被系统拒绝。
+#   epoch 秒跨轨道、跨重命名都单调递增，也不需要任何外部状态（32 位 versionCode 直到 2038 年都放得下）。
+# - 测试版标签序号取自 `gh release list` 里 android-beta-<n> 的最大值，因此与 run_number 无关。
 #
 # 路径过滤的判据：凡是能改变 APK 内容，或改变它如何被构建/校验的路径都算；纯文档
 # （docs/**、.trellis/**、README、AGENTS.md）改动不发版。
@@ -143,24 +150,50 @@ jobs:
             exit 1
           fi
 
+      - name: 计算版本号与标签
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # epoch 秒单调递增，测试机因此可以一路覆盖安装（beta → 正式版 → beta）。
+          echo "code=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+          if [ "${IS_STABLE}" = "true" ]; then
+            echo "name=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            # 已有测试版标签里的最大序号 + 1；与 run_number 无关，重命名 workflow 也不会撞名。
+            LAST_INDEX="$(gh release list --limit 100 --json tagName \
+              --jq '[.[] | select(.tagName | test("^android-beta-[0-9]+$")) | (.tagName | sub("^android-beta-"; "") | tonumber)] | max // 0')"
+            # 显式校验：$(( )) 遇到非纯数字会报成 "unbound variable"，那种信息对排查没有帮助。
+            case "${LAST_INDEX}" in
+              '' | *[!0-9]*)
+                echo "::error::解析已有测试版序号失败，拿到的是 ${LAST_INDEX:-空}"
+                exit 1
+                ;;
+            esac
+            NEXT_INDEX=$((LAST_INDEX + 1))
+            echo "name=1.0.${NEXT_INDEX}-beta" >> "$GITHUB_OUTPUT"
+            echo "tag=android-beta-${NEXT_INDEX}" >> "$GITHUB_OUTPUT"
+            echo "上一次测试版序号=${LAST_INDEX}，本次=${NEXT_INDEX}"
+          fi
+
+          echo "version=$(grep '^name=' "$GITHUB_OUTPUT" | cut -d= -f2)"
+          echo "tag=$(grep '^tag=' "$GITHUB_OUTPUT" | cut -d= -f2)"
+
       - name: 编译 APK
         id: build
         env:
+          CLASSTRACK_VERSION_CODE: ${{ steps.version.outputs.code }}
+          CLASSTRACK_VERSION_NAME: ${{ steps.version.outputs.name }}
           CLASSTRACK_KEYSTORE_FILE: ${{ steps.signing.outputs.store_file }}
           CLASSTRACK_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           CLASSTRACK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           CLASSTRACK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ "${IS_STABLE}" = "true" ]; then
-            VERSION_NAME="${GITHUB_REF_NAME#v}"
-          else
-            VERSION_NAME="1.0.${GITHUB_RUN_NUMBER}-beta"
-          fi
-          # run_number 单调递增，测试机因此可以覆盖安装上一个测试版或上一个正式版。
-          export CLASSTRACK_VERSION_CODE="${GITHUB_RUN_NUMBER}"
-          export CLASSTRACK_VERSION_NAME="${VERSION_NAME}"
-          echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "版本号：${CLASSTRACK_VERSION_NAME}（versionCode=${CLASSTRACK_VERSION_CODE}）"
 
           if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
             ./android/gradlew -p android :app:assembleRelease
@@ -179,17 +212,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SIGNED: ${{ steps.signing.outputs.signed }}
           NOTE: ${{ inputs.note }}
-          VERSION: ${{ steps.build.outputs.version_name }}
+          VERSION: ${{ steps.version.outputs.name }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
 
-          # 上一个同轨道发布标签，用于生成「本次改动」列表；没有则为空。
+          # TAG 由「计算版本号与标签」步骤给出（测试版是自动迭代的序号，正式版是推送的 tag）。
+          # 这里只为生成「本次改动」列表找上一个同轨道标签；没有则为空。
           if [ "${IS_STABLE}" = "true" ]; then
-            TAG="${GITHUB_REF_NAME}"
             PREV="$(git tag -l 'v[0-9]*' --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)"
             ASSET="ClassTrack-${VERSION}.apk"
           else
-            TAG="android-beta-${GITHUB_RUN_NUMBER}"
             PREV="$(gh release list --limit 50 --json tagName \
               --jq '[.[] | select(.tagName | startswith("android-beta-"))][0].tagName // empty' || true)"
             ASSET="ClassTrack-beta-${VERSION}.apk"

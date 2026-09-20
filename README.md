@@ -124,7 +124,7 @@ pnpm cap:install:android
 
 - 打开仓库的 **Releases**，找最新的 `android-beta-*` 预发布版本；
 - 下载 `ClassTrack-beta-latest.apk`（这个文件名永远指向最新测试版）或带版本号的那个；
-- 版本号形如 `1.0.<构建号>-beta`，构建号单调递增，因此可以直接覆盖安装上一个测试版。
+- 版本号形如 `1.0.<序号>-beta`，序号自动取已有测试版标签的最大值 +1，因此可以直接覆盖安装上一个测试版。
 
 发布流程在 `.github/workflows/android-release.yml`，两条轨道：
 
@@ -142,8 +142,9 @@ pnpm cap:install:android
   版本号取 tag 去掉前缀 `v`；工作流要求该 tag 指向 `master` 上的提交，且**必须**用签名包，
   否则直接失败 —— 正式版不会发未签名包。
 
-两条轨道的 versionCode 都取自 Actions 的 `run_number`，它在两条轨道之间单调递增，
-因此测试机能一路覆盖安装（beta → 正式版 → beta）。
+两条轨道的 versionCode 都取构建时刻的 epoch 秒：跨轨道、跨 workflow 重命名都单调递增，
+因此测试机能一路覆盖安装（beta → 正式版 → beta）。**不要改回 `run_number`** —— 它按 workflow
+各自计数，重命名 workflow 文件就会归零并与已有标签撞名（2026-09-20 实测过一次发布失败）。
 
 签名凭据只从 Secrets 读：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`。
 四个都配好之前，测试版发的是 debug 包（日志里会有警告），正式版则会被上面的校验直接拦下。
