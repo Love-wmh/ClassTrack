@@ -355,6 +355,6 @@ adb shell input motionevent UP 540 1400        # 落在桌面空白格
 
 ### 6.6 本轮状态
 
-- 设备：`emulator-5554`，Pixel Launcher，实例 id=5（2×2，紧凑样式），与验证前一致。
+- 设备：`emulator-5554`，Pixel Launcher，实例 id=5。验证前是 4 列×2 行 + 紧凑样式；本轮为了测最小尺寸把它缩到 **2×2** 并切换过样式，收尾已恢复成 4×2 + 紧凑（`phase=style_configured style=compact`、`phase=widget_sized w=373 h=210`）。
 - 截图：`research/android-emulator-widget-*.png`。
 - 未改动任何代码，因此不需要重跑构建门禁；上一轮的 87 例 Android 单测与五项 Web 门禁结论仍然有效。
