@@ -50,6 +50,7 @@ import com.classtrack.app.WidgetDayItem
 import com.classtrack.app.WidgetDayPlan
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
+import com.classtrack.app.WidgetFillPlan
 import com.classtrack.app.WidgetLayoutMetrics
 import com.classtrack.app.WidgetLinePolicy
 import com.classtrack.app.WidgetOccurrence
@@ -149,16 +150,32 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
     // 度量与行序列都按真实格子尺寸算：预览走同一份代码，因此预览不可能与桌面漂移。
     val size = LocalSize.current
     val metrics = WidgetLayoutMetrics.resolve(size.width.value, size.height.value)
-    val body = WidgetLinePolicy.resolve(config, plan)
     val dualColumn = isDualColumn(config, metrics)
+    val body = WidgetLinePolicy.resolve(config, plan, dualColumn)
 
     if (!preview) {
         WidgetDiagnostics.widgetSized(size.width.value.toInt(), size.height.value.toInt())
     }
+    // 字号与行距的方案：字号上界由格子尺寸给（格子越大字号越大），再收到「内容刚好放下」处。
+    // 传入的是一行行文本的字号基准值（hero 是纵向三行；双栏的课程行是双行行项），顺序与渲染一致。
+    val contentWidthDp = size.width.value - 2 * metrics.horizontalPaddingDp
+    // allowFit = false：可滚动的区域**不为了「刚好放下」而收字号** —— 内容多了就滚动，字号始终由格子
+    // 尺寸决定（产品要求「格子越大字号越大」）。只有不可滚动的双栏左卡才允许收（见 DualColumnBody）。
+    val fill = WidgetFillPlan.compute(
+        metrics,
+        size.height.value - 2 * metrics.verticalPaddingDp,
+        bodyTextLines(context, state, hero, body, dualColumn, contentWidthDp),
+        false
+    )
     WidgetDiagnostics.layoutMetrics(
         (metrics.scale * PERCENT).roundToInt(),
         config.wideLayoutStorageValue(),
         dualColumn
+    )
+    WidgetDiagnostics.layoutFill(
+        (fill.fontScale * PERCENT).roundToInt(),
+        (fill.gapDp * 10).roundToInt(),
+        (fill.fillRatio * PERCENT).roundToInt()
     )
 
     Column(
@@ -176,7 +193,9 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
             Text(text = promptText(context, state), maxLines = 3,
                 style = captionStyle(metrics, R.color.widget_text_muted))
         } else {
-            WidgetBody(context, state, config, plan, body, hero, appWidgetId, metrics, size, dualColumn, preview)
+            // 字号用「尺寸驱动 + 刚好放下」之后的版本；列宽/留白仍旧用 metrics（收字号不该挤窄时间列）。
+            WidgetBody(context, state, config, plan, body, hero, appWidgetId,
+                metrics.withFontBoost(fill.localBoost), size, dualColumn, fill, preview)
         }
     }
 }
@@ -215,14 +234,14 @@ private fun isDualColumn(config: WidgetStyleConfig, metrics: WidgetLayoutMetrics
 private fun ColumnScope.WidgetBody(context: Context, state: WidgetDisplayState, config: WidgetStyleConfig,
                                    plan: WidgetDayPlan, body: WidgetBodyPlan, hero: WidgetOccurrence,
                                    appWidgetId: Int, metrics: WidgetLayoutMetrics, size: DpSize,
-                                   dualColumn: Boolean, preview: Boolean) {
+                                   dualColumn: Boolean, fill: WidgetFillPlan, preview: Boolean) {
     val lines = body.lines
 
     if (preview) {
         Column(modifier = GlanceModifier.fillMaxWidth()) {
             Spacer(modifier = GlanceModifier.height(metrics.verticalPaddingDp.dp))
             for (line in lines) {
-                BodyLineView(context, state, plan, hero, appWidgetId, metrics, line)
+                BodyLineView(context, state, plan, hero, appWidgetId, metrics, fill, line)
             }
             Spacer(modifier = GlanceModifier.height(metrics.verticalPaddingDp.dp))
         }
@@ -236,11 +255,11 @@ private fun ColumnScope.WidgetBody(context: Context, state: WidgetDisplayState, 
     val openApp = actionStartActivity(scheduleIntent(context))
 
     if (dualColumn) {
-        DualColumnBody(context, state, plan, body, hero, appWidgetId, metrics, openApp)
+        DualColumnBody(context, state, plan, body, hero, appWidgetId, metrics, size, fill, openApp)
         return
     }
 
-    CourseList(context, state, plan, hero, appWidgetId, metrics, lines,
+    CourseList(context, state, plan, hero, appWidgetId, metrics, fill, lines, twoLineRows = false,
         GlanceModifier.fillMaxWidth().defaultWeight(), openApp)
 }
 
@@ -257,15 +276,42 @@ private fun ColumnScope.WidgetBody(context: Context, state: WidgetDisplayState, 
 @Composable
 private fun CourseList(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan,
                        hero: WidgetOccurrence, appWidgetId: Int, metrics: WidgetLayoutMetrics,
-                       lines: List<WidgetBodyLine>, modifier: GlanceModifier, openApp: Action) {
+                       fill: WidgetFillPlan, lines: List<WidgetBodyLine>, twoLineRows: Boolean,
+                       modifier: GlanceModifier, openApp: Action) {
     LazyColumn(modifier = modifier.clickable(openApp)) {
+        // 首尾留白仍是卡片自己的纵向内边距：它不参与「余量分配」，否则小格子的上下留白也会跟着变
+        // （2×2 与改动前的逐像素一致性就是被这一点打破的，真机比对时抓到的）。
         item { Spacer(modifier = GlanceModifier.height(metrics.verticalPaddingDp.dp).clickable(openApp)) }
         items(lines.size) { index ->
-            Box(modifier = GlanceModifier.fillMaxWidth().clickable(openApp)) {
-                BodyLineView(context, state, plan, hero, appWidgetId, metrics, lines[index])
+            Box(modifier = GlanceModifier.fillMaxWidth()
+                .padding(top = listGap(lines[index], metrics, fill, spaceEveryLine = twoLineRows))
+                .clickable(openApp)) {
+                BodyLineView(context, state, plan, hero, appWidgetId, metrics, fill, lines[index],
+                    twoLineRows = twoLineRows)
             }
         }
         item { Spacer(modifier = GlanceModifier.height(metrics.verticalPaddingDp.dp).clickable(openApp)) }
+    }
+}
+
+/**
+ * 列表项之间的间距。
+ *
+ * <p>基础值是改动前就验证过的两档（首行 6dp、其余 4dp），再加上填充方案分给行距的余量：格子越高行距越松，
+ * 但每份不超过 8dp，不会松成一张稀疏表格。首行始终多留一点，和汇总行拉开层次。
+ */
+private fun listGap(line: WidgetBodyLine, metrics: WidgetLayoutMetrics, fill: WidgetFillPlan,
+                    spaceEveryLine: Boolean): Dp {
+    // 单栏沿用改动前的口径：**只有课程行**带上行间距（hero / 汇总行自己带好了与下方的距离），
+    // 这条口径是 2×2 与改动前逐像素一致的来源之一。双栏是新的排布，才给每一段都留间距。
+    if (!spaceEveryLine && line.kind != WidgetBodyLine.Kind.COURSE) return 0.dp
+    val extra = (fill.gapDp - metrics.rowGapDp).coerceAtLeast(0f)
+    // 注意用 **line.index（课程序号）** 而不是列表位置：列表第 0 项是汇总行，用列表位置会让第一节课
+    // 拿不到「首行多留一点」的那 2dp（真机逐像素比对抓到过一次）。
+    return if (line.kind == WidgetBodyLine.Kind.COURSE && line.index == 0) {
+        (metrics.rowGapFirstDp + extra).dp
+    } else {
+        fill.gapDp.dp
     }
 }
 
@@ -282,12 +328,19 @@ private fun CourseList(context: Context, state: WidgetDisplayState, plan: Widget
 @Composable
 private fun ColumnScope.DualColumnBody(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan,
                            body: WidgetBodyPlan, hero: WidgetOccurrence, appWidgetId: Int,
-                           metrics: WidgetLayoutMetrics, openApp: Action) {
-    val headerLines = body.lines.map { line ->
-        // 左卡空间宽裕：课名放宽到两行；其余行原样。
-        if (line.kind == WidgetBodyLine.Kind.HERO) WidgetBodyLine.hero(DUAL_HERO_TITLE_LINES) else line
-    }.take(body.headerLineCount)
+                           metrics: WidgetLayoutMetrics, size: DpSize, fill: WidgetFillPlan,
+                           openApp: Action) {
+    val headerLines = body.lines.take(body.headerLineCount)
     val listLines = body.lines.drop(body.headerLineCount)
+    // 左卡与右栏**各自求字号**：左卡内容少（三块），同样的空间能放下更大的字；用一个全局字号会被右栏
+    // 拖小，于是左卡中缝反而留出一块空白（真机比对时就是这么发现的）。
+    val leftFill = WidgetFillPlan.compute(
+        metrics,
+        size.height.value - 2 * metrics.verticalPaddingDp - 2 * metrics.heroInnerPaddingDp,
+        headerTextLines(context, state, hero, headerLines,
+            metrics.dualHeaderWidthDp - 2 * metrics.heroInnerPaddingDp),
+        true
+    )
     Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight().clickable(openApp)) {
         // 左区：一整张主卡（占满高度、有分层表面、内容从顶部起排），而不是「Hero 的三行文字」。
         // 第一版双栏只是把行序列对半切，左栏因此变成一条很窄的空白，看起来像排坏了。
@@ -300,13 +353,27 @@ private fun ColumnScope.DualColumnBody(context: Context, state: WidgetDisplaySta
                 .fillMaxHeight()
                 .clickable(openApp),
         ) {
+            // 左卡内部是**三段**：顶部块（状态标签 + 课名）/ 中缝（下一节）/ 底部块（时间 · 教室 +
+            // 今天还有 N 节）。两个等权重的 Spacer 把余量摊到中缝上下，于是那半张卡不再是一个空洞 ——
+            // 这是「中缝放真信息 + 均分余量」的组合，而不是靠留白撑场面。
             Column(modifier = GlanceModifier.fillMaxSize()) {
                 val bottomLine = remainingTodayText(context, state)
+                val heroLine = headerLines.firstOrNull { it.kind == WidgetBodyLine.Kind.HERO }
+                val leftMetrics = metrics.withFontBoost(leftFill.localBoost)
+                if (heroLine != null) {
+                    HeroHeading(context, state, hero, appWidgetId, leftMetrics, heroLine.titleMaxLines)
+                }
+                Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight())
                 for (line in headerLines) {
-                    // heroAsCard：左卡整列就是一张卡，内部靠「吃掉余量的 Spacer」把顶部块与底部块拉开，
-                    // 因此它不靠留白撑场面。单栏不走这条分支（子卡片只在双栏存在）。
-                    BodyLineView(context, state, plan, hero, appWidgetId, metrics, line,
-                        heroAsCard = true, heroBottomLine = bottomLine)
+                    if (line.kind == WidgetBodyLine.Kind.MID_NEXT) {
+                        BodyLineView(context, state, plan, hero, appWidgetId, leftMetrics, leftFill, line)
+                    }
+                }
+                Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight())
+                HeroDetail(context, hero, leftMetrics)
+                if (bottomLine != null) {
+                    Text(text = bottomLine, maxLines = 1,
+                        style = captionStyle(leftMetrics, R.color.widget_text_muted))
                 }
             }
         }
@@ -315,34 +382,158 @@ private fun ColumnScope.DualColumnBody(context: Context, state: WidgetDisplaySta
 
         // 右区：当天课表。汇总行不再挂「样式」入口（入口只在左区保留一个）。
         Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight()) {
-            CourseList(context, state, plan, hero, appWidgetId, metrics, listLines,
+            CourseList(context, state, plan, hero, appWidgetId, metrics, fill, listLines, twoLineRows = true,
                 GlanceModifier.fillMaxWidth().defaultWeight(), openApp)
         }
     }
 }
 
-/** 双栏左卡里课名允许的行数：左卡独占一列，两行才不会把长课名截成「毛泽东思想和中国…」。 */
-private const val DUAL_HERO_TITLE_LINES = 2
+/**
+ * 把行序列折算成「一行行文本的字号基准值」，交给 {@link WidgetFillPlan} 估算内容高度。
+ *
+ * <p>估算保守优先：hero 的课名按行判决给的最大行数算（双栏左卡确实会画到两行），宁可少分一点余量，
+ * 也不能让内容被裁 —— 上一轮真机裁字就是这么来的。
+ */
+private fun headerTextLines(context: Context, state: WidgetDisplayState, hero: WidgetOccurrence,
+                            lines: List<WidgetBodyLine>, widthDp: Float): List<WidgetFillPlan.TextLine> {
+    val out = mutableListOf<WidgetFillPlan.TextLine>()
+    for (line in lines) {
+        when (line.kind) {
+            WidgetBodyLine.Kind.HERO -> {
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, heroLabel(context, state, hero).length, widthDp)
+                out += WidgetFillPlan.TextLine(TITLE_BASE_SP, maxOf(1, line.titleMaxLines), hero.name.length, widthDp)
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, widthDp)
+            }
+            else -> {
+                val text = nextUpAfterHero(state)?.occurrence
+                val label = if (text == null) "" else context.getString(R.string.widget_mid_next, text.startLabel, text.name)
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 2, label.length, widthDp)
+            }
+        }
+    }
+    // 左卡底部两块：时间 · 教室 +「今天还有 N 节」
+    out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, widthDp)
+    out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1,
+        (remainingTodayText(context, state) ?: "").length, widthDp)
+    return out
+}
+
+private fun bodyTextLines(context: Context, state: WidgetDisplayState, hero: WidgetOccurrence,
+                          body: WidgetBodyPlan, dualColumn: Boolean, listWidthDp: Float): List<WidgetFillPlan.TextLine> {
+    val out = mutableListOf<WidgetFillPlan.TextLine>()
+    for (line in body.lines) {
+        when (line.kind) {
+            WidgetBodyLine.Kind.HERO -> {
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, heroLabel(context, state, hero).length, listWidthDp)
+                out += WidgetFillPlan.TextLine(TITLE_BASE_SP, maxOf(1, line.titleMaxLines), hero.name.length, listWidthDp)
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, listWidthDp)
+            }
+            WidgetBodyLine.Kind.COURSE -> {
+                val item = line.item
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, if (dualColumn) 2 else 1,
+                    item.occurrence.name.length + TIME_LABEL_LENGTH, listWidthDp)
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, metaLength(context, item, line.isShowSections), listWidthDp)
+            }
+            WidgetBodyLine.Kind.FOOTER_LAST -> {
+                val last = state.todayItems.lastOrNull()?.occurrence
+                val text = if (last == null) "" else context.getString(R.string.widget_footer_last, last.startLabel, last.name)
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 2, text.length, listWidthDp)
+            }
+            else -> {
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, SUMMARY_LENGTH, listWidthDp)
+            }
+        }
+    }
+    return out
+}
+
+/** 课程行里「时间 + 课名」占的文字量（时间那一列也占宽度，一起算进去）。 */
+private const val TIME_LABEL_LENGTH = 6
+
+/** 汇总/计数一类行的典型长度：它们是固定句式，估算用常数即可。 */
+private const val SUMMARY_LENGTH = 18
+
+private fun metaLength(context: Context, item: WidgetDayItem, showSections: Boolean): Int {
+    var length = item.occurrence.classroom.length
+    if (showSections && item.occurrence.sections.isNotBlank()) {
+        length += item.occurrence.sections.length + 3
+    }
+    return length
+}
+
+/** 行高估算用的字号基准值：与行判决给出的字体角色一一对应。 */
+private const val TITLE_BASE_SP = 16f
+private const val BODY_BASE_SP = 13f
+private const val CAPTION_BASE_SP = 11f
 
 /** 渲染正文中的一行；真实渲染与配置页预览共用它，因此两条路径的视觉不会漂移。 */
 @Composable
 private fun BodyLineView(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan,
                          hero: WidgetOccurrence, appWidgetId: Int, metrics: WidgetLayoutMetrics,
-                         line: WidgetBodyLine, heroAsCard: Boolean = false,
-                         heroBottomLine: String? = null) {
+                         fill: WidgetFillPlan, line: WidgetBodyLine,
+                         twoLineRows: Boolean = false) {
     when (line.kind) {
-        WidgetBodyLine.Kind.HERO -> if (heroAsCard) {
-            HeroCard(context, state, hero, appWidgetId, metrics, line.titleMaxLines, heroBottomLine)
-        } else {
-            HeroSection(context, state, hero, appWidgetId, metrics, line.titleMaxLines)
-        }
-        WidgetBodyLine.Kind.SUMMARY -> SummaryRow(context, state, plan, appWidgetId, metrics, line.isShowCounts,
-            !heroAsCard)
+        WidgetBodyLine.Kind.HERO -> HeroSection(context, state, hero, appWidgetId, metrics, line.titleMaxLines)
+        WidgetBodyLine.Kind.SUMMARY -> SummaryRow(context, state, plan, appWidgetId, metrics, line.isShowCounts, true)
+        WidgetBodyLine.Kind.SUMMARY_COUNTS -> SummaryCountsRow(context, state, plan, metrics)
         WidgetBodyLine.Kind.COUNTER -> CounterRow(context, state, plan, appWidgetId, metrics)
         WidgetBodyLine.Kind.COLLAPSED -> CollapsedLine(context, plan, metrics)
         WidgetBodyLine.Kind.NEXT_OTHER -> NextOtherDayLine(context, state, metrics)
-        WidgetBodyLine.Kind.COURSE -> DayRow(context, line.item, rowGap(line.index, metrics), metrics, line.isShowSections)
+        WidgetBodyLine.Kind.MID_NEXT -> MidNextRow(context, state, metrics)
+        WidgetBodyLine.Kind.FOOTER_LAST -> FooterLastRow(context, state, metrics)
+        WidgetBodyLine.Kind.COURSE -> DayRow(context, line.item, metrics, line.isShowSections, twoLineRows)
     }
+}
+
+/**
+ * 双栏富内容：汇总行下面那行当天计数（「已上完 1 节 · 还有 2 节」）。
+ *
+ * <p>数据来自既有状态（{@code todayFinishedCount} / {@code todayRemainingCount}），
+ * **不需要任何额外刷新**：这是本轮填充方案的基本要求。
+ */
+@Composable
+private fun SummaryCountsRow(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan,
+                             metrics: WidgetLayoutMetrics) {
+    if (plan.source != WidgetDayPlan.Source.TODAY) return
+    Text(text = context.getString(R.string.widget_counts_summary, state.todayFinishedCount,
+            state.todayRemainingCount), maxLines = 1,
+        style = captionStyle(metrics, R.color.widget_text_muted))
+}
+
+/** 双栏左卡中缝：「下一节 16:00 线性代数 D402」。当天没有后续课时不画。 */
+@Composable
+private fun MidNextRow(context: Context, state: WidgetDisplayState, metrics: WidgetLayoutMetrics) {
+    val item = nextUpAfterHero(state) ?: return
+    val occurrence = item.occurrence
+    Text(text = context.getString(R.string.widget_mid_next, occurrence.startLabel, occurrence.name), maxLines = 2,
+        style = bodyStyle(metrics, R.color.widget_text_secondary))
+}
+
+/** 双栏列表底部：「今天最后一节 19:00 数据结构 A101」。 */
+@Composable
+private fun FooterLastRow(context: Context, state: WidgetDisplayState, metrics: WidgetLayoutMetrics) {
+    val last = state.todayItems.lastOrNull() ?: return
+    Text(text = context.getString(R.string.widget_footer_last, last.occurrence.startLabel, last.occurrence.name),
+        maxLines = 2, style = captionStyle(metrics, R.color.widget_text_muted))
+}
+
+/**
+ * @return hero 之后的第一节「还没开始」的课；没有则为 `null`。
+ *
+ * <p>用 hero 在当天的位置做切分，而不是比较时间：这样「hero 是正在上的那一节」与「hero 是接下来那一节」
+ * 两种情况都成立，也不会因为秒级误差选错行。
+ */
+private fun nextUpAfterHero(state: WidgetDisplayState): WidgetDayItem? {
+    val hero = state.hero ?: return null
+    var passedHero = false
+    for (item in state.todayItems) {
+        if (!passedHero) {
+            if (item.occurrence == hero) passedHero = true
+            continue
+        }
+        if (item.phase == WidgetDayItem.Phase.UPCOMING) return item
+    }
+    return null
 }
 
 /**
@@ -403,8 +594,8 @@ private fun rowGap(index: Int, metrics: WidgetLayoutMetrics): Dp =
  * @param showSections 「信息加密」时为 `true`，时间右侧多一列「第 3-4 节」。
  */
 @Composable
-private fun DayRow(context: Context, item: WidgetDayItem, topPadding: Dp, metrics: WidgetLayoutMetrics,
-                   showSections: Boolean) {
+private fun DayRow(context: Context, item: WidgetDayItem, metrics: WidgetLayoutMetrics,
+                   showSections: Boolean, twoLines: Boolean) {
     val occurrence = item.occurrence
     val nameColor = when (item.phase) {
         WidgetDayItem.Phase.IN_PROGRESS -> R.color.widget_accent
@@ -412,7 +603,32 @@ private fun DayRow(context: Context, item: WidgetDayItem, topPadding: Dp, metric
         else -> R.color.widget_text_primary
     }
 
-    Row(modifier = GlanceModifier.fillMaxWidth().padding(top = topPadding)) {
+    if (twoLines) {
+        // 双栏的右栏又宽又高：课名允许两行、教室挪到课名下面。
+        // 一行的 700dp 宽卡片把教室推到最右边，眼睛要从课名跳到屏幕另一头才读得到。
+        val meta = buildList {
+            if (occurrence.sections.isNotBlank()) add(context.getString(R.string.widget_sections_suffix, occurrence.sections))
+            if (occurrence.classroom.isNotBlank()) add(occurrence.classroom)
+        }.joinToString(" · ")
+
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
+            Text(text = if (item.isInProgress) "●" else " ", maxLines = 1,
+                modifier = GlanceModifier.width(metrics.markerColumnDp.dp),
+                style = captionStyle(metrics, R.color.widget_accent))
+            Text(text = occurrence.startLabel, maxLines = 1,
+                modifier = GlanceModifier.width(metrics.timeColumnDp.dp),
+                style = bodyStyle(metrics, R.color.widget_text_secondary))
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(text = occurrence.name, maxLines = 2, style = bodyStyle(metrics, nameColor))
+                if (meta.isNotBlank()) {
+                    Text(text = meta, maxLines = 1, style = captionStyle(metrics, R.color.widget_text_muted))
+                }
+            }
+        }
+        return
+    }
+
+    Row(modifier = GlanceModifier.fillMaxWidth()) {
         Text(text = if (item.isInProgress) "●" else " ", maxLines = 1,
             modifier = GlanceModifier.width(metrics.markerColumnDp.dp),
             style = captionStyle(metrics, R.color.widget_accent))
@@ -470,10 +686,15 @@ private fun HeroHeading(context: Context, state: WidgetDisplayState, hero: Widge
 /** hero 的下半块：时间 · 教室。单栏与双栏左卡共用。 */
 @Composable
 private fun HeroDetail(context: Context, hero: WidgetOccurrence, metrics: WidgetLayoutMetrics) {
+    Text(text = heroDetailText(context, hero), maxLines = 1,
+        style = bodyStyle(metrics, R.color.widget_text_secondary))
+}
+
+/** 「14:00 - 15:40 · B203」：渲染与高度估算共用同一份文案，避免两处写法漂移。 */
+private fun heroDetailText(context: Context, hero: WidgetOccurrence): String {
     val timeRange = context.getString(R.string.widget_time_range, hero.startLabel, hero.endLabel)
-    val detail = if (hero.classroom.isBlank()) timeRange
+    return if (hero.classroom.isBlank()) timeRange
     else context.getString(R.string.widget_time_and_room, timeRange, hero.classroom)
-    Text(text = detail, maxLines = 1, style = bodyStyle(metrics, R.color.widget_text_secondary))
 }
 
 /**

@@ -23,35 +23,54 @@ public final class WidgetLinePolicy {
     private WidgetLinePolicy() {
     }
 
+    /** 「紧凑」样式下 hero 课名的行数：一行（这一条同时保证了 2×2 逐像素不变）。 */
+    private static final int COMPACT_TITLE_LINES = 1;
+
+    /** 其余样式下 hero 课名的行数：两行 —— 字号随格子变大了，一行放不下长课名。 */
+    private static final int WIDE_TITLE_LINES = 2;
+
     /**
      * 按样式与配置算出正文的行序列。
      *
      * @param config 该实例的配置（布局样式 + 已上完策略 + 大格子表现）。
      * @param plan 「列今天还是列明天」的裁决结果。
+     * @param dualColumn 这一次是否真的分了两栏（几何判据在 {@code WidgetLayoutMetrics} 里）。
+     *     双栏的右栏更宽也更高，因此启用一组**静态富内容**（双行行项、汇总计数、左卡中缝、底部最后一节）。
+     *     这些行只依赖渲染时刻已有的数据，不需要任何额外刷新。
      * @return 行序列与双栏切分点，永不为 `null`。
      */
-    public static WidgetBodyPlan resolve(WidgetStyleConfig config, WidgetDayPlan plan) {
+    public static WidgetBodyPlan resolve(WidgetStyleConfig config, WidgetDayPlan plan, boolean dualColumn) {
         WidgetStyleConfig.LayoutStyle style = config.getLayoutStyle();
         boolean dense = isDense(config);
 
         if (style == WidgetStyleConfig.LayoutStyle.COMPACT) {
             // 「紧凑」定位就是只显示一节课，不因为格子变大而长出列表。
             List<WidgetBodyLine> compact = new ArrayList<>(2);
-            compact.add(WidgetBodyLine.hero(dense ? 2 : 1));
+            compact.add(WidgetBodyLine.hero(COMPACT_TITLE_LINES));
             compact.add(WidgetBodyLine.counter());
             return new WidgetBodyPlan(compact, 1);
         }
 
         List<WidgetBodyLine> lines = new ArrayList<>();
         if (style == WidgetStyleConfig.LayoutStyle.NEXT_UP) {
-            lines.add(WidgetBodyLine.hero(dense ? 2 : 1));
+            lines.add(WidgetBodyLine.hero(WIDE_TITLE_LINES));
+        }
+        // 双栏：左卡中缝放「下一节 + 本周进度」，于是左卡里是「顶部块 / 中缝 / 底部块」三段。
+        if (dualColumn) {
+            lines.add(WidgetBodyLine.midNext());
         }
 
         if (plan.hasRows()) {
             lines.add(WidgetBodyLine.summary(dense));
+            if (dualColumn) {
+                lines.add(WidgetBodyLine.summaryCounts());
+            }
             List<WidgetDayItem> rows = plan.getRows();
             for (int index = 0; index < rows.size(); index++) {
                 lines.add(WidgetBodyLine.course(rows.get(index), index, dense));
+            }
+            if (dualColumn) {
+                lines.add(WidgetBodyLine.footerLast());
             }
             if (plan.getCollapsedFinishedCount() > 0) {
                 lines.add(WidgetBodyLine.collapsed());
@@ -72,7 +91,20 @@ public final class WidgetLinePolicy {
             lines.add(WidgetBodyLine.nextOther());
         }
 
-        return new WidgetBodyPlan(lines, lines.isEmpty() ? 0 : 1);
+        // 左栏恒为开头若干行：hero +（双栏时）中缝行；右栏是其余全部行。
+        // 没有 hero 的样式（全天课表）左栏拿首行 —— 否则左栏会是空的，看起来像排坏了。
+        int header = 0;
+        for (WidgetBodyLine line : lines) {
+            if (line.getKind() == WidgetBodyLine.Kind.HERO || line.getKind() == WidgetBodyLine.Kind.MID_NEXT) {
+                header++;
+            } else {
+                break;
+            }
+        }
+        if (header == 0) {
+            header = lines.isEmpty() ? 0 : 1;
+        }
+        return new WidgetBodyPlan(lines, header);
     }
 
     /**

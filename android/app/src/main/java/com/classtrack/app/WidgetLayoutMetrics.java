@@ -33,16 +33,22 @@ package com.classtrack.app;
  */
 public final class WidgetLayoutMetrics {
 
-    /** 标定基准宽度：手机 4×3 实测（2026-09-20，`phase=widget_sized w=373 h=321`）。 */
-    public static final float W_REF = 373f;
+    /**
+     * 标定基准宽度：**2×2 最小格**（2026-09-20 实测 179×210dp）。
+     *
+     * <p>这里从「手机 4×3」改成「2×2」是产品负责人在真机比对后的要求：**格子越大字号越大应当是默认事实**，
+     * 而不是「先按 4×3 定死、再想办法填满」。于是 2×2 = 1.0（与改动前逐值相同），手机 4×3 ≈ 1.53，
+     * 平板 4×3 顶到上限 2.0。
+     */
+    public static final float W_REF = 179f;
 
-    /** 标定基准高度：手机 4×3 实测。 */
-    public static final float H_REF = 321f;
+    /** 标定基准高度：2×2 最小格实测。 */
+    public static final float H_REF = 210f;
 
-    /** 缩放下限：现有绝对值就是小格子上验证过的答案，绝不缩小。 */
+    /** 缩放下限：与 2×2 一致 —— 更小的格子保持 2×2 的字号，绝不缩小。 */
     public static final float MIN_SCALE = 1f;
 
-    /** 缩放上限：防失控的常量，不是标定值（实测两个档位都没顶到它）。 */
+    /** 缩放上限：防失控的常量（平板 4×3 的 419/210 ≈ 2.0 正好落在它上面）。 */
     public static final float MAX_SCALE = 2f;
 
     /** 允许分两栏的最小宽度：再窄下去两栏各自都读不通。这是**布局可行性下限**，不是内容可见性阈值。 */
@@ -84,6 +90,36 @@ public final class WidgetLayoutMetrics {
     /** 其余度量落网格的步长（dp）。 */
     private static final float DP_STEP = 1f;
 
+    /**
+     * 一行文本占的高度 = 字号 × 本系数。
+     *
+     * <p>**实测标定，不是猜的**：平板 4×3 截图上四行课表的行距是 51px(280dpi) = 29.1dp，减掉 5dp 行距 →
+     * 17sp 字号的行盒 24.1dp → 系数 1.42。上一轮用「字号 × 1.45」估算主卡高度却在真机上裁掉了 hero 首行，
+     * 根因不是系数，而是漏算了「样式」按钮（带内边距）会让标签行更高 —— 见 {@link WidgetFillPlan}。
+     */
+    public static final float LINE_HEIGHT_FACTOR = 1.42f;
+
+    /** 行高估算的安全系数：宁可少分一点余量，也不能让内容被裁（1.02 是实测下来既不裁切也不留白的取值）。 */
+    public static final float LINE_HEIGHT_SAFETY = 1.02f;
+
+    /**
+     * 字号落网格：与渲染层用的取整规则**完全一致**。
+     *
+     * <p>估算必须用同一个取整结果，否则会出现「估算 19.88sp、实际渲染 20sp」这种系统性偏小 ——
+     * 偏小的估算会让内容放不下，正是上一轮真机裁字的成因。
+     *
+     * @param sp 未取整的字号。
+     * @return 落到 0.5sp 网格上的字号。
+     */
+    public static float snappedSp(float sp) {
+        return Math.max(0f, Math.round(sp * 2f) / 2f);
+    }
+
+    /** 内容高度估算时用的行盒高度（dp）；入参应当已经过 {@link #snappedSp(float)}。 */
+    public static float estimateLineHeightDp(float fontSizeSp) {
+        return Math.max(0f, fontSizeSp) * LINE_HEIGHT_FACTOR * LINE_HEIGHT_SAFETY;
+    }
+
     /** 双栏时左栏（主卡）占正文宽度的比例，以及它的下限/上限（dp）。 */
     private static final float DUAL_HEADER_SHARE = 0.36f;
     private static final float DUAL_HEADER_MIN_DP = 220f;
@@ -97,11 +133,19 @@ public final class WidgetLayoutMetrics {
 
     private final float scale;
     private final float padScale;
+    /** 局部字号系数（由 {@link WidgetFillPlan} 给的「刚好放下」值），只影响字号，不影响列宽与留白。 */
+    private final float fontBoost;
     private final boolean dualColumn;
     private final float widthDp;
     private final float heightDp;
 
     private WidgetLayoutMetrics(float scale, float padScale, boolean dualColumn, float widthDp, float heightDp) {
+        this(scale, padScale, dualColumn, widthDp, heightDp, 1f);
+    }
+
+    private WidgetLayoutMetrics(float scale, float padScale, boolean dualColumn, float widthDp, float heightDp,
+            float fontBoost) {
+        this.fontBoost = fontBoost;
         this.scale = scale;
         this.padScale = padScale;
         this.dualColumn = dualColumn;
@@ -163,6 +207,19 @@ public final class WidgetLayoutMetrics {
     }
 
     /** @return 统一缩放因子，恒在 [{@link #MIN_SCALE}, {@link #MAX_SCALE}] 内。 */
+    /**
+     * @param boost 局部字号系数（≤ 1）。
+     * @return 只改了字号的副本：列宽、内边距、行距都不动 —— 收字号是为了「刚好放下」，
+     *     不应该顺手把时间列也挤窄。
+     */
+    public WidgetLayoutMetrics withFontBoost(float boost) {
+        float clamped = Math.min(Math.max(boost, 0.5f), 1f);
+        if (Math.abs(clamped - fontBoost) < 0.001f) {
+            return this;
+        }
+        return new WidgetLayoutMetrics(scale, padScale, dualColumn, widthDp, heightDp, clamped);
+    }
+
     public float getScale() {
         return scale;
     }
@@ -174,17 +231,17 @@ public final class WidgetLayoutMetrics {
 
     /** @return hero 课名字号（sp）。 */
     public float getTitleSp() {
-        return snap(BASE_TITLE_SP * scale, SP_STEP);
+        return snap(BASE_TITLE_SP * scale * fontBoost, SP_STEP);
     }
 
     /** @return 正文字号（sp）。 */
     public float getBodySp() {
-        return snap(BASE_BODY_SP * scale, SP_STEP);
+        return snap(BASE_BODY_SP * scale * fontBoost, SP_STEP);
     }
 
     /** @return 说明字号（sp）。 */
     public float getCaptionSp() {
-        return snap(BASE_CAPTION_SP * scale, SP_STEP);
+        return snap(BASE_CAPTION_SP * scale * fontBoost, SP_STEP);
     }
 
     /** @return 卡片横向内边距（dp）。 */

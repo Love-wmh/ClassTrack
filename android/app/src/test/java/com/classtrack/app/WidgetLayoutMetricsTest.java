@@ -18,10 +18,15 @@ public class WidgetLayoutMetricsTest {
     /** 度量浮点比较的容差；比例运算不追求逐位相等。 */
     private static final float EPSILON = 0.0001f;
 
-    /** 2×2（iPhone 下限）与 4×3（放置默认）必须与改动前的写死常量逐值相同。 */
+    /**
+     * 基准格（2×2 = 179×210dp）以及所有「至少有一边不到基准」的格子，必须与改动前的写死常量逐值相同。
+     *
+     * <p>2026-09-20 参考格子从「手机 4×3」改为「2×2」之后，这一条守住的是**最小格**：它是「小格子不回归」
+     * 的锚点（2×2 逐像素不变就是靠它）。
+     */
     @Test
     public void smallCellsKeepEveryMetricExactlyAsBefore() {
-        for (float[] size : new float[][] {{179f, 210f}, {276f, 210f}, {373f, 321f}, {250f, 180f}}) {
+        for (float[] size : new float[][] {{179f, 210f}, {276f, 210f}, {373f, 210f}, {250f, 180f}}) {
             WidgetLayoutMetrics metrics = WidgetLayoutMetrics.resolve(size[0], size[1]);
 
             assertEquals("scale 必须锁在下限：" + size[0] + "x" + size[1], WidgetLayoutMetrics.MIN_SCALE, metrics.getScale(), EPSILON);
@@ -41,12 +46,26 @@ public class WidgetLayoutMetricsTest {
         }
     }
 
-    /** 平板 4×3 实测 733×419dp：应当按更紧的高度放大到约 1.31 倍。 */
+    /**
+     * 手机默认格（4×3 = 373×321dp）现在**不再**等于基准：它比 2×2 大，所以按新口径字号要变大
+     * （产品要求「格子越大字号越大」）。这里把变化量钉住，免得以后有人顺手改回 1.0。
+     */
+    @Test
+    public void phoneDefaultCellGrowsTypeWithTheCell() {
+        WidgetLayoutMetrics metrics = WidgetLayoutMetrics.resolve(373f, 321f);
+
+        assertEquals(1.529f, metrics.getScale(), 0.01f);
+        assertEquals(24.5f, metrics.getTitleSp(), EPSILON);
+        assertEquals(20f, metrics.getBodySp(), EPSILON);
+        assertEquals(17f, metrics.getCaptionSp(), EPSILON);
+    }
+
+    /** 平板 4×3 实测 733×419dp：按更紧的高度放大到 ≈2.0（也就是全局上限附近）。 */
     @Test
     public void tabletCellScalesUpByTheTighterDimension() {
         WidgetLayoutMetrics metrics = WidgetLayoutMetrics.resolve(733f, 419f);
 
-        assertEquals(1.305f, metrics.getScale(), 0.01f);
+        assertEquals(1.995f, metrics.getScale(), 0.01f);
         assertTrue("字号确实变大了", metrics.getBodySp() > 13f);
         assertTrue("内边距也随之变大", metrics.getHorizontalPaddingDp() > 14f);
         assertEquals("内边距用 sqrt(scale)，比字号保守", (float) Math.sqrt(metrics.getScale()), metrics.getPadScale(), EPSILON);
@@ -55,8 +74,8 @@ public class WidgetLayoutMetricsTest {
     /** 只要有一个维度还是小尺寸，就不放大 —— 这是「取 min」的意义。 */
     @Test
     public void aSingleSmallDimensionKeepsTheWholeCardAtBaseline() {
-        assertEquals(WidgetLayoutMetrics.MIN_SCALE, WidgetLayoutMetrics.resolve(1000f, 321f).getScale(), EPSILON);
-        assertEquals(WidgetLayoutMetrics.MIN_SCALE, WidgetLayoutMetrics.resolve(373f, 900f).getScale(), EPSILON);
+        assertEquals(WidgetLayoutMetrics.MIN_SCALE, WidgetLayoutMetrics.resolve(1000f, 210f).getScale(), EPSILON);
+        assertEquals(WidgetLayoutMetrics.MIN_SCALE, WidgetLayoutMetrics.resolve(179f, 900f).getScale(), EPSILON);
     }
 
     @Test
@@ -68,9 +87,11 @@ public class WidgetLayoutMetricsTest {
 
         assertTrue("变宽不该变小", wider >= base);
         assertTrue("变高不该变小", taller >= base);
-        assertEquals("只有一边变大时仍受另一边约束", base, wider, EPSILON);
-        assertEquals("只有一边变大时仍受另一边约束", base, taller, EPSILON);
-        assertTrue("两边都变大才真的放大", both > base);
+        // 373×321 受**高度**约束（373/179 ≈ 2.08 > 321/210 ≈ 1.53）：只变宽时高度仍是瓶颈，结果不变。
+        assertEquals("高度仍是瓶颈时不放大", base, wider, EPSILON);
+        // 变成 373×480 之后瓶颈换成宽度（373/179 ≈ 2.08 < 480/210 ≈ 2.29），于是真的放大。
+        assertTrue("瓶颈换边之后才继续放大", taller > base);
+        assertTrue("两边都变大也放大", both > base);
     }
 
     @Test
@@ -115,7 +136,7 @@ public class WidgetLayoutMetricsTest {
     /** 双栏左栏宽度必须落在「读得通」的舒适区间里，而不是卡片宽度的固定百分比。 */
     @Test
     public void dualHeaderKeepsAComfortableWidth() {
-        assertEquals(252f, WidgetLayoutMetrics.resolve(733f, 419f).getDualHeaderWidthDp(), 2f);
+        assertEquals(249f, WidgetLayoutMetrics.resolve(733f, 419f).getDualHeaderWidthDp(), 2f);
         assertEquals("极窄的双栏卡片保底 220dp", 220f, WidgetLayoutMetrics.resolve(534f, 315f).getDualHeaderWidthDp(), EPSILON);
         assertEquals("极宽的卡片上限 360dp", 360f, WidgetLayoutMetrics.resolve(2000f, 900f).getDualHeaderWidthDp(), EPSILON);
     }
@@ -123,10 +144,10 @@ public class WidgetLayoutMetricsTest {
     /** 双栏左卡的内部留白随尺寸放大，但尺度保守（大格子上不该被内边距吃掉内容区）。 */
     @Test
     public void dualCardKeepsInnerPaddingConservative() {
-        assertEquals(14f, WidgetLayoutMetrics.resolve(373f, 321f).getHeroInnerPaddingDp(), EPSILON);
-        assertEquals(16f, WidgetLayoutMetrics.resolve(733f, 419f).getHeroInnerPaddingDp(), EPSILON);
-        assertEquals(12f, WidgetLayoutMetrics.resolve(373f, 321f).getDualGapDp(), 1f);
-        assertEquals(14f, WidgetLayoutMetrics.resolve(733f, 419f).getDualGapDp(), 1f);
+        assertEquals(17f, WidgetLayoutMetrics.resolve(373f, 321f).getHeroInnerPaddingDp(), EPSILON);
+        assertEquals(20f, WidgetLayoutMetrics.resolve(733f, 419f).getHeroInnerPaddingDp(), EPSILON);
+        assertEquals(15f, WidgetLayoutMetrics.resolve(373f, 321f).getDualGapDp(), 1f);
+        assertEquals(17f, WidgetLayoutMetrics.resolve(733f, 419f).getDualGapDp(), 1f);
     }
 
     /** 分栏判据的两侧：宽度下限与宽高比下限各测一次。 */

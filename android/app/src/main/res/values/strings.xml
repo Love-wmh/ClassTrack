@@ -30,6 +30,10 @@
     <string name="widget_tomorrow_count">明天 %1$d 节</string>
     <string name="widget_finished_count">已上完 %1$d 节</string>
     <string name="widget_today_remaining_count">今天还有 %1$d 节</string>
+    <!-- 双栏富内容（静态数据，不需要额外刷新） -->
+    <string name="widget_counts_summary">已上完 %1$d 节 · 还有 %2$d 节</string>
+    <string name="widget_mid_next">下一节 %1$s %2$s</string>
+    <string name="widget_footer_last">今天最后一节 %1$s %2$s</string>
     <string name="widget_next_other_day_line">下一节 · %1$s %2$s %3$s</string>
     <string name="widget_style_entry">样式</string>
     <string name="widget_sections_suffix">第%1$s节</string>

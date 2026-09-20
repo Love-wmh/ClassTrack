@@ -28,7 +28,13 @@ public final class WidgetBodyLine {
         /** 「下一节 · 10月8日 周四 08:00 高等数学」。 */
         NEXT_OTHER,
         /** 一行课程。 */
-        COURSE
+        COURSE,
+        /** 双栏富内容：汇总行下面那行「已上完 1 节 · 还有 2 节」。 */
+        SUMMARY_COUNTS,
+        /** 双栏富内容：左卡中缝的「下一节 16:00 线性代数 D402」+「第 1 周 / 共 20 周」。 */
+        MID_NEXT,
+        /** 双栏富内容：列表底部的「今天最后一节 19:00 数据结构 A101」。 */
+        FOOTER_LAST
     }
 
     private final Kind kind;
@@ -77,6 +83,27 @@ public final class WidgetBodyLine {
     /** @return 「下一节 · 某日 某时刻 某课」行。 */
     public static WidgetBodyLine nextOther() {
         return new WidgetBodyLine(Kind.NEXT_OTHER, null, 0, 1, false, false);
+    }
+
+    /**
+     * @param item 这一节课。
+     * @param index 在行序列里的下标；首行（0）会多留一点与汇总行之间的间距。
+     * @param showSections 「信息加密」时为 `true`，渲染层在时间后补节次。
+     * @return 一行课程。
+     */
+    /** @return 双栏富内容：汇总行下面的当天计数行。 */
+    public static WidgetBodyLine summaryCounts() {
+        return new WidgetBodyLine(Kind.SUMMARY_COUNTS, null, 0, 1, true, false);
+    }
+
+    /** @return 双栏富内容：左卡中缝的「下一节」行。 */
+    public static WidgetBodyLine midNext() {
+        return new WidgetBodyLine(Kind.MID_NEXT, null, 0, 1, false, false);
+    }
+
+    /** @return 双栏富内容：列表底部的「今天最后一节」行。 */
+    public static WidgetBodyLine footerLast() {
+        return new WidgetBodyLine(Kind.FOOTER_LAST, null, 0, 1, false, false);
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.classtrack.app;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -101,7 +102,9 @@ public class WidgetLinePolicyTest {
             }
         }
 
-        assertEquals("默认样式下 hero 仍是一行", 1, adaptive.getLines().get(0).getTitleMaxLines());
+        // 课名行数由**样式**决定、与尺寸无关：紧凑 1 行（2×2 逐像素不变依赖它），其余 2 行
+        // （字号随格子变大后，一行放不下「毛泽东思想和中国特色社会主义理论体系概论」）。
+        assertEquals("默认样式下 hero 两行", 2, adaptive.getLines().get(0).getTitleMaxLines());
         assertFalse(adaptive.getLines().get(1).isShowCounts());
         assertFalse(adaptive.getLines().get(2).isShowSections());
     }
@@ -168,6 +171,9 @@ public class WidgetLinePolicyTest {
     private static final WidgetBodyLine.Kind COLLAPSED = WidgetBodyLine.Kind.COLLAPSED;
     private static final WidgetBodyLine.Kind NEXT_OTHER = WidgetBodyLine.Kind.NEXT_OTHER;
     private static final WidgetBodyLine.Kind COURSE = WidgetBodyLine.Kind.COURSE;
+    private static final WidgetBodyLine.Kind SUMMARY_COUNTS = WidgetBodyLine.Kind.SUMMARY_COUNTS;
+    private static final WidgetBodyLine.Kind MID_NEXT = WidgetBodyLine.Kind.MID_NEXT;
+    private static final WidgetBodyLine.Kind FOOTER_LAST = WidgetBodyLine.Kind.FOOTER_LAST;
 
     private static final WidgetStyleConfig.WideLayout ADAPTIVE = WidgetStyleConfig.WideLayout.ADAPTIVE;
     private static final WidgetStyleConfig.WideLayout DENSE = WidgetStyleConfig.WideLayout.DENSE;
@@ -176,7 +182,56 @@ public class WidgetLinePolicyTest {
     private static WidgetBodyPlan body(WidgetStyleConfig.LayoutStyle style, WidgetStyleConfig.FinishedPolicy policy,
             WidgetStyleConfig.WideLayout wide, List<WidgetDayItem> today, List<WidgetDayItem> tomorrow) {
         WidgetDayPlan dayPlan = WidgetDayPlan.resolve(today, tomorrow, policy);
-        return WidgetLinePolicy.resolve(new WidgetStyleConfig(style, policy, wide), dayPlan);
+        return WidgetLinePolicy.resolve(new WidgetStyleConfig(style, policy, wide), dayPlan, false);
+    }
+
+    /** 双栏（几何真的够宽）时的行序列：会比单栏多一组静态富内容行。 */
+    private static WidgetBodyPlan dualBody(WidgetStyleConfig.LayoutStyle style, WidgetStyleConfig.FinishedPolicy policy,
+            WidgetStyleConfig.WideLayout wide, List<WidgetDayItem> today, List<WidgetDayItem> tomorrow) {
+        WidgetDayPlan dayPlan = WidgetDayPlan.resolve(today, tomorrow, policy);
+        return WidgetLinePolicy.resolve(new WidgetStyleConfig(style, policy, wide), dayPlan, true);
+    }
+
+    /** 双栏富内容：汇总计数行 + 左卡中缝「下一节」行 + 列表底部「今天最后一节」行，顺序固定。 */
+    @Test
+    public void dualColumnAddsStaticRichLinesInFixedOrder() {
+        WidgetBodyPlan plan = dualBody(NEXT_UP, SHOW_DIM, ADAPTIVE, todayItems(), tomorrowItems());
+
+        assertEquals(SUMMARY_COUNTS, plan.getLines().get(3).getKind());
+        assertEquals(FOOTER_LAST, plan.getLines().get(plan.getLines().size() - 1).getKind());
+        assertEquals("左栏 = hero + 中缝行", 2, plan.getHeaderLineCount());
+        assertEquals(MID_NEXT, plan.getLines().get(1).getKind());
+    }
+
+    /** 单栏不出现双栏富内容：手机两个预设的观感因此与改动前同源。 */
+    @Test
+    public void singleColumnKeepsNoRichLines() {
+        WidgetBodyPlan plan = body(NEXT_UP, SHOW_DIM, ADAPTIVE, todayItems(), tomorrowItems());
+
+        for (WidgetBodyLine line : plan.getLines()) {
+            assertNotEquals(SUMMARY_COUNTS, line.getKind());
+            assertNotEquals(FOOTER_LAST, line.getKind());
+            assertNotEquals(MID_NEXT, line.getKind());
+        }
+        assertEquals(1, plan.getHeaderLineCount());
+    }
+
+    /** 课名行数：紧凑样式 1 行（2×2 逐像素不变依赖它），其余样式 2 行（字号随格子变大后一行放不下）。 */
+    @Test
+    public void heroTitleLinesFollowTheStyleNotTheSize() {
+        assertEquals(1, heroLines(COMPACT, SHOW_DIM, ADAPTIVE));
+        assertEquals(2, heroLines(NEXT_UP, SHOW_DIM, ADAPTIVE));
+    }
+
+    private static int heroLines(WidgetStyleConfig.LayoutStyle style, WidgetStyleConfig.FinishedPolicy policy,
+            WidgetStyleConfig.WideLayout wide) {
+        WidgetBodyPlan plan = body(style, policy, wide, todayItems(), tomorrowItems());
+        for (WidgetBodyLine line : plan.getLines()) {
+            if (line.getKind() == HERO) {
+                return line.getTitleMaxLines();
+            }
+        }
+        return 0;
     }
 
     /** 一天里「已上完 + 正在进行 + 还有一节」，这样三种「已上完」策略的差异都能看出来。 */

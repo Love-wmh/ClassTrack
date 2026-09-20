@@ -77,6 +77,21 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 记录一次「铺满」求解的结果（只记数值，**不记任何课程内容**）。
+     *
+     * <p>字号上界由格子尺寸给（格子越大字号越大），实际字号会被收到「内容刚好放下」处 —— 这条日志把
+     * 「字号被收了多少、行距分到多少、内容占了可用高度的几成」摊开，验收时不必只靠看截图猜。
+     *
+     * @param fontScalePercent 实际字号系数（百分比，100 = 基准）。
+     * @param gapTenthDp 行距（0.1dp 为单位，避免日志里出现小数）。
+     * @param fillPercent 内容占可用高度的百分比。
+     */
+    public static void layoutFill(int fontScalePercent, int gapTenthDp, int fillPercent) {
+        Log.i(TAG, "phase=layout_fill font=" + Math.max(0, fontScalePercent) + " gap=" + Math.max(0, gapTenthDp) / 10f
+                + " fill=" + Math.max(0, fillPercent));
+    }
+
+    /**
      * 记录一次渲染入口读到的状态（只记类型与计数，**不记任何课程内容**）。
      *
      * 这条日志是排查「推送成功但画面没变」的关键：它把「快照有没有读到」与「读到了但界面没更新」
