@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "feature 内组件的 props 约定（非导出 type XxxProps、onXxx 回调）、Tailwind + cn() 写法、移动优先断点，本次改动全部落在 ScheduleTable / ScheduleCourseCell"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "新增 feature 私有 hook useScheduleZoom 的组织方式，以及订阅浏览器外部系统必须用 useSyncExternalStore（本次用到的 useIsMobile 即此模式）"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五项可信门禁、禁止 any/ts-ignore/eslint-disable、vitest 只收 app/**/*.test.ts、提交信息主题必须中文；决定新增 utils.test.ts 的写法与是否能通过 lint"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "新增文件必须落在正确层级：feature 私有 hook 放 app/features/schedule/hooks/，纯计算放 feature 的 utils.ts，字面量放 constants.ts"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "严格模式、import type、类型组织约定，决定 SectionTime / ScheduleDetailLevel 等新类型的声明位置与写法"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/design.md", "reason": "D1~D13 全部技术决策（网格 min-width 策略、只改列宽的缩放、节次时间推导规则、桌面端零改动边界、测试挂钩 data 属性契约）与已知限制，是实现时必须遵守的单一事实来源"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/implement.md", "reason": "P1~P6 的阶段顺序、每阶段文件清单与校验命令、通过判据与回滚点"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/research/mobile-schedule-baseline.md", "reason": "改动前实测数值、复现环境与三个本机环境坑（XDG_RUNTIME_DIR 只读、TMPDIR=/tmp/claude 必须存在、后台进程不能跨 bash 调用存活）"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/research/seed-schedule-fixture.js", "reason": "视觉验证用的 localStorage 种子数据（zustand persist 格式），改完 UI 需要用它复现同一组课程再做断言"}

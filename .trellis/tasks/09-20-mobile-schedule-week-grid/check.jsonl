@@ -1,0 +1,7 @@
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/prd.md", "reason": "验收标准 A~E 是检查清单本体；逐项核对并用真实证据（命令输出、截图路径、实测数值）判定，不得把「类型通过」当行为验证"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁与禁止模式的准确定义，用于判断是否存在为通过门禁而放宽规则、或漏跑某道门禁的情况"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件层约定（props 形态、cn()、Tailwind 原子类、桌面端不得无谓改动），判断实现是否符合既有模式"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "类型与禁止抑制手段约定，检查新增 TS 模块是否违规"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/design.md", "reason": "D9 桌面端零改动边界、D13 测试挂钩属性契约、D12 风险表与「已知限制」交付口径；检查必须逐条核对，尤其桌面端视觉一致性与节次时间推导的诚实性"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/implement.md", "reason": "每阶段声明的校验命令与通过判据，用于判断实现是否真正跑过对应验证而不是口头声称"}
+{"file": ".trellis/tasks/09-20-mobile-schedule-week-grid/research/mobile-schedule-baseline.md", "reason": "改动前实测数值与桌面回归基线，用于对比「改动后是否真的整周可见、桌面是否真的没变」，并复用其中的环境绕法"}
