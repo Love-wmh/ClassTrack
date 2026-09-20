@@ -1546,7 +1546,7 @@ def _auto_commit_archive(
         print("[OK] No task changes to commit.", file=sys.stderr)
         return True
 
-    commit_msg = f"chore(task): archive {task_name}"
+    commit_msg = f"chore(task): 归档 {task_name}"
     # Commit with an explicit pathspec: a bare `git commit` would sweep any
     # unrelated entries the developer had staged before archiving into the
     # chore commit (#579). `source_rel` is included so the source-side
@@ -1601,7 +1601,7 @@ def _print_index_lock_warning(
     )
     print(
         f'[WARN] commit manually: git add -A -- {" ".join(paths)} && '
-        f'git commit -m "chore(task): archive {task_name}"',
+        f'git commit -m "chore(task): 归档 {task_name}"',
         file=sys.stderr,
     )
 

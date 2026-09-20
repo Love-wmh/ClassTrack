@@ -101,6 +101,7 @@ fix(widget): keep card clicks working          ❌ 主题没有中文
 - CI：`.github/workflows/ci.yml` 的 `commitlint` job 校验 PR 范围内的每个提交，因此 `--no-verify` 绕不过去；
 - 手工自查：`pnpm exec commitlint --edit <文件>`，或对一段范围 `pnpm exec commitlint --from <A> --to <B> --verbose`；
 - **不回改历史**：2026-09-20 之前的提交信息是英文的，规则从该日起对新提交生效。
+- **Trellis 脚本的自动提交也算数**：`task.py archive` 与 `add_session.py` 会各自产生一次自动提交（`chore(task): 归档 <slug>`、`chore(trellis): 记录会话日志`），它们同样过 husky 钩子。上游默认主题是英文，本项目已改成中文：会话日志主题在 `.trellis/config.yaml` 的 `session_commit_message`，归档主题在 `.trellis/scripts/common/task_store.py`（该文件是上游模板，`trellis update` 可能覆盖回英文）。这两处一旦被改回英文，`task.py archive` 会以「归档已落盘、自动提交失败」的中间态结束 —— 此时用中文主题手工提交即可，不要用 `--no-verify`。
 
 ## 构建环境
 

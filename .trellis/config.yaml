@@ -9,7 +9,11 @@
 
 # Commit message used when auto-committing journal/index changes
 # after running add_session.py
-session_commit_message: "chore: record journal"
+#
+# 本仓库的 commitlint 要求提交主题必须含中文（见
+# .trellis/spec/frontend/quality-guidelines.md「提交信息」段），因此这里覆盖默认的
+# 英文 "chore: record journal"，否则脚本的自动提交会被 husky 钩子拒绝。
+session_commit_message: "chore(trellis): 记录会话日志"
 
 # Maximum lines per journal file before rotating to a new one
 max_journal_lines: 2000
