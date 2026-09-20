@@ -24,6 +24,7 @@ export default [
       '.codebuddy/**',
       '.codex/**',
       '.pi/**',
+      '.trellis/**',
     ],
   },
   js.configs.recommended,
