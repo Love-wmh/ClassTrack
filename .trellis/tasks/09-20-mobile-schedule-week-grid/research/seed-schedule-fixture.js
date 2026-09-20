@@ -76,4 +76,5 @@ const state = {
 }
 
 localStorage.setItem('class-track-storage', JSON.stringify({ state, version: 3 }))
-'seeded:' + classes.length
+// 回读用的写入标记，避免用表达式语句结尾（仓库 ESLint 会拒绝未使用的表达式）
+localStorage.setItem('class-track-seed-size', String(classes.length))
