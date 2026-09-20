@@ -5,7 +5,7 @@ import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import ScheduleCourseDialog from './ScheduleCourseDialog'
-import { getCurrentRealWeek, getMaxWeek } from './utils'
+import { deriveSectionTimes, getCurrentRealWeek, getMaxWeek } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
 import { useWeekKeyboardNavigation } from './hooks/useWeekKeyboardNavigation'
 
@@ -37,6 +37,9 @@ export default function SchedulePage() {
 
   const weekClasses = useMemo(() => classes.filter((classItem) => classItem.weeks.includes(currentWeek)), [classes, currentWeek])
 
+  // 节次时间用整个学期的课程推导（不是仅本周），这样只在其他周出现的节次也能拿到时间。
+  const sectionTimes = useMemo(() => deriveSectionTimes(classes), [classes])
+
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
 
@@ -52,7 +55,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background px-3 pb-3 pt-3 sm:px-5 sm:py-6 md:pb-6">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background px-2 pb-3 pt-3 sm:px-5 sm:py-6 md:pb-6">
       <ImportDialog />
 
       <div className="mx-auto flex min-h-0 w-full max-w-[1410px] flex-1 flex-col">
@@ -69,6 +72,7 @@ export default function SchedulePage() {
           classMarks={classMarks}
           currentWeek={currentWeek}
           firstWeekStartDate={firstWeekStartDate}
+          sectionTimes={sectionTimes}
           onCourseClick={(course) => setSelectedCourseId(course.id)}
         />
       </div>
