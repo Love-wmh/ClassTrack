@@ -336,3 +336,37 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Next Steps
 
 - 左卡中缝约 90dp 空白需新内容才能填满（接明天/倒计时已否）；OEM launcher 与 fontScale≥1.5 未验证
+
+
+## Session 11: 小工具「添加到桌面」：回调式确认 + 两段式目标判决 + 诚实文案
+<!-- trellis-session: v=2 fp=83e8e8ea85d1b0d3 -->
+
+**Date**: 2026-09-21
+**Task**: 小工具「添加到桌面」：回调式确认 + 两段式目标判决 + 诚实文案
+**Branch**: `master`
+
+### Summary
+
+按 requestPinAppWidget 真实契约重做 pin 链路：传 successCallback、只有确认回调才算成功、回调里按实例 id 落预设、删除渲染侧兜底；Web 侧改三态文案并常驻手动步骤
+
+### Main Changes
+
+- 新增 WidgetPinResultReceiver/WidgetPinConfirmation/WidgetPinResult/WidgetPinTargets/WidgetPinBaseline 与 consumePinResult 插件方法；删除 applyPendingPreset/isConfigured/claim；spec 与 verification 同步
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0d7fbdd` | fix(widget): 回调式确认替换「请求已受理即成功」，并按两段式判决落预设 |
+
+### Testing
+
+- [OK] Android testDebugUnitTest 157 例全绿；pnpm test 80 例；pnpm lint 0 error；cap:build:android 通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 真机（PKR110/ColorOS）空闲时补 A4 a/b/c 现场证据：确认不再出现假「已添加」、超时文案与常驻手动步骤出现、记录 AddItemActivity 是否置前
