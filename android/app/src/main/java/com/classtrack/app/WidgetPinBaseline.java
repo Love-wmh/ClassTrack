@@ -44,6 +44,25 @@ public final class WidgetPinBaseline {
      *     调用方必须把 `null` 当作「不知道」而不是「没有实例」，否则差集会退化成「当前全集」，
      *     把预设写到用户所有旧卡片上。
      */
+    /**
+     * **不消费**地读一次基线。
+     *
+     * <p>给「无回调复核」用（见 {@link WidgetPinObservation}）：等待窗口末尾要拿请求前的实例集合做差集，
+     * 但**不能把它取走** —— 确认回调可能在复核**之后**才到，那时 {@link WidgetPinTargets} 还要用同一份基线
+     * 去兜 AOSP Launcher3 那种「回调把 `EXTRA_APPWIDGET_ID` 发成 0」的场景。
+     *
+     * <p>清理不靠这里：下一次 {@link #record(int[], long)} 会覆盖，超出 {@link #TIMEOUT_MS} 自然失效。
+     *
+     * @param nowEpochMs 读取时刻。
+     * @return 与 {@link #consume(long)} 同语义（没记录 / 已超时 → `null`；空集合是有效记录），但**不清空**。
+     */
+    public static synchronized int[] peek(long nowEpochMs) {
+        if (!recorded || nowEpochMs - recordedAtMs > TIMEOUT_MS) {
+            return null;
+        }
+        return appWidgetIds.clone();
+    }
+
     public static synchronized int[] consume(long nowEpochMs) {
         int[] ids = appWidgetIds;
         boolean had = recorded;

@@ -67,4 +67,45 @@ public class WidgetPinBaselineTest {
 
         assertArrayEquals(new int[0], WidgetPinBaseline.consume(NOW));
     }
+
+    // ---- peek：给「无回调复核」用的只读读法（见 WidgetPinObservation） ----
+
+    /** 复核必须**不消费**基线：回调可能在复核之后才到，那时还要拿同一份基线做差集。 */
+    @Test
+    public void peekDoesNotConsume() {
+        WidgetPinBaseline.record(new int[]{5, 7}, NOW);
+
+        assertArrayEquals(new int[]{5, 7}, WidgetPinBaseline.peek(NOW));
+        assertArrayEquals("第二次读必须还是同一份", new int[]{5, 7}, WidgetPinBaseline.peek(NOW));
+        assertArrayEquals("peek 之后 consume 仍要能拿到", new int[]{5, 7}, WidgetPinBaseline.consume(NOW));
+        assertNull(WidgetPinBaseline.consume(NOW));
+    }
+
+    /** peek 的「不知道 vs 空集合」必须与 consume 完全一致，否则差集会退化成全集。 */
+    @Test
+    public void peekKeepsTheUnknownVersusEmptyDistinction() {
+        assertNull("没记录过 → 不知道", WidgetPinBaseline.peek(NOW));
+
+        WidgetPinBaseline.record(new int[0], NOW);
+        assertArrayEquals("空集合是有效记录", new int[0], WidgetPinBaseline.peek(NOW));
+    }
+
+    @Test
+    public void peekExpiresOnTheSameTimeout() {
+        WidgetPinBaseline.record(new int[]{5}, NOW);
+
+        assertArrayEquals(new int[]{5}, WidgetPinBaseline.peek(NOW + WidgetPinBaseline.TIMEOUT_MS));
+        assertNull(WidgetPinBaseline.peek(NOW + WidgetPinBaseline.TIMEOUT_MS + 1));
+    }
+
+    /** peek 返回的是副本：调用方改动它不得污染基线。 */
+    @Test
+    public void peekReturnsADefensiveCopy() {
+        WidgetPinBaseline.record(new int[]{5}, NOW);
+
+        int[] first = WidgetPinBaseline.peek(NOW);
+        first[0] = 999;
+
+        assertArrayEquals(new int[]{5}, WidgetPinBaseline.peek(NOW));
+    }
 }

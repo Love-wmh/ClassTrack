@@ -53,4 +53,41 @@ public class WidgetPinResultTest {
         assertFalse(WidgetPinResult.consumeConfirmed(NOW) >= 0);
         assertTrue(WidgetPinResult.TIMEOUT_MS > 0);
     }
+
+    // ---- hasConfirmed：给「无回调复核」用的只读查询（见 WidgetPinObservation） ----
+
+    /**
+     * 复核必须先问「回调到了吗」，但**不能把回调取走** —— 取走就等于把「已添加」的权威信号弄丢了。
+     */
+    @Test
+    public void hasConfirmedIsReadOnly() {
+        WidgetPinResult.recordConfirmed(12, NOW);
+
+        assertTrue(WidgetPinResult.hasConfirmed(NOW));
+        assertTrue("查询本身不得消费", WidgetPinResult.hasConfirmed(NOW));
+        assertEquals("回调仍要能交给面板", 12, WidgetPinResult.consumeConfirmed(NOW));
+        assertFalse(WidgetPinResult.hasConfirmed(NOW));
+    }
+
+    @Test
+    public void hasConfirmedIsFalseWhenNothingRecorded() {
+        assertFalse(WidgetPinResult.hasConfirmed(NOW));
+    }
+
+    @Test
+    public void hasConfirmedExpiresOnTheSameTimeout() {
+        WidgetPinResult.recordConfirmed(12, NOW);
+
+        assertTrue(WidgetPinResult.hasConfirmed(NOW + WidgetPinResult.TIMEOUT_MS));
+        assertFalse(WidgetPinResult.hasConfirmed(NOW + WidgetPinResult.TIMEOUT_MS + 1));
+    }
+
+    /** 被取走之后不得再被「查到」，否则复核会在面板已经拿到结果后再报一次「观察到」。 */
+    @Test
+    public void consumedConfirmationIsNoLongerVisible() {
+        WidgetPinResult.recordConfirmed(12, NOW);
+        WidgetPinResult.consumeConfirmed(NOW);
+
+        assertFalse(WidgetPinResult.hasConfirmed(NOW));
+    }
 }
