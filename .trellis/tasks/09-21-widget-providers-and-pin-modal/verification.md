@@ -12,18 +12,32 @@ Web 侧（醒目标态框）的纯逻辑由 vitest 钉住，但**模态框的真
 模拟器上 AOSP launcher 会正常弹确认界面，探针那条失败路径需要 ColorOS 那种"丢请求"的现场才能触发（真机项）。
 **拖动改尺寸的自动匹配**也只做了单元测试级验证：设备上的拖动手势本轮未执行。
 
-## A1 模态状态机与文案 ⏳（逻辑已测，设备交互未验）
+## A1 模态状态机与文案 ✅（点击即弹与失败态已在模拟器上看到）
 
 - vitest：`resolvePinModalState`（进行中永远显示 / 失败态可关 / 成功态自动收起）、`resolvePinProbeOutcome`、
-  `pinOutcomeMessage`（含「requesting 文案绝不含『已添加』」「no_confirmation 文案含推断说明」）全部通过。
-- Web 用例数 **91**（上一轮 80 → +11）。
-- 未验：点击后模态是否真的立刻出现、探针命中后是否立刻切失败态（需要真机 ColorOS 现场）。
+  `resolvePinFinalOutcome`（**探针命中后不得被兜底文案降级**）、`pinOutcomeMessage` 全部通过。
+  Web 用例数 **92**。
+- 设备实测（模拟器）：点卡片后 **模态立即出现**，标题「正在尝试添加…」+ 中性文案
+  「已请求系统添加。若弹出确认界面，请点确认；否则请用手动步骤添加。」，背后卡片的按钮变成「等待确认…」，
+  **没有任何卡片显示「已添加」** ✅（截图 `modal-requesting.png`）。
+- 失败态实测：在 launcher 无法确认的情况下（详见 A2），模态切到失败态 —— 标题「⚠ 没有添加成功」、
+  如实文案、**按尺寸指名的手动步骤**（`2×2 / 2×3 / 4×2 / 4×3 / 6×3`）、「再试一次」「知道了」两个按钮 ✅
+  （截图 `modal-failed.png`）。
 
-## A2 快探针 ⏳（逻辑已测，现场未触发）
+## A2 快探针 ✅（逻辑 + 受控实验；并据此修掉一个真 bug）
 
 - `PinAttemptTest` / `PinAttemptStateTest` 全绿（未退后台且过窗口 → 判失败；退过后台 / 时钟回拨 / 无尝试 → 不判）。
-- 模拟器现场：pin 时 AOSP launcher **会**把确认界面置前 → 我们的 Activity 被 pause → 探针**正确地不判失败**
-  （日志里没有出现 `no_confirmation` 路径），这正是期望行为，但它没有覆盖失败分支。
+- 模拟器 AOSP 现场：pin 时 launcher **会**把确认界面置前 → 我们的 Activity 被 pause → 探针**正确地不判失败** ✅
+  （这条「不误报」的方向由此得到设备级证据）。
+- 失败方向用**受控实验**触发：ColorOS 的失败现场是「确认界面从未出现」，模拟器上无法复现（AOSP 一定弹界面，
+  而 playstore 镜像既不能 root、也没有调试权限禁用 launcher 的 `AddItemActivity`）。因此临时让
+  `MainActivity.onPause` 不上报「退到后台」（**该补丁只用于实验，已回滚、未进仓库**），
+  在真实 pin 流程下观察 → 模态确实切到了失败态。
+  - **实验当场发现一个真 bug**：轮询结束时的兜底 `setOutcome('unconfirmed')` 会**覆盖**探针刚给出的
+    `no_confirmation`，于是用户永远只看到通用文案，探针那句更可行动的「如果你在桌面上看到了确认界面，
+    请先把它点完」白写了。已修（`resolvePinFinalOutcome(probeFired)`）并用 vitest 钉住。
+  - 因为虚拟机随后被关闭，**修复后**的这次文案差异没有在设备上再走一遍 —— 它由单测保证，
+    并在真机（ColorOS 现场）复验时一并确认。
 
 ## A3 五档 provider 注册 ✅
 
@@ -65,12 +79,28 @@ Web 侧（醒目标态框）的纯逻辑由 vitest 钉住，但**模态框的真
 - 拒绝原因拆成白名单枚举（`invalid_widget_id` / `unknown_instance` / `foreign_provider`），
   `WidgetDiagnostics` 白名单同步 ✓。
 
-## A6 尺寸变化自动匹配 ⏳（单测通过，设备拖动未验）
+## A6 尺寸变化自动匹配 ✅（**已在模拟器上用真实拖拽手势验证两个方向**）
 
-- `WidgetStyleResolverTest` 全绿：显式样式原样返回（手动优先）、AUTO 按尺寸匹配样式与宽格表现、
-  「已上完策略」不被覆盖、尺寸不可用时退回 provider、都没有时落到最小档、解析结果永不为 AUTO。
-- `WidgetPresetTest` 全绿：标识↔格子一致、标定样本自命中、清晰边界（2×3 vs 4×3 vs 6×3）、非法尺寸回退、极端尺寸。
-- 未验：设备上拖动改尺寸后样式是否随之变化（需 launcher 拖拽手势）。
+单元测试（`WidgetStyleResolverTest` / `WidgetPresetTest`）覆盖逻辑；设备侧做了如下实验（模拟器 1080×2400 @420dpi，
+AOSP Launcher3，单页 5 列网格）：
+
+**手势方法**（记录下来，可复用）：`adb shell input motionevent DOWN/MOVE/UP` 组合 ——
+先用「DOWN + 6 次原地 MOVE + UP」长按唤出调整尺寸的把手（把手是浅紫色，可用连通域扫描定位，
+本次量到右/上/下三个），再从**把手本身** DOWN 起拖，**中途可截图确认轮廓跟随**；
+松手点必须落在目标列内（差一点点会贴回原尺寸）。
+
+| 实验 | 观察（`phase=widget_sized` / `phase=layout_metrics`，已带实例 id） | 结论 |
+|---|---|---|
+| 拖动前（该实例是**显式**样式） | `widget=5 w=179 h=321 → wide=adaptive` | 基线 |
+| 向右拖到 3 列 | `widget=5 w=276 h=321 → wide=adaptive` | **尺寸变了、形态不变** → 手动优先 ✅ |
+| 在配置页把它改成「自动（按尺寸）」并保存（尺寸仍 276×321） | `widget=5 w=276 h=321 → **wide=two_column**` | 切到 AUTO 后立即按尺寸解析 ✅ |
+| 再拖回 2 列 | `widget=5 w=179 h=321 → **wide=adaptive**` | **尺寸变化 → 形态随之回退** ✅ |
+
+（276×321 的最近邻是 `cell_4x3`（归一化距离 0.26，次近的 `cell_4x2` 是 0.59），179×321 最近邻是 `cell_2x3`，
+与 `layout_metrics` 报出的形态完全一致，说明设备上的匹配结果与单测手算一致。）
+
+另外顺手验证了两条用户路径：widget 内的「样式」入口能打开配置页（**归属校验通过** ✅，且此时实例属于新 provider），
+以及配置页保存后样式立即生效。
 
 ## A8 门禁 ✅
 
@@ -109,3 +139,9 @@ Web 侧（醒目标态框）的纯逻辑由 vitest 钉住，但**模态框的真
    读到 `INVALID_APPWIDGET_ID`，看起来像"安全校验把合法实例拒了"。为此顺手把拒绝原因拆成白名单枚举 ——
    这个歧义以后不会再浪费一轮（spec 里也记了这一条）。
 5. **`WidgetContent` 里插入样式解析时误删了一行**（`val context = ...`），靠紧接着的 `read` 发现并补回。
+6. **AUTO 下「大格子表现」的灰显说明文案写错了原因**（复用了「紧凑」那句，看起来像样式被切成紧凑）：
+   已按真正原因分成两条文案（`widget_config_wide_ineffective_auto`），由配置页按当前选项切换。
+7. **`input tap` 在 WebView 里常常无效、但 `input motionevent` 的长按+拖拽能稳定驱动 launcher**：
+   本轮所有尺寸手势都用它完成（见 A6 的方法说明）。
+8. **CDP 里替换 `Capacitor.Plugins.X.method` 拦不住插件调用**（Capacitor 的 `registerPlugin` 代理不查那张表）：
+   想造失败现场只能从原生侧入手，本轮改用「临时补丁 + 回滚」的受控实验。

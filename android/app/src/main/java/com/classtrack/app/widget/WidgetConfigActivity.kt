@@ -222,6 +222,14 @@ class WidgetConfigActivity : AppCompatActivity() {
         for (index in 0 until wideGroup.childCount) {
             wideGroup.getChildAt(index).isEnabled = effective
         }
+        // 说明文案必须写**真正的原因**：AUTO 下宽格表现由尺寸匹配到的预设决定，与「紧凑」无关。
+        wideHint.text = getString(
+            if (selectedLayout() == WidgetStyleConfig.LayoutStyle.AUTO) {
+                R.string.widget_config_wide_ineffective_auto
+            } else {
+                R.string.widget_config_wide_ineffective
+            }
+        )
         wideHint.visibility = if (effective) View.GONE else View.VISIBLE
     }
 

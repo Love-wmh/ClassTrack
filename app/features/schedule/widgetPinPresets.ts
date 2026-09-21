@@ -145,6 +145,16 @@ export function resolvePinPollOutcome(confirmation: WidgetPinConfirmation): 'add
 }
 
 /**
+ * 等待结束时用哪个状态收尾。
+ *
+ * **探针已经命中过就不要降级**：`no_confirmation` 的文案比兜底文案更可行动（它明确说了「系统没有弹出
+ * 确认界面」并给出「如果你在桌面上看到了确认界面，请先把它点完」），被 `unconfirmed` 覆盖掉等于白探。
+ */
+export function resolvePinFinalOutcome(probeFired: boolean): 'no_confirmation' | 'unconfirmed' {
+  return probeFired ? 'no_confirmation' : 'unconfirmed'
+}
+
+/**
  * 每个状态对应的提示文案；`null` 表示这一状态下不给任何提示（不打扰用户）。
  */
 export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {

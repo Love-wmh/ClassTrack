@@ -93,6 +93,9 @@
     <string name="widget_config_wide_two_column">双栏</string>
     <string name="widget_config_wide_two_column_desc">左栏放当前或接下来的一节课，右栏放当天课表；格子不够宽时自动保持单栏。</string>
     <string name="widget_config_wide_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
+    <!-- 「自动（按尺寸）」时同理：宽格表现由匹配到的那一档预设决定，用户在这里选的不会被使用。
+         说清真正的原因，而不是复用「紧凑」那句 —— 否则用户会以为样式被切成了紧凑。 -->
+    <string name="widget_config_wide_ineffective_auto">「自动（按尺寸）」时，宽格表现由当前尺寸匹配到的那一档决定，所以这个选项对它没有效果。</string>
     <string name="widget_config_confirm">确定</string>
     <string name="widget_config_cancel">取消</string>
 

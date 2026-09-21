@@ -8,6 +8,7 @@ import {
   WIDGET_PIN_NARROW_CELL_HINT,
   WIDGET_PIN_PRESETS,
   pinOutcomeMessage,
+  resolvePinFinalOutcome,
   resolvePinModalState,
   resolvePinProbeOutcome,
   resolvePinPollOutcome,
@@ -220,6 +221,16 @@ describe('添加到桌面的模态框状态机', () => {
     expect(message).toContain('没有弹出确认界面')
     expect(message).toContain('如果你在桌面上看到了确认界面')
     expect(message).not.toContain('已添加')
+  })
+
+  it('探针命中后的收尾文案不得被降级为兜底文案', () => {
+    // 真机/受控实验实测过的缺陷：探针已经给出「系统没有弹出确认界面」，最后一轮却用兜底文案覆盖了它，
+    // 用户看到的就是一句更不可行动的通用提示。
+    expect(resolvePinFinalOutcome(true)).toBe('no_confirmation')
+    expect(resolvePinFinalOutcome(false)).toBe('unconfirmed')
+    // 两者文案确实不同，且探针那条包含可行动的下一步。
+    expect(pinOutcomeMessage('no_confirmation')).not.toBe(pinOutcomeMessage('unconfirmed'))
+    expect(pinOutcomeMessage('no_confirmation')).toContain('如果你在桌面上看到了确认界面')
   })
 
   it('手动步骤按尺寸指名，且与预设表的格子一致', () => {

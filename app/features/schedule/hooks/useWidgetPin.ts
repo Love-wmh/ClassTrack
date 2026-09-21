@@ -3,6 +3,7 @@ import { isNativeWidgetSnapshotAvailable, widgetSnapshotPlugin } from '~/lib/nat
 import type { WidgetPresetId } from '~/lib/native-widget-snapshot'
 import {
   pinOutcomeMessage,
+  resolvePinFinalOutcome,
   resolvePinModalState,
   resolvePinProbeOutcome,
   resolvePinPollOutcome,
@@ -97,6 +98,8 @@ export function useWidgetPin(): WidgetPinState {
       }
 
       // 确认回调 10 次 × 1s；前 3 次顺路问一次快探针 —— 它一旦命中就立刻切失败态，
+      // `probeFired` 记住「探针已经给过更具体的结论」，避免最后一轮把它降级成兜底文案。
+      let probeFired = false
       // 但**不中断**轮询（回调可能稍后才到，那时必须翻成成功）。
       for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt += 1) {
         const confirmation = await widgetSnapshotPlugin.consumePinResult()
@@ -110,13 +113,16 @@ export function useWidgetPin(): WidgetPinState {
           const probe = resolvePinProbeOutcome(await widgetSnapshotPlugin.getPinAttempt())
           if (probe === 'no_confirmation') {
             // 推断：系统没有弹出确认界面。切失败态让用户马上有路可走（文案里也说明了这是推断）。
+            probeFired = true
             setOutcome('no_confirmation')
           }
         }
         await delay(POLL_INTERVAL_MS)
       }
       // 等不到确认：不是错误，是有些桌面会静默吞掉请求 —— 如实告知并给手动步骤。
-      setOutcome(resolvePinPollOutcome({ confirmed: false, appWidgetId: null }))
+      // **不要覆盖已经给出的更具体结论**：探针已经说过「系统没有弹出确认界面」时，那句更可行动
+      // （它告诉用户先去把可能存在的确认界面点完），不能被这条兜底文案降级掉。
+      setOutcome(resolvePinFinalOutcome(probeFired))
     } catch {
       // 原生侧拒绝（例如预设标识非法）不该弹红错：用户看到的仍然是一条可行动的说明。
       setOutcome('unsupported')
