@@ -7,8 +7,14 @@ import type { WidgetPinAttempt, WidgetPinConfirmation, WidgetPinResult, WidgetPr
  * 小工具在任何尺寸都能渲染，但只有少数几个尺寸被验证过「内容刚好铺满、不裁切」。预设把这几个尺寸
  * 连同对应的摆法一起推荐给用户，避免用户自己拖出一个没人验证过的尺寸。
  *
- * **标识必须与原生 `WidgetPreset.java` 的白名单逐字一致**（原生只认这几个字符串，拼错会静默回退）。
- * 这条由 `widgetPinPresets.test.ts` 守住。
+ * **按尺寸命名**（2026-09-21 口径变更）：预设同时是系统拾取器里的一个 provider、pin 面板里的一张卡、
+ * 以及**尺寸变化后自动匹配的目标**。三处都靠"多大格子"说话，所以标识与名字都以格子为准
+ * （`cell_4x3` / 「标准 4×3」），不再用 `phone_standard` 这种与设备绑定的名字
+ * —— 同一个 4×3 在手机与平板上都存在，只是渲染结果不同。
+ *
+ * **标识必须与原生 `WidgetPreset.java` 的白名单逐字一致**（原生只认这几个字符串，拼错会静默回退成
+ * 「未选预设」）。这条由 `widgetPinPresets.test.ts` 守住，且那道测试会直接读 Android 侧的
+ * `WidgetProviderRegistry.java` 与五份 `widget_info_*.xml`，把三层对齐。
  */
 export type WidgetPinPreset = {
   /** 与原生白名单一致的标识。 */
@@ -22,7 +28,7 @@ export type WidgetPinPreset = {
   /** 何时该选它；写在卡片上避免用户逐个试。 */
   hint: string
   /**
-   * 是否只有横向够宽的格子才看得出效果。
+   * 是否「宽度够就分两栏」。
    *
    * 双栏要求「宽度 ≥ 320dp 且宽度 ≥ 高度 × 1.25」，**手机竖屏的 4×3 不满足**（373×321 → 宽高比 1.16），
    * 于是在手机上它会老老实实按单栏渲染 —— 不报错，但和名字给人的预期不符。这条标记让卡片如实说明
@@ -31,40 +37,40 @@ export type WidgetPinPreset = {
   needsWideCell?: boolean
 }
 
-/** 预设清单；顺序就是卡片顺序（从最简到最全）。 */
+/** 预设清单；顺序就是卡片顺序（从最小到最大），也是拾取器里的 provider 顺序。 */
 export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
   {
-    id: 'phone_minimal',
-    name: '手机 · 极简',
+    id: 'cell_2x2',
+    name: '极简 2×2',
     cell: '2×2',
     description: '一张卡突出「现在这节课」，下面跟一行「下一节」。',
     hint: '桌面位置紧张、只想扫一眼现在上什么。',
   },
   {
-    id: 'phone_standard',
-    name: '手机 · 标准',
-    cell: '4×3',
-    description: '上面是当前课程，下面接今天整天课表。',
-    hint: '最常用的摆法，绝大多数手机桌面。',
+    id: 'cell_2x3',
+    name: '手机 2×3',
+    cell: '2×3',
+    description: '上面是当前课程，下面接两行今天的课表。',
+    hint: '手机竖屏的主力位，一屏能看两节。',
   },
   {
-    id: 'phone_wide',
-    name: '手机 · 宽横',
+    id: 'cell_4x2',
+    name: '宽横 4×2',
     cell: '4×2',
     description: '横向铺开、只占两行高度，课表按行滚动。',
     hint: '顶部空间有限，或喜欢横着放。',
   },
   {
-    id: 'tablet_dual',
-    name: '平板 · 双栏',
+    id: 'cell_4x3',
+    name: '标准 4×3',
     cell: '4×3',
-    description: '左栏是当前课程卡片，右栏是今天课表。',
-    hint: '平板横屏；字更大、信息更多。',
+    description: '上面是当前课程，下面接今天整天课表；格子够宽时自动分两栏。',
+    hint: '最常用的摆法：手机单栏、平板双栏。',
     needsWideCell: true,
   },
   {
-    id: 'tablet_wide',
-    name: '平板 · 宽屏',
+    id: 'cell_6x3',
+    name: '宽屏 6×3',
     cell: '6×3',
     description: '左卡 + 更宽的右侧课表，教室就在课名下面。',
     hint: '平板横向 6 列以上的宽格。',
@@ -103,12 +109,7 @@ export const WIDGET_PIN_UNCONFIRMED_HINT = '系统没有完成添加（部分厂
 /** 系统弹窗被取消（或 launcher 没有真的放下）时的说明。 */
 export const WIDGET_PIN_CANCELLED_HINT = '没有添加成功。可以再点一次，或按下面的手动步骤添加。'
 
-/**
- * 「添加到桌面」这次操作的**状态**。
- *
- * 关键区分：`'requesting'`（已请求、还没等到系统确认）**不等于**成功。`requestPinAppWidget` 的返回值只表示
- * 「请求已受理」，真机上出现过「受理了但什么都没放下」；因此只有 `'added'`（收到确认回调）才允许显示「已添加」。
- */
+/** 「添加到桌面」这次操作的**状态**。 */
 export type WidgetPinOutcome = 'idle' | 'requesting' | 'added' | 'cancelled' | 'no_confirmation' | 'unconfirmed' | 'unsupported'
 
 /**
@@ -168,6 +169,7 @@ export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
  * 面板底部**常驻**的手动步骤说明。
  *
  * 不只在失败时出现：会静默吞掉请求的桌面上，它是唯一可靠的路径，因此始终可见。
+ * 尺寸清单从预设表生成，避免"面板写一种、拾取器里是另一种"的错位。
  */
 export const WIDGET_PIN_MANUAL_STEPS = `长按桌面空白处 → 小工具 → 找到课表 → 按尺寸选（${WIDGET_PIN_PRESETS.map((preset) => preset.cell).join(' / ')}）→ 拖到桌面上，再按卡片上的格子数调整大小`
 
@@ -177,12 +179,12 @@ export const WIDGET_PIN_MANUAL_STEPS = `长按桌面空白处 → 小工具 → 
  * - `requesting`：点击后**立刻**出现（用户要知道我们正在尝试，而不是点完没反应）；
  * - `failed`：任何失败/疑似失败都走这里（被取消、不支持、系统没弹确认界面、超时未确认）；
  * - `added`：只有确认回调到达才出现，随后自动收起；
- * - `hidden`：没请求，或用户已经把这次失败关掉了（不再重复打扰）。
+ * - `hidden`：没请求，或用户已经把这次结果关掉了（不再重复打扰）。
  */
 export type WidgetPinModalState = 'hidden' | 'requesting' | 'failed' | 'added'
 
 /**
- * 由状态与「用户是否关掉了本次失败」推出模态该显示什么（纯映射，vitest 覆盖）。
+ * 由状态与「用户是否关掉」推出模态该显示什么（纯映射，vitest 覆盖）。
  */
 export function resolvePinModalState(outcome: WidgetPinOutcome, dismissed: boolean): WidgetPinModalState {
   if (outcome === 'requesting') {

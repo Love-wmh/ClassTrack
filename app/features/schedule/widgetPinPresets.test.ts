@@ -16,7 +16,7 @@ import {
  * 原生侧只认这几个字符串，拼错不会报错、只会静默回退成「未选预设」（用户看到的是「点了没生效」）。
  * 因此这里把同一份字面量再写一遍并比对 —— 两边改动时，这个测试会立刻失败。
  */
-const NATIVE_WHITELIST = ['phone_minimal', 'phone_standard', 'phone_wide', 'tablet_dual', 'tablet_wide'] as const
+const NATIVE_WHITELIST = ['cell_2x2', 'cell_2x3', 'cell_4x2', 'cell_4x3', 'cell_6x3'] as const
 
 describe('小工具预设目录', () => {
   it('标识与原生白名单逐字一致、且不重复', () => {
@@ -38,7 +38,7 @@ describe('小工具预设目录', () => {
   it('只有宽格才生效的预设被如实标记，且带一句退化成单栏的说明', () => {
     const wideOnly = WIDGET_PIN_PRESETS.filter((preset) => preset.needsWideCell).map((preset) => preset.id)
 
-    expect(wideOnly).toEqual(['tablet_dual', 'tablet_wide'])
+    expect(wideOnly).toEqual(['cell_4x3', 'cell_6x3'])
     expect(WIDGET_PIN_NARROW_CELL_HINT).toContain('单栏')
   })
 

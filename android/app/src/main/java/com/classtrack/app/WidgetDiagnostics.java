@@ -135,11 +135,11 @@ public final class WidgetDiagnostics {
     private static String safePreset(String value) {
         String parsed = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
         switch (parsed) {
-            case "phone_minimal":
-            case "phone_standard":
-            case "phone_wide":
-            case "tablet_dual":
-            case "tablet_wide":
+            case WidgetPreset.ID_CELL_2X2:
+            case WidgetPreset.ID_CELL_2X3:
+            case WidgetPreset.ID_CELL_4X2:
+            case WidgetPreset.ID_CELL_4X3:
+            case WidgetPreset.ID_CELL_6X3:
                 return parsed;
             default:
                 return "unknown";

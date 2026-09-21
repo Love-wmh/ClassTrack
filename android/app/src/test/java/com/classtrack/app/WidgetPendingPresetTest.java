@@ -17,16 +17,16 @@ public class WidgetPendingPresetTest {
 
     @Test
     public void consumeIsOneShot() {
-        WidgetPendingPreset.set(WidgetPreset.ID_TABLET_DUAL, NOW);
+        WidgetPendingPreset.set(WidgetPreset.ID_CELL_4X3, NOW);
 
         WidgetPreset first = WidgetPendingPreset.consume(NOW);
-        assertEquals(WidgetPreset.ID_TABLET_DUAL, first.getId());
+        assertEquals(WidgetPreset.ID_CELL_4X3, first.getId());
         assertNull("第二次读必须为空，否则会影响下一个实例", WidgetPendingPreset.consume(NOW));
     }
 
     @Test
     public void expiredSlotIsDiscarded() {
-        WidgetPendingPreset.set(WidgetPreset.ID_PHONE_STANDARD, NOW);
+        WidgetPendingPreset.set(WidgetPreset.ID_CELL_4X3, NOW);
 
         assertNull(WidgetPendingPreset.consume(NOW + WidgetPendingPreset.TIMEOUT_MS + 1));
     }
@@ -34,9 +34,9 @@ public class WidgetPendingPresetTest {
     /** 刚好在有效期内不该被判成过期：边界两侧都要有断言。 */
     @Test
     public void slotIsValidRightUpToTheTimeout() {
-        WidgetPendingPreset.set(WidgetPreset.ID_PHONE_STANDARD, NOW);
+        WidgetPendingPreset.set(WidgetPreset.ID_CELL_4X3, NOW);
 
-        assertEquals(WidgetPreset.ID_PHONE_STANDARD,
+        assertEquals(WidgetPreset.ID_CELL_4X3,
                 WidgetPendingPreset.consume(NOW + WidgetPendingPreset.TIMEOUT_MS).getId());
     }
 
@@ -55,17 +55,17 @@ public class WidgetPendingPresetTest {
      */
     @Test
     public void peekDoesNotConsumeButConsumeDoes() {
-        WidgetPendingPreset.set(WidgetPreset.ID_TABLET_WIDE, NOW);
+        WidgetPendingPreset.set(WidgetPreset.ID_CELL_6X3, NOW);
 
-        assertEquals(WidgetPreset.ID_TABLET_WIDE, WidgetPendingPreset.peek(NOW).getId());
-        assertEquals(WidgetPreset.ID_TABLET_WIDE, WidgetPendingPreset.peek(NOW).getId());
+        assertEquals(WidgetPreset.ID_CELL_6X3, WidgetPendingPreset.peek(NOW).getId());
+        assertEquals(WidgetPreset.ID_CELL_6X3, WidgetPendingPreset.peek(NOW).getId());
         WidgetPendingPreset.consume();
         assertNull("consume 之后必须为空", WidgetPendingPreset.peek(NOW));
     }
 
     @Test
     public void clearDiscardsWithoutConsuming() {
-        WidgetPendingPreset.set(WidgetPreset.ID_PHONE_MINIMAL, NOW);
+        WidgetPendingPreset.set(WidgetPreset.ID_CELL_2X2, NOW);
         WidgetPendingPreset.clear();
 
         assertNull(WidgetPendingPreset.consume(NOW));

@@ -53,7 +53,7 @@ export type WidgetExactAlarmStatus = {
  * 拼错不会报错、只会静默回退成「未选预设」。这条跨层契约由
  * `app/features/schedule/widgetPinPresets.test.ts` 用同一份字面量守住。
  */
-export type WidgetPresetId = 'phone_minimal' | 'phone_standard' | 'phone_wide' | 'tablet_dual' | 'tablet_wide'
+export type WidgetPresetId = 'cell_2x2' | 'cell_2x3' | 'cell_4x2' | 'cell_4x3' | 'cell_6x3'
 
 /**
  * 「添加到桌面」的结果。

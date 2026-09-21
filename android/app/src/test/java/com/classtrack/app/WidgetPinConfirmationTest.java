@@ -16,7 +16,7 @@ public class WidgetPinConfirmationTest {
 
     @Test
     public void validIdAndPendingPresetProduceThatPresetsConfig() {
-        WidgetStyleConfig config = WidgetPinConfirmation.planFor(42, WidgetPreset.parse("tablet_dual"));
+        WidgetStyleConfig config = WidgetPinConfirmation.planFor(42, WidgetPreset.parse("cell_4x3"));
 
         assertNotNull(config);
         assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, config.getLayoutStyle());
@@ -27,7 +27,7 @@ public class WidgetPinConfirmationTest {
 
     @Test
     public void compactPresetMapsToCompactStyle() {
-        WidgetStyleConfig config = WidgetPinConfirmation.planFor(7, WidgetPreset.parse("phone_minimal"));
+        WidgetStyleConfig config = WidgetPinConfirmation.planFor(7, WidgetPreset.parse("cell_2x2"));
 
         assertNotNull(config);
         assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, config.getLayoutStyle());
@@ -43,7 +43,7 @@ public class WidgetPinConfirmationTest {
     /** 非法实例 id → 不写（回调也可能被伪造/带脏值）。 */
     @Test
     public void invalidIdsAreRejected() {
-        assertNull(WidgetPinConfirmation.planFor(-1, WidgetPreset.parse("phone_standard")));
-        assertNull(WidgetPinConfirmation.planFor(Integer.MIN_VALUE, WidgetPreset.parse("phone_standard")));
+        assertNull(WidgetPinConfirmation.planFor(-1, WidgetPreset.parse("cell_4x3")));
+        assertNull(WidgetPinConfirmation.planFor(Integer.MIN_VALUE, WidgetPreset.parse("cell_4x3")));
     }
 }
