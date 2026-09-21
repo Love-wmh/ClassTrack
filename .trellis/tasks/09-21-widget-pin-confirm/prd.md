@@ -93,7 +93,7 @@
 - [x] **A1 回调落库有 JUnit 覆盖**：`WidgetPinConfirmation`（纯逻辑）覆盖「有效 id + 有待消费预设 → 用该预设的样式/大格子表现」「无预设 → 只记日志」「非法 id → 不写」；另加 `WidgetPinTargets`（回调 id 可信 / 发回 0 / 差集 / 基线未知 / 差集为空）与 `WidgetPinResult`、`WidgetPinBaseline` 两个一次性槽位的语义（共 157 例全绿）。
 - [x] **A2 只有确认才成功**：`phase=pin_requested` / `pin_result` / `pin_confirmed`（另加 `pin_confirmed_unresolved`）齐备；`requested=true` 只进「等待确认」，不再被当作成功（模拟器实测三段日志，见 verification A2）。
 - [x] **A3 Web 三态有测试**：三态判决抽成纯函数 `resolvePinStartOutcome` / `resolvePinPollOutcome` / `pinOutcomeMessage`，由 vitest 钉住（含「requesting 文案绝不含『已添加』」「unconfirmed 文案含『厂商桌面』并指向手动步骤」）；常驻手动步骤文案亦被覆盖。
-- [ ] **A4 真机证据**（**部分待补**）：(d) 已在模拟器上完成——确认回调触发后 `tablet_dual` 预设真的落库（`wide=adaptive → wide=two_column`），且**发现回调 id 不可信（发回 0）并据此加了两级判决**；(a)(b)(c) 的**真机现场**证据待真机空闲时补（模拟器侧等价证据见 verification A4）——真机预期：`pin_confirmed` 不出现 → 10 秒后如实文案 + 常驻手动步骤，桌面无小工具但**不再撒谎**。
+- [x] **A4 真机证据**：真机 PKR110（装 CI 产出 `1.0.6-beta`，sha256 校验一致）实测——（a）面板四张卡都没有「已添加」；（b）10 秒后如实显示「系统没有完成添加（部分厂商桌面会忽略这个请求）。请用下面的手动步骤添加。」且手动步骤**常驻**（请求前也已可见）；（c）launcher 在 `14:59:25.299` 起了 `AddItemActivity`(`CONFIRM_PIN_APPWIDGET`) 但**从未置前**（`mCurrentFocus`/`mFocusedApp` 始终是我们），`pin_confirmed` 计数 0，classtrack 实例仍是 `id=16` 一个；（d）确认回调触发时的落库在模拟器上验证（`tablet_dual` → `wide=two_column`），并据此发现回调 id 不可信、补了两级判决。详见 verification。
 - [x] **A5 渲染侧兜底已移除**且无回归：删掉 `applyPendingPreset` / `WidgetStyleState.isConfigured` / `WidgetPendingPreset.claim()`；Android 单测 **157 例**全绿、`pnpm test` **80 例**全绿、`pnpm lint` 0 error、`pnpm cap:build:android` 通过。
 - [x] **A6 spec 同步**：`android-home-widget.md` 重写 pin 条目（API 真实契约 + 确认 id 不可信 + 两段式目标解析 + `null` 基线语义 + 诚实文案 + 常驻手动步骤），并明确记下删除的「渲染侧兜底」。
 
