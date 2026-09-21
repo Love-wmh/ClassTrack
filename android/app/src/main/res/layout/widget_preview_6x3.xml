@@ -44,6 +44,8 @@
             android:padding="20dp">
 
                 <TextView
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/widget_preview_hero_label"
@@ -61,6 +63,8 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
@@ -69,6 +73,8 @@
                     android:textSize="26sp" />
 
                 <TextView
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/widget_preview_counter"
@@ -91,6 +97,8 @@
         android:orientation="horizontal">
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -99,6 +107,8 @@
             android:textSize="22sp" />
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_style_entry"
@@ -107,6 +117,8 @@
     </LinearLayout>
 
     <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/widget_preview_counts"
@@ -119,6 +131,8 @@
         android:orientation="horizontal">
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="88dp"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_time_1"
@@ -136,6 +150,8 @@
             android:textSize="26sp" />
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_room_1"
@@ -149,6 +165,8 @@
         android:orientation="horizontal">
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="88dp"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_time_2"
@@ -166,6 +184,8 @@
             android:textSize="26sp" />
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/widget_preview_room_2"

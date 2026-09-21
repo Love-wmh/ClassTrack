@@ -30,12 +30,17 @@ internal object WidgetStyleState {
      *
      * @param context 任意 Context。
      * @param glanceId 该实例的 Glance id。
-     * @return 配置；从未写入过或值已损坏时返回默认配置，绝不会为 `null`。
+     * @return 配置；**样式键从没被写过时返回 `auto`（未显式选择）**，值已损坏时按各自默认值回退，
+     *     绝不会为 `null`。
      */
     suspend fun read(context: Context, glanceId: GlanceId): WidgetStyleConfig {
         val preferences = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
         return WidgetStyleConfig.parse(
-            preferences[layoutStyleKey],
+            // 从未写过样式键 = 「未显式选择」= `auto`：解析时会落到**该实例 provider 那档预设**的样式
+            // （1×2 → 紧凑、3×2 → 接下来）。这里不能传 `null` —— `parse` 会把它直接变成
+            // DEFAULT_LAYOUT_STYLE（「接下来」），于是 provider 预设永远生效不了，而「从系统拾取器
+            // 拖进来」的实例正好只走这条路径（不会经过 pin 的显式写入）。
+            preferences[layoutStyleKey] ?: WidgetStyleConfig.STORAGE_VALUE_AUTO,
             preferences[finishedPolicyKey],
             preferences[wideLayoutKey]
         )

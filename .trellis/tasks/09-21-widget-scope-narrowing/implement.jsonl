@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/09-21-widget-scope-narrowing/design.md", "reason": "本次唯一技术依据：D1 注册表维护标记、D2 组件启停判决（纯函数 + 启动收敛调用点）、D3 样式解析新语义与为何保留 AUTO、D4 pin 写预设样式、D5 Web 侧收窄、D6 配置页二级菜单与自动展开、D7 两档 metadata 与标定值、D8 跨层与调用点断言"}
+{"file": ".trellis/tasks/09-21-widget-scope-narrowing/prd.md", "reason": "需求与验收：R1-R7 的边界、A1-A8 的验收口径、以及 D1-D6 已敲定的产品决策（含被否方案）——实现时不得自行改口径"}
+{"file": ".trellis/tasks/09-21-widget-scope-narrowing/implement.md", "reason": "阶段与门禁：P1-P8 的先后顺序、每个阶段的验证命令（就是该阶段的完成定义）、以及回滚清单"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "既有 widget 契约：单 provider 假设的遗留位置（provider 元数据、pin 目标组件、配置页归属校验）、AUTO 尺寸匹配与双栏选项的既有条目、picker 标签与预览资产的同步条件、pin 判决与「确认 id 不可信」的两级判决"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端层的目录与约定索引：确认 Web 侧预设表/组件/test 该放在哪里，以及跨层文件（native-widget-snapshot.ts）的定位"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "本仓库的可信门禁与格式约定（ESLint/Prettier/vitest/typecheck 的具体口径），P5/P6 的提交前必须符合"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层改动清单：本次改 Web 预设表 ↔ 原生白名单 ↔ 清单 ↔ 资源 ↔ 生成脚本 ↔ 测试四处以上，需要按跨层检查表逐项确认没有漏改"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "两个新 provider 必须复用同一个 ClassTrackWidget 渲染入口、配置页二级区不得复制渲染逻辑，避免为「第二档」复制一遍"}

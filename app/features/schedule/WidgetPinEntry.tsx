@@ -8,7 +8,6 @@ import { useWidgetPin } from './hooks/useWidgetPin'
 import type { WidgetPinCapability, WidgetPresetId } from '~/lib/native-widget-snapshot'
 import {
   manualSteps,
-  WIDGET_PIN_NARROW_CELL_HINT,
   WIDGET_PIN_OBSERVED_HINT,
   WIDGET_PIN_PRESETS,
   WIDGET_PIN_REQUESTING_HINT,
@@ -112,11 +111,6 @@ export default function WidgetPinEntry() {
                     <Badge variant="secondary" className="font-mono text-[0.7rem]">
                       {preset.cell}
                     </Badge>
-                    {preset.needsWideCell ? (
-                      <Badge variant="outline" className="text-[0.7rem] text-muted-foreground">
-                        需宽格
-                      </Badge>
-                    ) : null}
                   </div>
                   <Button
                     variant={isAdded ? 'secondary' : 'default'}
@@ -134,7 +128,6 @@ export default function WidgetPinEntry() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{preset.description}</p>
                 <p className="mt-1 text-xs text-muted-foreground">适合：{preset.hint}</p>
-                {preset.needsWideCell ? <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_NARROW_CELL_HINT}</p> : null}
               </div>
             )
           })}

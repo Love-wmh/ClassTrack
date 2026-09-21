@@ -43,23 +43,36 @@ public final class WidgetBodyLine {
     private final int titleMaxLines;
     private final boolean showCounts;
     private final boolean showSections;
+    private final boolean stackedDetail;
 
     private WidgetBodyLine(Kind kind, WidgetDayItem item, int index, int titleMaxLines,
-            boolean showCounts, boolean showSections) {
+            boolean showCounts, boolean showSections, boolean stackedDetail) {
         this.kind = kind;
         this.item = item;
         this.index = index;
         this.titleMaxLines = titleMaxLines;
         this.showCounts = showCounts;
         this.showSections = showSections;
+        this.stackedDetail = stackedDetail;
     }
 
     /**
      * @param titleMaxLines hero 课名允许的行数；1 为默认，「信息加密」时放宽到 2。
-     * @return hero 行。
+     * @return hero 行（明细一行：时间 · 教室）。
      */
     public static WidgetBodyLine hero(int titleMaxLines) {
-        return new WidgetBodyLine(Kind.HERO, null, 0, Math.max(1, titleMaxLines), false, false);
+        return hero(titleMaxLines, false);
+    }
+
+    /**
+     * @param titleMaxLines hero 课名允许的行数；1 为默认，「信息加密」时放宽到 2。
+     * @param stackedDetail `true` 时 hero 明细拆成**两行**（时间一行、教室一行）。
+     *     「紧凑」样式用它保证任何格宽下教室都不会被裁掉（2026-09-21：窄格里「14:00 - 15:35 · C305」
+     *     被裁成「14:00 - …」，教室直接看不见了）。
+     * @return hero 行。
+     */
+    public static WidgetBodyLine hero(int titleMaxLines, boolean stackedDetail) {
+        return new WidgetBodyLine(Kind.HERO, null, 0, Math.max(1, titleMaxLines), false, false, stackedDetail);
     }
 
     /**
@@ -67,22 +80,22 @@ public final class WidgetBodyLine {
      * @return 汇总行。
      */
     public static WidgetBodyLine summary(boolean showCounts) {
-        return new WidgetBodyLine(Kind.SUMMARY, null, 0, 1, showCounts, false);
+        return new WidgetBodyLine(Kind.SUMMARY, null, 0, 1, showCounts, false, false);
     }
 
     /** @return 「紧凑」样式的计数行。 */
     public static WidgetBodyLine counter() {
-        return new WidgetBodyLine(Kind.COUNTER, null, 0, 1, false, false);
+        return new WidgetBodyLine(Kind.COUNTER, null, 0, 1, false, false, false);
     }
 
     /** @return 「已上完 N 节」折叠行。 */
     public static WidgetBodyLine collapsed() {
-        return new WidgetBodyLine(Kind.COLLAPSED, null, 0, 1, false, false);
+        return new WidgetBodyLine(Kind.COLLAPSED, null, 0, 1, false, false, false);
     }
 
     /** @return 「下一节 · 某日 某时刻 某课」行。 */
     public static WidgetBodyLine nextOther() {
-        return new WidgetBodyLine(Kind.NEXT_OTHER, null, 0, 1, false, false);
+        return new WidgetBodyLine(Kind.NEXT_OTHER, null, 0, 1, false, false, false);
     }
 
     /**
@@ -93,17 +106,17 @@ public final class WidgetBodyLine {
      */
     /** @return 双栏富内容：汇总行下面的当天计数行。 */
     public static WidgetBodyLine summaryCounts() {
-        return new WidgetBodyLine(Kind.SUMMARY_COUNTS, null, 0, 1, true, false);
+        return new WidgetBodyLine(Kind.SUMMARY_COUNTS, null, 0, 1, true, false, false);
     }
 
     /** @return 双栏富内容：左卡中缝的「下一节」行。 */
     public static WidgetBodyLine midNext() {
-        return new WidgetBodyLine(Kind.MID_NEXT, null, 0, 1, false, false);
+        return new WidgetBodyLine(Kind.MID_NEXT, null, 0, 1, false, false, false);
     }
 
     /** @return 双栏富内容：列表底部的「今天最后一节」行。 */
     public static WidgetBodyLine footerLast() {
-        return new WidgetBodyLine(Kind.FOOTER_LAST, null, 0, 1, false, false);
+        return new WidgetBodyLine(Kind.FOOTER_LAST, null, 0, 1, false, false, false);
     }
 
     /**
@@ -113,7 +126,7 @@ public final class WidgetBodyLine {
      * @return 一行课程。
      */
     public static WidgetBodyLine course(WidgetDayItem item, int index, boolean showSections) {
-        return new WidgetBodyLine(Kind.COURSE, item, index, 1, false, showSections);
+        return new WidgetBodyLine(Kind.COURSE, item, index, 1, false, showSections, false);
     }
 
     public Kind getKind() {
@@ -143,5 +156,10 @@ public final class WidgetBodyLine {
     /** @return 课程行是否要补节次（「第 3-4 节」）。 */
     public boolean isShowSections() {
         return showSections;
+    }
+
+    /** @return hero 明细是否要拆成两行（时间 / 教室）。 */
+    public boolean isStackedDetail() {
+        return stackedDetail;
     }
 }

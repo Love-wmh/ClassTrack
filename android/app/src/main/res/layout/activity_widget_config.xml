@@ -57,19 +57,6 @@
             android:layout_marginTop="8dp"
             android:orientation="vertical">
 
-            <RadioButton
-                android:id="@+id/widget_config_layout_auto"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/widget_config_layout_auto" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="32dp"
-                android:text="@string/widget_config_layout_auto_desc"
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="13sp" />
 
             <RadioButton
                 android:id="@+id/widget_config_layout_day_list"
@@ -78,6 +65,7 @@
                 android:text="@string/widget_config_layout_day_list" />
 
             <TextView
+                android:id="@+id/widget_config_layout_day_list_desc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="32dp"
@@ -121,6 +109,7 @@
                 android:text="@string/widget_config_layout_compact" />
 
             <TextView
+                android:id="@+id/widget_config_layout_compact_desc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="32dp"
@@ -135,6 +124,35 @@
                 android:layout_marginTop="6dp" />
         </RadioGroup>
 
+
+        <!--
+            二级区入口：一级只留「接下来」（本轮收缩后的核心摆法），其余样式与两组选项默认折叠。
+            为什么不放在 RadioGroup 里：它是折叠开关而不是一个选项 —— 混进单选组会被当成可选项。
+        -->
+        <TextView
+            android:id="@+id/widget_config_advanced_toggle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:text="@string/widget_config_advanced_expand"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <!--
+            二级区内容。默认 `gone`；若实例的配置落在这一区里，进页面会自动展开（不让用户以为设置丢了）。
+            注意「全天课表 / 紧凑」两个单选项仍在上面那个 RadioGroup 里（必须留在同一组才有互斥语义），
+            折叠时由代码单独把它们的控件一起收起。
+        -->
+        <LinearLayout
+            android:id="@+id/widget_config_advanced_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
         <TextView
             android:id="@+id/widget_config_finished_section"
             android:layout_width="match_parent"
@@ -219,18 +237,6 @@
                 android:text="@string/widget_config_wide_dense_desc"
                 android:textSize="12sp" />
 
-            <RadioButton
-                android:id="@+id/widget_config_wide_two_column"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/widget_config_wide_two_column" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="32dp"
-                android:text="@string/widget_config_wide_two_column_desc"
-                android:textSize="12sp" />
         </RadioGroup>
 
         <TextView
@@ -241,6 +247,7 @@
             android:text="@string/widget_config_wide_ineffective"
             android:textSize="12sp"
             android:visibility="gone" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"

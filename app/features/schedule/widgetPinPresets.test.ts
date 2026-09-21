@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest'
 import {
   manualSteps,
   MANUAL_HINT_BY_FAMILY,
-  WIDGET_PIN_NARROW_CELL_HINT,
   WIDGET_PIN_PRESETS,
   WIDGET_PIN_SPACE_HINT,
   pinOutcomeMessage,
@@ -24,7 +23,7 @@ import {
  * 原生侧只认这几个字符串，拼错不会报错、只会静默回退成「未选预设」（用户看到的是「点了没生效」）。
  * 因此这里把同一份字面量再写一遍并比对 —— 两边改动时，这个测试会立刻失败。
  */
-const NATIVE_WHITELIST = ['cell_2x2', 'cell_2x3', 'cell_4x2', 'cell_4x3', 'cell_6x3'] as const
+const NATIVE_WHITELIST = ['cell_3x2', 'cell_1x2', 'cell_2x2', 'cell_2x3', 'cell_4x2', 'cell_4x3', 'cell_6x3'] as const
 
 /**
  * 跨层断言用的路径（相对仓库根）：直接读**真实的** Android 资源与清单。
@@ -34,13 +33,26 @@ const NATIVE_WHITELIST = ['cell_2x2', 'cell_2x3', 'cell_4x2', 'cell_4x3', 'cell_
  * 抄一遍只能证明"我抄对了"，读文件才能证明"两边真的一样"。
  */
 const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url))
-const WIDGET_CELLS = ['2x2', '2x3', '4x2', '4x3', '6x3'] as const
+const WIDGET_CELLS = ['3x2', '1x2', '4x3', '2x2', '2x3', '4x2', '6x3'] as const
+
+/**
+ * 维护档：只有这两档会出现在系统拾取器里，也只有这两档会下发到面板。
+ *
+ * 其余五档的 provider/元数据/预览仍留在应用里（存量实例与配置页归属校验要用，见 `WidgetProviderScopeGate`），
+ * 所以与清单、资源的一致性断言仍然覆盖全部七档。
+ */
+const MAINTAINED_CELLS = ['3x2', '1x2'] as const
 
 describe('小工具预设目录', () => {
   it('标识与原生白名单逐字一致、且不重复', () => {
     const ids = WIDGET_PIN_PRESETS.map((preset) => preset.id)
 
-    expect(ids).toEqual([...NATIVE_WHITELIST])
+    // 面板只下发维护档 —— 其余档的 provider 已被禁用，列出来只会是点了放不下的死卡。
+    expect(ids).toEqual([...MAINTAINED_CELLS].map((cells) => `cell_${cells}`))
+    // 这些标识必须都在原生白名单里（原生只认白名单，拼错会静默回退成「未选预设」）。
+    for (const id of ids) {
+      expect(NATIVE_WHITELIST).toContain(id as (typeof NATIVE_WHITELIST)[number])
+    }
     expect(new Set(ids).size).toBe(ids.length)
   })
 
@@ -53,11 +65,15 @@ describe('小工具预设目录', () => {
     }
   })
 
-  it('只有宽格才生效的预设被如实标记，且带一句退化成单栏的说明', () => {
-    const wideOnly = WIDGET_PIN_PRESETS.filter((preset) => preset.needsWideCell).map((preset) => preset.id)
+  it('面板只提供两档维护档，且两档都指向真实存在的 provider', () => {
+    expect(WIDGET_PIN_PRESETS.map((preset) => preset.cell)).toEqual(['3×2', '1×2'])
+    const registry = readFileSync(join(REPO_ROOT, 'android/app/src/main/java/com/classtrack/app/WidgetProviderRegistry.java'), 'utf8')
 
-    expect(wideOnly).toEqual(['cell_4x3', 'cell_6x3'])
-    expect(WIDGET_PIN_NARROW_CELL_HINT).toContain('单栏')
+    for (const cells of MAINTAINED_CELLS) {
+      // 「维护档」在注册表里是 maintained=true 那一半：标签写着维护、注册表却标成收起（或反过来）
+      // 会让拾取器少一条 / 多一条，而这两种错都很难在日常使用中发现。
+      expect(registry, cells).toContain(`WidgetPreset.ID_CELL_${cells.toUpperCase()}, true`)
+    }
   })
 
   it('手动步骤仍指名每一档尺寸，且不承诺尺寸由我们决定', () => {
@@ -125,24 +141,26 @@ describe('添加到桌面的三态判决', () => {
  * 所以这里要钉住三件事：进行中永远可见、失败态可见且可关、成功态只在确认回调之后出现。
  */
 /**
- * 五档 provider 与 Web 侧预设的跨层一致性。
+ * 七档 provider（两档维护 + 五档收起）与 Web 侧预设的跨层一致性。
  *
  * 出错时的表现很隐蔽（某个尺寸放下去是错的样式 / 拾取器里显示错尺寸），因此把四处对齐：
- * 预设表 → `WidgetProviderRegistry.java`（receiver 类名 ↔ 预设）→ `widget_info_*.xml`（targetCell）
+ * 预设表 → `WidgetProviderRegistry.java`（receiver 类名 ↔ 预设 ↔ 是否维护）→ `widget_info_*.xml`（targetCell）
  * → `strings.xml`（provider 标签）。
  */
-describe('五档 provider 的跨层一致性', () => {
-  it('注册表里恰好五档，且每档对应预设表里的一个标识', () => {
+describe('七档 provider 的跨层一致性', () => {
+  it('注册表里恰好七档，其中维护档恰好两档', () => {
     const registry = readFileSync(join(REPO_ROOT, 'android/app/src/main/java/com/classtrack/app/WidgetProviderRegistry.java'), 'utf8')
-    const registered = [...registry.matchAll(/new Entry\(PACKAGE \+ "(\w+)", WidgetPreset\.ID_CELL_(\w+)\)/g)].map((match) => ({
-      receiver: match[1],
-      cells: match[2].toLowerCase(),
-    }))
+    const registered = [...registry.matchAll(/new Entry\(PACKAGE \+ "(\w+)", WidgetPreset\.ID_CELL_(\w+), (true|false)\)/g)].map(
+      (match) => ({
+        receiver: match[1],
+        cells: match[2].toLowerCase(),
+        maintained: match[3] === 'true',
+      })
+    )
 
-    expect(registered).toHaveLength(WIDGET_CELLS.length)
-    for (const entry of registered) {
-      expect(WIDGET_CELLS).toContain(entry.cells as (typeof WIDGET_CELLS)[number])
-    }
+    expect(registered.map((entry) => entry.cells)).toEqual([...WIDGET_CELLS])
+    // 维护档 = 会进拾取器的那两档；多一个会多一条、少一个会少一条。
+    expect(registered.filter((entry) => entry.maintained).map((entry) => entry.cells)).toEqual([...MAINTAINED_CELLS])
     // 每档都要有 receiver：类名一律以 Cell<尺寸> 结尾，唯独 4×3 沿用旧类名（改名会让既有实例失效）。
     for (const cells of WIDGET_CELLS) {
       const entry = registered.find((candidate) => candidate.cells === cells)
@@ -151,33 +169,38 @@ describe('五档 provider 的跨层一致性', () => {
     }
   })
 
-  it('每档的元数据文件声明的格子数与预设一致，且各指向自己的预览', () => {
-    for (const preset of WIDGET_PIN_PRESETS) {
-      const cells = preset.id.replace('cell_', '').replace('x', 'x')
+  it('每档的元数据文件声明的格子数与注册表一致，且各指向自己的预览', () => {
+    for (const cells of WIDGET_CELLS) {
       const [width, height] = cells.split('x')
       const info = readFileSync(join(REPO_ROOT, `android/app/src/main/res/xml/widget_info_${cells}.xml`), 'utf8')
 
-      expect(info, preset.id).toContain(`android:targetCellWidth="${width}"`)
-      expect(info, preset.id).toContain(`android:targetCellHeight="${height}"`)
-      expect(info, preset.id).toContain(`@layout/widget_preview_${cells}`)
-      expect(info, preset.id).toContain(`@drawable/widget_preview_${cells}`)
-      // 卡片上写的格子必须与元数据一致（"卡片写着 4×3、拾取器里是 2×3" 是用户能直接看到的谎）。
-      expect(preset.cell, preset.id).toBe(`${width}×${height}`)
+      expect(info, cells).toContain(`android:targetCellWidth="${width}"`)
+      expect(info, cells).toContain(`android:targetCellHeight="${height}"`)
+      expect(info, cells).toContain(`@layout/widget_preview_${cells}`)
+      expect(info, cells).toContain(`@drawable/widget_preview_${cells}`)
+      // 维护档的面板卡片上写着格子数，它必须与元数据一致（"卡片写着 3×2、拾取器里是 2×2" 是用户能直接看到的谎）。
+      const preset = WIDGET_PIN_PRESETS.find((candidate) => candidate.id === `cell_${cells}`)
+      if (preset) {
+        expect(preset.cell, cells).toBe(`${width}×${height}`)
+      }
     }
   })
-
-  it('provider 标签与面板卡片名逐字一致', () => {
+  it('维护档的拾取器标签就是「课表」，面板卡片名负责区分摆法', () => {
     const strings = readFileSync(join(REPO_ROOT, 'android/app/src/main/res/values/strings.xml'), 'utf8')
 
     for (const preset of WIDGET_PIN_PRESETS) {
       const cells = preset.id.replace('cell_', '')
       const label = (strings.match(new RegExp(`<string name="widget_label_${cells}">([^<]+)</string>`)) || [])[1]
-      // 标签="课表 · " + 卡片名：面板与拾取器里必须叫同一个名字，否则用户对不上。
-      expect(label, preset.id).toBe(`课表 · ${preset.name}`)
+      // 拾取器里两档**同名**（2026-09-21 用户要求：名字不带样式也不带尺寸）—— launcher 会在标签下方
+      // 自己打出它算出的跨度，用户按跨度区分。因此这里的契约是「标签恒为课表」，而不是「标签=课表 · 卡片名」。
+      expect(label, preset.id).toBe('课表')
     }
+    // 面板卡片必须自己可区分（两档同名会让用户不知道点哪一张）。
+    const names = WIDGET_PIN_PRESETS.map((preset) => preset.name)
+    expect(new Set(names).size).toBe(names.length)
   })
 
-  it('清单注册了五条 provider，且旧类名仍在', () => {
+  it('清单注册了七条 provider，且旧类名仍在', () => {
     const manifest = readFileSync(join(REPO_ROOT, 'android/app/src/main/AndroidManifest.xml'), 'utf8')
 
     expect([...manifest.matchAll(/android.appwidget.action.APPWIDGET_UPDATE/g)]).toHaveLength(WIDGET_CELLS.length)

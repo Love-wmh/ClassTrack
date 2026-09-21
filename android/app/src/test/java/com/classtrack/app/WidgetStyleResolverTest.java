@@ -7,11 +7,12 @@ import static org.junit.Assert.assertSame;
 import org.junit.Test;
 
 /**
- * 「存储配置 + 当前尺寸」→「可直接渲染的配置」。
+ * 「存储配置 + 该实例的 provider」→「可直接渲染的配置」。
  *
- * <p>这是产品 2026-09-21 口径变更（「改尺寸后要匹配上」）的落点，四条优先级缺一不可：
- * **显式选择赢**、**AUTO 按尺寸匹配**、**尺寸不可用时退回 provider**、**都没有时给最小档**。
- * 另外「已上完策略」不参与自动匹配 —— 它是用户独立的显式选择。
+ * <p>2026-09-21 口径变更后只剩三级：
+ * **显式选择赢**、**AUTO 用 provider 预设的样式**、**都没有时给默认**。
+ * 「按尺寸自动匹配」那条路径已删除（连同 `WidgetPreset#match`），因此这里不再有尺寸入参。
+ * 另外「已上完策略」不参与解析 —— 它是用户独立的显式选择。
  */
 public class WidgetStyleResolverTest {
 
@@ -20,13 +21,13 @@ public class WidgetStyleResolverTest {
                 WidgetStyleConfig.FinishedPolicy.HIDE);
     }
 
-    /** 手动优先：用户显式选过样式，尺寸再怎么变都不改它。 */
+    /** 手动优先：用户显式选过样式，provider 与尺寸都不再影响它。 */
     @Test
     public void explicitStyleAlwaysWins() {
         WidgetStyleConfig explicit = new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.DAY_LIST,
                 WidgetStyleConfig.FinishedPolicy.COLLAPSE, WidgetStyleConfig.WideLayout.DENSE);
 
-        WidgetStyleConfig resolved = WidgetStyleResolver.effective(explicit, 1142f, 419f,
+        WidgetStyleConfig resolved = WidgetStyleResolver.effective(explicit,
                 WidgetPreset.parse(WidgetPreset.ID_CELL_6X3));
 
         assertSame("显式配置必须原样返回，不复制也不改写", explicit, resolved);
@@ -34,54 +35,47 @@ public class WidgetStyleResolverTest {
         assertEquals(WidgetStyleConfig.WideLayout.DENSE, resolved.getWideLayout());
     }
 
-    /** AUTO：样式与宽格表现都来自当前尺寸匹配到的那一档。 */
+    /** AUTO（历史存储值 / 从未配置）：样式与宽格表现都来自该实例 provider 那档预设。 */
     @Test
-    public void autoFollowsTheMatchedPreset() {
-        WidgetStyleConfig compact = WidgetStyleResolver.effective(auto(), 179f, 210f, null);
-        assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, compact.getLayoutStyle());
-        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, compact.getWideLayout());
+    public void autoFollowsTheProviderPreset() {
+        WidgetStyleConfig threeTwo = WidgetStyleResolver.effective(auto(),
+                WidgetPreset.parse(WidgetPreset.ID_CELL_3X2));
+        assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, threeTwo.getLayoutStyle());
+        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, threeTwo.getWideLayout());
 
-        WidgetStyleConfig tablet = WidgetStyleResolver.effective(auto(), 1142f, 419f, null);
-        assertEquals(WidgetStyleConfig.WideLayout.TWO_COLUMN, tablet.getWideLayout());
+        // 为什么这条最重要：1×2 的默认样式是「紧凑」。落错档就等于卡片名与实物不符。
+        WidgetStyleConfig oneTwo = WidgetStyleResolver.effective(auto(),
+                WidgetPreset.parse(WidgetPreset.ID_CELL_1X2));
+        assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, oneTwo.getLayoutStyle());
 
-        // 同一个实例被拖大：4×3 → 6×3，宽格表现随之变化（这就是「改尺寸后要匹配上」）。
+        // 收起档同样按预设解析：桌面上遗留的 4×3 实例仍要拿到它原本的（双栏能力）表现。
         assertEquals(WidgetStyleConfig.WideLayout.TWO_COLUMN,
-                WidgetStyleResolver.effective(auto(), 373f, 321f, null).getWideLayout());
-        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE,
-                WidgetStyleResolver.effective(auto(), 179f, 315f, null).getWideLayout());
+                WidgetStyleResolver.effective(auto(), WidgetPreset.parse(WidgetPreset.ID_CELL_4X3)).getWideLayout());
     }
 
-    /** 「已上完策略」是用户独立的显式选择，自动匹配不许覆盖它。 */
+    /** 「已上完策略」是用户独立的显式选择，解析不许覆盖它。 */
     @Test
-    public void finishedPolicySurvivesAutoMatching() {
+    public void finishedPolicySurvivesResolution() {
         assertEquals(WidgetStyleConfig.FinishedPolicy.HIDE,
-                WidgetStyleResolver.effective(auto(), 179f, 210f, null).getFinishedPolicy());
+                WidgetStyleResolver.effective(auto(), WidgetPreset.parse(WidgetPreset.ID_CELL_3X2)).getFinishedPolicy());
     }
 
-    /** 尺寸不可用（还没测量到 / 异常值）时退回该实例 provider 那档，而不是随手给一档。 */
+    /** 连 provider 都不知道（实例刚被删除 / 外部组件）时给默认配置，而不是留「未定义」。 */
     @Test
-    public void unusableSizeFallsBackToTheProviderPreset() {
-        WidgetPreset tablet = WidgetPreset.parse(WidgetPreset.ID_CELL_6X3);
-
-        assertEquals(WidgetStyleConfig.WideLayout.TWO_COLUMN,
-                WidgetStyleResolver.effective(auto(), 0f, 0f, tablet).getWideLayout());
-        assertEquals(WidgetStyleConfig.WideLayout.TWO_COLUMN,
-                WidgetStyleResolver.effective(auto(), -5f, 200f, tablet).getWideLayout());
-    }
-
-    /** 连 provider 都不知道时给最小档：宁可给一个确定的形态，也不留"未定义"。 */
-    @Test
-    public void noSizeAndNoProviderFallsBackToTheSmallestPreset() {
-        WidgetStyleConfig resolved = WidgetStyleResolver.effective(auto(), 0f, 0f, null);
+    public void unknownProviderFallsBackToDefaults() {
+        WidgetStyleConfig resolved = WidgetStyleResolver.effective(auto(), null);
 
         assertNotNull(resolved);
-        assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, resolved.getLayoutStyle());
+        assertEquals(WidgetStyleConfig.DEFAULT_LAYOUT_STYLE, resolved.getLayoutStyle());
+        assertEquals(WidgetStyleConfig.DEFAULT_WIDE_LAYOUT, resolved.getWideLayout());
+        // 用户的「已上完」选择仍要保留。
+        assertEquals(WidgetStyleConfig.FinishedPolicy.HIDE, resolved.getFinishedPolicy());
     }
 
     /** `null` 配置（读取失败）也必须有确定结果。 */
     @Test
     public void nullConfigIsTreatedAsDefaults() {
-        WidgetStyleConfig resolved = WidgetStyleResolver.effective(null, 373f, 321f, null);
+        WidgetStyleConfig resolved = WidgetStyleResolver.effective(null, null);
 
         assertNotNull(resolved);
         assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, resolved.getLayoutStyle());
@@ -91,8 +85,9 @@ public class WidgetStyleResolverTest {
     @Test
     public void resolvedConfigIsNeverAuto() {
         for (WidgetPreset preset : WidgetPreset.all()) {
-            WidgetStyleConfig resolved = WidgetStyleResolver.effective(auto(), 373f, 321f, preset);
-            assertEquals(preset.getId(), WidgetStyleConfig.LayoutStyle.NEXT_UP, resolved.getLayoutStyle());
+            WidgetStyleConfig resolved = WidgetStyleResolver.effective(auto(), preset);
+            assertEquals(preset.getId(), preset.getLayoutStyle(), resolved.getLayoutStyle());
         }
+        assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, WidgetStyleResolver.effective(auto(), null).getLayoutStyle());
     }
 }

@@ -20,7 +20,7 @@ describe('桌面小工具插件封装', () => {
   })
 
   it('Web 上「添加到桌面」如实返回不支持，而不是假装成功', async () => {
-    expect(await widgetSnapshotPlugin.requestPinWidget({ preset: 'cell_4x3' })).toEqual({
+    expect(await widgetSnapshotPlugin.requestPinWidget({ preset: 'cell_3x2' })).toEqual({
       supported: false,
       requested: false,
     })

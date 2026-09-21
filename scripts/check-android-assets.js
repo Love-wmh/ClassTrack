@@ -15,15 +15,22 @@ const ROUTES_SOURCE = join(ROOT_DIR, 'app', 'routes.ts')
 const MAX_UNZIP_OUTPUT_BYTES = 32 * 1024 * 1024
 
 // 小工具 provider 的期望清单：格子数 → 元数据文件里的 targetCellWidth/Height。
-// 五档各一个 provider 是 2026-09-21 的产品决定（拾取器里按尺寸选），任何一处写歪都会让
+// 七档各一个 provider（2026-09-21 维护面收缩：两档维护 + 五档收起），任何一处写歪都会让
 // "某个尺寸放下去是错的样式" 这种极难复现的问题流出去，所以在这里与清单一起断言。
+// 顺序 = WidgetProviderRegistry 的声明顺序（维护档在前）。
 const WIDGET_PROVIDER_CELLS = {
+  '3x2': [3, 2],
+  '1x2': [1, 2],
+  '4x3': [4, 3],
   '2x2': [2, 2],
   '2x3': [2, 3],
   '4x2': [4, 2],
-  '4x3': [4, 3],
   '6x3': [6, 3],
 }
+
+// 维护档：只有这两档会出现在系统拾取器里（其余档的 receiver 在应用启动时被禁用）。
+// 必须与注册表里的 `maintained` 标记严格对应 —— 多一档会在拾取器里多一条，少一档会少一条。
+const MAINTAINED_WIDGET_CELLS = ['3x2', '1x2']
 
 function sha256File(filePath) {
   return createHash('sha256').update(readAssetFile(filePath)).digest('hex')
@@ -152,8 +159,41 @@ export function assertWidgetProviders({
     throw new Error('AndroidManifest.xml lost the legacy ClassTrackWidgetReceiver (existing widgets would break)')
   }
   const receiverCount = (manifest.match(/android.appwidget.action.APPWIDGET_UPDATE/g) || []).length
-  if (receiverCount !== 5) {
-    throw new Error(`manifest declares ${receiverCount} APPWIDGET_UPDATE receivers, expected 5`)
+  if (receiverCount !== 7) {
+    throw new Error(`manifest declares ${receiverCount} APPWIDGET_UPDATE receivers, expected 7`)
+  }
+
+  // 注册表是「哪些档是维护档」的唯一真相源：启动时的禁用清单由它推导，所以这里断言三件事 ——
+  // ①条目顺序与元数据清单一致 ②维护档恰好是那两档 ③每条非维护条目都真的在清单里。
+  // ③ 很关键：漏一条就不会被禁用，拾取器里就会多出一条，而漏掉的往往是改名或新增档位时忘了改标记。
+  const registry = readFileSync(join(ROOT_DIR, 'android/app/src/main/java/com/classtrack/app/WidgetProviderRegistry.java'), 'utf8')
+  const registered = [...registry.matchAll(/new Entry\(PACKAGE \+ "(\w+)", WidgetPreset\.ID_CELL_(\w+), (true|false)\)/g)].map((match) => ({
+    receiver: match[1],
+    cells: match[2].toLowerCase(),
+    maintained: match[3] === 'true',
+  }))
+  const expectedCells = Object.keys(WIDGET_PROVIDER_CELLS)
+  if (registered.map((entry) => entry.cells).join(',') !== expectedCells.join(',')) {
+    throw new Error(
+      `WidgetProviderRegistry order [${registered.map((entry) => entry.cells).join(', ')}] != expected [${expectedCells.join(', ')}]`
+    )
+  }
+  const maintained = registered.filter((entry) => entry.maintained).map((entry) => entry.cells)
+  if (maintained.join(',') !== MAINTAINED_WIDGET_CELLS.join(',')) {
+    throw new Error(
+      `WidgetProviderRegistry marks [${maintained.join(', ')}] as maintained, expected [${MAINTAINED_WIDGET_CELLS.join(', ')}]`
+    )
+  }
+  for (const entry of registered.filter((candidate) => !candidate.maintained)) {
+    if (!manifest.includes(`.widget.${entry.receiver}`)) {
+      throw new Error(`retired provider ${entry.receiver} is missing from AndroidManifest.xml (its instances could never be found again)`)
+    }
+  }
+
+  // 「判决正确」与「判决真的会被执行」是两件事：没有这个调用点，注册表再正确，拾取器里也还是七条。
+  const mainActivity = readFileSync(join(ROOT_DIR, 'android/app/src/main/java/com/classtrack/app/MainActivity.java'), 'utf8')
+  if (!mainActivity.includes('WidgetProviderScopeGate.apply(')) {
+    throw new Error('MainActivity no longer converges the widget provider scope (WidgetProviderScopeGate.apply is gone)')
   }
 }
 

@@ -57,7 +57,11 @@
         </provider>
 
         <!--
-          桌面小工具的五个 provider（2×2 / 2×3 / 4×2 / 4×3 / 6×3），每个尺寸一个。
+          桌面小工具的七个 provider（**两档维护 + 五档收起**），每个尺寸一个：
+          维护档 = 3×2「接下来」与 1×2「紧凑」—— 只有这两个会出现在系统拾取器里；
+          收起档 = 2×2 / 2×3 / 4×2 / 4×3 / 6×3 —— 应用启动时被 `WidgetProviderScopeGate` 禁用（组件
+          禁用即从拾取器消失），但**类、清单与元数据一律保留**：桌面上可能还留着这些尺寸的实例，
+          而配置页的归属校验（`WidgetProviders.isOurs`）也必须继续认它们。
 
           为什么按尺寸注册多个：pin 的尺寸提示（OPTION_APPWIDGET_MIN_WIDTH/HEIGHT）会被 launcher 忽略
           （实测 Launcher3 只认 provider 自己的 targetCellWidth/Height），而**拾取器里的尺寸标签来自
@@ -107,6 +111,30 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info_2x3" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.Cell3x2WidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_3x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_3x2" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.Cell1x2WidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_1x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_1x2" />
         </receiver>
 
         <receiver

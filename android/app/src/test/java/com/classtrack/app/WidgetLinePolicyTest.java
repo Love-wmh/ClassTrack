@@ -32,16 +32,72 @@ public class WidgetLinePolicyTest {
     private static final WidgetStyleConfig.FinishedPolicy HIDE = WidgetStyleConfig.FinishedPolicy.HIDE;
     private static final WidgetStyleConfig.FinishedPolicy COLLAPSE = WidgetStyleConfig.FinishedPolicy.COLLAPSE;
 
-    /** 「紧凑」样式永远只有 hero + 计数行，三种策略与三种「大格子表现」都不改变它。 */
+    /**
+     * 「紧凑」= 主课 + 计数 + **主课之后**的课（2026-09-21 用户要求：1×2 下方原来是一整块空白）。
+     *
+     * <p>三种「已上完」策略与三种「大格子表现」都不改变这个序列：已上完的行排在主课之前，天然被挡在外面，
+     * 课程行增强（节次列）对紧凑样式也无效果。
+     */
     @Test
-    public void compactStyleNeverGrowsAList() {
+    public void compactListsTheClassesAfterTheHero() {
         for (WidgetStyleConfig.FinishedPolicy policy : WidgetStyleConfig.FinishedPolicy.values()) {
             for (WidgetStyleConfig.WideLayout wide : WidgetStyleConfig.WideLayout.values()) {
                 WidgetBodyPlan plan = body(COMPACT, policy, wide, todayItems(), Collections.<WidgetDayItem>emptyList());
 
-                assertKinds(plan, WidgetBodyLine.Kind.HERO, WidgetBodyLine.Kind.COUNTER);
+                assertKinds(plan, HERO, COUNTER, COURSE);
+                assertEquals("紧凑的 hero 课名恒为一行", 1, plan.getLines().get(0).getTitleMaxLines());
+                for (WidgetBodyLine line : plan.getLines()) {
+                    if (line.getKind() != COURSE) continue;
+                    assertEquals("紧凑只列主课之后的课", "课程还没上", line.getItem().getOccurrence().getName());
+                    assertFalse("节次列只属于「信息加密」", line.isShowSections());
+                }
             }
         }
+    }
+
+    /**
+     * 「紧凑」的课程行用窄卡形态（课名一行、「时间 · 教室」一行）。
+     *
+     * <p>1×2 的格宽只有 82~105dp：时间一旦独占一列，课名就只剩三十几 dp，四个字的课名会被裁成
+     * 「线性代…」；而教室挤在同一行右侧又会与课名重叠。形态由判决层给出，渲染层只照着画。
+     */
+    @Test
+    public void compactRowsUseTheNarrowRowForm() {
+        assertEquals(WidgetBodyPlan.RowForm.COMPACT,
+                body(COMPACT, SHOW_DIM, ADAPTIVE, todayItems(), empty()).getRowForm());
+        assertEquals(WidgetBodyPlan.RowForm.STANDARD,
+                body(NEXT_UP, SHOW_DIM, ADAPTIVE, todayItems(), empty()).getRowForm());
+        assertEquals("双栏的行形态由渲染侧显式指定，判决层保持 STANDARD",
+                WidgetBodyPlan.RowForm.STANDARD,
+                dualBody(NEXT_UP, SHOW_DIM, ADAPTIVE, todayItems(), empty()).getRowForm());
+    }
+
+    /** 今天没有正在上的课时主课就是第一节还没上的课，紧凑样式同样只列它之后的课。 */
+    @Test
+    public void compactSkipsTheHeroItselfWhenNothingIsInProgress() {
+        List<WidgetDayItem> noInProgress = items(item("还没上一", UPCOMING, "周日"), item("还没上二", UPCOMING, "周日"));
+
+        WidgetBodyPlan plan = body(COMPACT, SHOW_DIM, ADAPTIVE, noInProgress, empty());
+
+        assertKinds(plan, HERO, COUNTER, COURSE);
+        assertEquals("课程还没上二", plan.getLines().get(2).getItem().getOccurrence().getName());
+    }
+
+    /** 今天没课、列明天时：主课是明天第一节，紧凑样式把明天其余的课列在它下面。 */
+    @Test
+    public void compactListsTheRestOfTomorrowWhenTodayHasNoClasses() {
+        WidgetBodyPlan plan = body(COMPACT, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems());
+
+        assertKinds(plan, HERO, COUNTER, COURSE);
+        assertEquals("课程明天二", plan.getLines().get(2).getItem().getOccurrence().getName());
+    }
+
+    /** 今天全部已上完（主课落到别的日子）：紧凑样式一行课都不补，只留主课与计数。 */
+    @Test
+    public void compactAddsNoRowsWhenEveryRowIsFinished() {
+        List<WidgetDayItem> allFinished = items(item("已上完", FINISHED, "周日"));
+
+        assertKinds(body(COMPACT, SHOW_DIM, ADAPTIVE, allFinished, empty()), HERO, COUNTER);
     }
 
     /** 迁移后的存量行为：三种样式 × 三种策略各自该画哪些行。 */

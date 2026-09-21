@@ -10,7 +10,7 @@
   生成依据：
   - 标定尺寸 179×210dp → `WidgetLayoutMetrics` 的 scale = 1.00、
     padScale = 1.00（W_REF/H_REF = 179×210，下界 1）；
-  - 默认样式：「极简」= 只画 hero + 「今天还有 N 节」（没有课程列表）。
+  - 默认样式：「紧凑」= 只画 hero + 「今天还有 N 节」（没有课程列表）。
 
   **什么时候必须重跑本脚本**：改了 `WidgetLayoutMetrics` 的基础常量/参考格/上下界、改了该档的默认样式
   或行项形态、改了 `WidgetProviderRegistry` 里的标定尺寸。
@@ -37,6 +37,8 @@
         android:orientation="horizontal">
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -45,6 +47,8 @@
             android:textSize="11sp" />
 
         <TextView
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingStart="8dp"
@@ -65,16 +69,65 @@
         android:textStyle="bold" />
 
     <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/widget_preview_hero_time"
+        android:text="@string/widget_preview_hero_time_range"
         android:textColor="@color/widget_text_secondary"
         android:textSize="13sp" />
+
     <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_preview_room_3"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="11sp" />
+    <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:text="@string/widget_preview_counter"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="11sp" />
+    <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/widget_preview_name_4"
+        android:textColor="@color/widget_text_primary"
+        android:textSize="13sp" />
+
+    <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_preview_meta_4"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="11sp" />
+    <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/widget_preview_name_5"
+        android:textColor="@color/widget_text_primary"
+        android:textSize="13sp" />
+
+    <TextView
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_preview_meta_5"
         android:textColor="@color/widget_text_muted"
         android:textSize="11sp" />
 </LinearLayout>

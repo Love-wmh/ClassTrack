@@ -12,12 +12,11 @@ public final class WidgetStyleConfig {
     /** 主视图样式。 */
     public enum LayoutStyle {
         /**
-         * 自动（按尺寸）：**未显式选择**时的状态，由当前格子尺寸匹配最合适的一档预设
-         * （见 {@link WidgetStyleResolver} 与 {@link WidgetPreset#match}）。
+         * 自动（按尺寸）：**历史口径**留下的状态（2026-09-21 起不再是默认值，也不再出现在配置页）。
+         * （见 {@link WidgetStyleResolver}：解析成该实例 provider 预设的样式）。
          *
-         * <p>为什么要有这一档：产品要求「改尺寸后要匹配上」——用户把格子拖大/拖小，样式与行项形态
-         * 应当跟着变，而不是永远停在放下那一刻的形态。用户在配置页显式选了某一种样式后就不再自动变
-         * （手动优先）。
+         * <p>为什么保留而不删掉：历史实例存过 `"auto"`，而配置页已不再提供这一档 —— 保留它才能让那些
+         * 存储值继续解析出一个可渲染的配置，而不是落进「未知值 → 默认」的分支。
          */
         AUTO,
         /** 全天课表：汇总行 + 今天一整天的课（正在上的高亮）。 */
@@ -60,13 +59,16 @@ public final class WidgetStyleConfig {
     public static final String KEY_FINISHED_POLICY = "finished_policy";
 
     /**
-     * 未配置过的实例使用「自动（按尺寸）」。
+     * 未配置过的实例使用「接下来」。
      *
-     * <p>2026-09-21 由产品负责人要求「改尺寸后要匹配上」，因此默认值从写死的「接下来」改成自动匹配：
-     * 一个 2×3 的格子自动用手机档的形态、拖到 6×3 就换成宽屏档的形态。显式选择仍然永远优先
-     * （配置页选了具体样式就不再自动变）。
+     * <p>2026-09-21 口径变更（维护面收缩）：默认值从「自动（按尺寸）」改回「接下来」。
+     * 原因是「按尺寸自动匹配样式」那条路径被删除（见 design D3）—— 现在样式由用户显式选择、
+     * 或该实例 provider 那档预设的样式决定，尺寸只影响度量。
+     *
+     * <p>`AUTO` 仍然可解析（历史实例存过 `"auto"`），只是不再作为默认值，也不再出现在配置页 UI 上；
+     * 它读出来会被 {@link WidgetStyleResolver} 解析成 provider 预设的样式。
      */
-    public static final LayoutStyle DEFAULT_LAYOUT_STYLE = LayoutStyle.AUTO;
+    public static final LayoutStyle DEFAULT_LAYOUT_STYLE = LayoutStyle.NEXT_UP;
 
     /** 未配置过的实例使用「已上完灰显」。 */
     public static final FinishedPolicy DEFAULT_FINISHED_POLICY = FinishedPolicy.SHOW_DIM;
@@ -81,6 +83,15 @@ public final class WidgetStyleConfig {
     public static final LayoutStyle STYLE_WITHOUT_LIST = LayoutStyle.COMPACT;
 
     private static final String VALUE_AUTO = "auto";
+
+    /**
+     * 「未显式选择」的**存储值**（`"auto"`），公开给读取方用。
+     *
+     *     <p>为什么要暴露它：`WidgetStyleState.read` 需要区分「这个键从没被写过」与「用户选了某个样式」。
+     *     前者应当回落到该实例 provider 那档预设的样式（1×2 → 紧凑），后者原样生效 —— 而 `parse(null, ...)`
+     *     会把「没写过」直接变成 {@link #DEFAULT_LAYOUT_STYLE}，那样 provider 预设就永远生效不了。
+     */
+    public static final String STORAGE_VALUE_AUTO = VALUE_AUTO;
     private static final String VALUE_DAY_LIST = "day_list";
     private static final String VALUE_NEXT_UP = "next_up";
     private static final String VALUE_COMPACT = "compact";
@@ -219,9 +230,24 @@ public final class WidgetStyleConfig {
     }
 
     public boolean isWideLayoutEffective() {
-        // 「自动（按尺寸）」时宽格表现由匹配到的预设决定（见 WidgetStyleResolver），用户在这一组里
-        // 选的值不会被使用 —— 因此如实把它算作"不生效"，配置页会灰显并说明，而不是默默无视点击。
+        // 「紧凑」不显示列表，宽格表现对它天然无效。
+        // 注意：「自动（按尺寸）」已不再是默认值、也不再出现在 UI 上，但历史实例仍可能存着 `auto`，
+        // 那种情况下宽格表现由解析出的 provider 预设决定 —— 同样算「不生效」，配置页会灰显并说明。
         return layoutStyle != STYLE_WITHOUT_LIST && layoutStyle != LayoutStyle.AUTO;
+    }
+
+    /**
+     * 这份配置是否需要「更多设置」二级区来承载。
+     *
+     * <p>配置页一级只留「接下来」（核心档），其余样式与两组选项收进默认折叠的二级区；
+     * 但**默认折叠不能让已有配置看起来丢了** —— 只要实例的配置落在二级区里，进页面就要自动展开。
+     *
+     * @return 样式不是「接下来」，或「已上完」「大格子表现」不是默认值时返回 `true`。
+     */
+    public boolean needsAdvancedSection() {
+        return layoutStyle != LayoutStyle.NEXT_UP
+                || finishedPolicy != DEFAULT_FINISHED_POLICY
+                || wideLayout != DEFAULT_WIDE_LAYOUT;
     }
     public LayoutStyle getLayoutStyle() {
         return layoutStyle;

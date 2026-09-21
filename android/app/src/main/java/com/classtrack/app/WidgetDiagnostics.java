@@ -105,6 +105,19 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 记录一次「维护面收敛」（禁用收起档 provider）。
+     *
+     *     <p>只输出两个计数，没有任何用户数据：`retired` = 本次遍历到的收起档数量（期望等于 5），
+     *     `written` = 真正写了组件状态的数量（收敛后重复启动应当恒为 0）。
+     *
+     * @param retired 遍历到的收起档数量。
+     * @param written 实际写入的组件数量。
+     */
+    public static void scopeConverged(int retired, int written) {
+        Log.i(TAG, "phase=scope_converged retired=" + Math.max(0, retired) + " written=" + Math.max(0, written));
+    }
+
+    /**
      * 记录一次渲染用到的排版度量。
      *
      * <p>`scale` 是「度量相对基准放大到几成」，以百分数整数表示（131 = 1.31 倍），`dual` 表示这一帧
