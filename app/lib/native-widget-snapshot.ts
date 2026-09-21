@@ -46,6 +46,29 @@ export type WidgetExactAlarmStatus = {
   exact: boolean
 }
 
+/**
+ * 预设标识。
+ *
+ * **必须与原生 `WidgetPreset.java` 的白名单逐字一致** —— 原生侧只认这几个字符串，
+ * 拼错不会报错、只会静默回退成「未选预设」。这条跨层契约由
+ * `app/features/schedule/widgetPinPresets.test.ts` 用同一份字面量守住。
+ */
+export type WidgetPresetId = 'phone_minimal' | 'phone_standard' | 'phone_wide' | 'tablet_dual' | 'tablet_wide'
+
+/**
+ * 「添加到桌面」的结果。
+ *
+ * 只有两个布尔，没有错误码：`supported=false` 表示系统/launcher 不支持一键添加（走手动说明），
+ * `requested=false` 表示支持但这次没发起（例如用户在系统弹窗上取消了）。两者都不是异常，
+ * 因此不用 reject 表达，调用方按值分支更省心。
+ */
+export type WidgetPinResult = {
+  /** 系统/launcher 是否支持一键添加。 */
+  supported: boolean
+  /** 是否真的发起了放置请求。 */
+  requested: boolean
+}
+
 /** 跳转系统设置页的结果。 */
 export type WidgetExactAlarmRequestResult = {
   /** 是否真的拉起了系统设置页。 */
@@ -63,6 +86,8 @@ export interface WidgetSnapshotPlugin {
   getExactAlarmStatus(): Promise<WidgetExactAlarmStatus>
   /** 跳转系统「闹钟与提醒」设置页；不在应用内自行请求或伪造授权。 */
   requestExactAlarmPermission(): Promise<WidgetExactAlarmRequestResult>
+  /** 请求 launcher 按预设放置一个小工具实例（Android 8+，且 launcher 支持时）。 */
+  requestPinWidget(options: { preset: WidgetPresetId }): Promise<WidgetPinResult>
   /** 订阅原生事件；原生侧在 `handleOnResume()` 中发出 `resumed`。 */
   addListener(eventName: 'resumed', listenerFunc: () => void): Promise<PluginListenerHandle>
 }
@@ -88,6 +113,11 @@ class WidgetSnapshotWeb extends WebPlugin implements WidgetSnapshotPlugin {
 
   async requestExactAlarmPermission(): Promise<WidgetExactAlarmRequestResult> {
     return { launched: false, exact: false }
+  }
+
+  async requestPinWidget(): Promise<WidgetPinResult> {
+    // 浏览器 / PWA / iOS 上不存在「桌面」，如实返回不支持，由调用方展示手动添加说明。
+    return { supported: false, requested: false }
   }
 }
 

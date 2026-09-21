@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/prd.md", "reason": "验收标准 A1..A9 与 R1..R6/C1..C3 的准确措辞，检查必须逐项核对，不得把未验证项当已完成"}
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/design.md", "reason": "逐条核对 D1..D10 是否真的落地：连续缩放（无档位、无阈值分支）、行判决在 Java、第三键容错、双栏判据与回退、日志白名单"}
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/implement.md", "reason": "检查各阶段完成判据是否达成、回滚点是否保留、验证矩阵是否漏项"}
+{"file": ".trellis/tasks/09-20-android-widget-adaptive-space/env-setup.md", "reason": "复核取证步骤可复现（AVD 配置、日志 phase、截图换算），并确认已知限制被如实记录"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "检查契约是否被静默放宽：点击必须同时挂在列表容器与每个 item、日志不得含课程内容、预览与桌面必须一致、initialLayout 只能用白名单类"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁与禁止模式的准确要求，判断是否存在为通过门禁而放宽规则（例如 eslint-disable、跳过测试）"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "确认本次没有在原生侧另起一套日期/周次推导，也没有把「信息加密」扩张成跨层快照契约改动"}
+{"file": ".trellis/tasks/archive/2026-09/09-19-android-home-widget/design-appendix.md", "reason": "上一任务的一致性检查表与 Rollback 口径；本次修订 D16 时必须确认没有把 D11/D12 的交付口径与安全边界一起改坏"}

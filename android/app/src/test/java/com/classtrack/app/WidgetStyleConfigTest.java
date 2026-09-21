@@ -70,6 +70,50 @@ public class WidgetStyleConfigTest {
         }
     }
 
+    @Test
+    public void wideLayoutDefaultsToAdaptiveAndIsTolerantOfDirtyValues() {
+        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, WidgetStyleConfig.defaults().getWideLayout());
+        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, WidgetStyleConfig.parseWideLayout(null));
+        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, WidgetStyleConfig.parseWideLayout(""));
+        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, WidgetStyleConfig.parseWideLayout("no_such_value"));
+        assertEquals(WidgetStyleConfig.WideLayout.DENSE, WidgetStyleConfig.parseWideLayout("  Dense "));
+        assertEquals(WidgetStyleConfig.WideLayout.TWO_COLUMN, WidgetStyleConfig.parseWideLayout("TWO_COLUMN"));
+        assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE,
+                new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP, null, null).getWideLayout());
+    }
+
+    /** 三个存储值都必须能原样解析回来，否则用户的选择会在下次渲染时被静默丢弃。 */
+    @Test
+    public void wideLayoutStorageValueRoundTrips() {
+        for (WidgetStyleConfig.WideLayout wide : WidgetStyleConfig.WideLayout.values()) {
+            WidgetStyleConfig original = new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP,
+                    WidgetStyleConfig.FinishedPolicy.SHOW_DIM, wide);
+            WidgetStyleConfig restored = WidgetStyleConfig.parse(original.layoutStyleStorageValue(),
+                    original.finishedPolicyStorageValue(), original.wideLayoutStorageValue());
+
+            assertEquals("大格子表现往返后必须一致：" + wide, wide, restored.getWideLayout());
+        }
+    }
+
+    /** 「紧凑」样式不显示课表，因此课程行增强与双栏对它都无效果（配置页据此灰显）。 */
+    @Test
+    public void wideLayoutOnlyAppliesToStylesThatRenderAList() {
+        assertFalse(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.COMPACT, WidgetStyleConfig.FinishedPolicy.SHOW_DIM,
+                WidgetStyleConfig.WideLayout.DENSE).isWideLayoutEffective());
+        assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.DAY_LIST, WidgetStyleConfig.FinishedPolicy.SHOW_DIM,
+                WidgetStyleConfig.WideLayout.DENSE).isWideLayoutEffective());
+        assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP, WidgetStyleConfig.FinishedPolicy.SHOW_DIM,
+                WidgetStyleConfig.WideLayout.TWO_COLUMN).isWideLayoutEffective());
+    }
+
+
+    /**
+     * @return 「大格子表现」这个选项对当前样式是否有效。
+     *
+     * <p>与「已上完策略」同源：「紧凑」样式不显示课表，课程行增强与双栏都无从生效。
+     *     配置页按同一判据灰显，渲染层也按同一判据忽略它，两处不会打架。
+     */
+
     /**
      * 只有「紧凑」样式不显示列表，因此「已上完的课」对它无效果。
      * 配置页要据此提示用户，不能让用户以为设置坏了。

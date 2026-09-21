@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 8
-- **Last Active**: 2026-09-20
+- **Total Sessions**: 10
+- **Last Active**: 2026-09-21
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~259 | Active |
+| `journal-1.md` | ~338 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,8 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-09-21 | 小工具预设尺寸与前台「添加到桌面」入口：字号随尺寸放大 + 双栏静态富内容 + pin 流程 | `f147d9f`, `d3f086c`, `8476e31`, `028cb44` | `feat/widget-adaptive-space` |
+| 9 | 2026-09-20 | 小工具大格子适配：双栏左卡吃满纵向 + 修掉配置页快照冲突崩溃 | `471af70` | `feat/widget-adaptive-space` |
 | 8 | 2026-09-20 | 桌面小工具真机回测收尾：缩放下限、最小尺寸布局与拖放放置 | `dca7ae4`, `a7f808e` | `master` |
 | 7 | 2026-09-20 | 手机端课表整周铺满与双指缩放（含 Android 模拟器真机验收） | `86fbdb0`, `f8437dc`, `3bb1474`, `32f7700`, `39df123`, `045d8d7` | `feat/mobile-schedule-week-grid` |
 | 6 | 2026-09-19 | Fix native shell 404 white screen and verify on emulator | `a2fccfd` | `fix/native-import-white-screen-ui` |

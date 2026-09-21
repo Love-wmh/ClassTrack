@@ -257,3 +257,82 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: 小工具大格子适配：双栏左卡吃满纵向 + 修掉配置页快照冲突崩溃
+<!-- trellis-session: v=2 fp=36628113e0124e3b -->
+
+**Date**: 2026-09-20
+**Task**: 小工具大格子适配：双栏左卡吃满纵向 + 修掉配置页快照冲突崩溃
+**Branch**: `feat/widget-adaptive-space`
+
+### Summary
+
+子卡片只保留在双栏（真机比对后产品决定），双栏左卡用 fillMaxHeight + 弹性 Spacer 两端对齐吃满整列；新增度量落网格与双栏排布参数，删除只服务于单栏主卡化的三个度量；正文列表抽成共用 CourseList（OptIn 仍各一处）；修掉配置页重渲预览与后台发布撞 Snapshot.apply() 导致的进程崩溃（平板实测 3 次 FATAL → 压测 0 次）。
+
+### Main Changes
+
+- android/app/src/main/java/com/classtrack/app/widget/ClassTrackWidget.kt：HeroSection/HeroCard 分离，HeroHeading/HeroDetail 共用；CourseList 抽取
+- android/app/src/main/java/com/classtrack/app/WidgetLayoutMetrics.java：snap() 落网格、双栏排布参数、删除 fillFraction/heroHeightDp/heroSurfaceAlpha
+- android/app/src/main/java/com/classtrack/app/widget/WidgetRenderCache.kt：publishSafely 冲突重试 + 退回普通赋值
+- .trellis/spec/frontend/android-home-widget.md：D16 收窄式修订、子卡片只在双栏、不要给文本容器估算高度
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `471af70` | feat(widget): 双栏左卡重做为主卡，并修掉配置页快照冲突崩溃 |
+
+### Testing
+
+- [OK] ./android/gradlew -p android testDebugUnitTest（111 用例全绿）；pnpm cap:build:android + asset check 通过
+- [OK] 手机 2×2 与改动前基线逐像素相同（差异包围盒 None）；平板 4×3 三档截图 + phase=layout_metrics 取证
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 任务归档；后续可选：信息加密叠加双栏、fontScale≥1.5 的实测、OEM 平板 ROM 复验
+
+
+## Session 10: 小工具预设尺寸与前台「添加到桌面」入口：字号随尺寸放大 + 双栏静态富内容 + pin 流程
+<!-- trellis-session: v=2 fp=0b22996dc682fbd3 -->
+
+**Date**: 2026-09-21
+**Task**: 小工具预设尺寸与前台「添加到桌面」入口：字号随尺寸放大 + 双栏静态富内容 + pin 流程
+**Branch**: `feat/widget-adaptive-space`
+
+### Summary
+
+①参考格子改为 2×2，让「格子越大字号越大」成为默认事实（手机 4×3 16sp→24.5sp、平板 32sp）；②新增 WidgetFillPlan 解「刚好放下」的字号并做折行感知估算；③双栏加静态富内容（双行行项/汇总计数/底部最后一节/中缝下一节与再下一节），左卡余量按 2:3 落；④前台顶栏新增「添加到桌面」入口与五个预设，走 requestPinAppWidget；⑤实测 launcher 不理会尺寸提示、且不拉配置页，于是加渲染侧兜底 + 原子 claim；⑥修掉滚动条在 API 33+ 的回归（改覆盖 Glance 的空样式）。
+
+### Main Changes
+
+- android/app/src/main/java/com/classtrack/app/{WidgetPreset,WidgetPendingPreset,WidgetFillPlan}.java 新增；WidgetLayoutMetrics 参考格子改 2×2 + 行高实测系数 + withFontBoost
+- ClassTrackWidget.kt：填充方案接入、双栏左卡三段、双行行项、中缝两行、样式覆盖修滚动条
+- WidgetSnapshotPlugin.requestPinWidget + WidgetConfigActivity 预填 + WidgetDiagnostics 四条新 phase
+- app/features/schedule/{WidgetPinEntry.tsx,hooks/useWidgetPin.ts,widgetPinPresets.ts} + ScheduleHeader 紧凑化
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f147d9f` | feat(widget): 字号随格子尺寸放大，并给双栏加静态富内容 |
+| `d3f086c` | feat(widget): 前台「添加到桌面」入口与预设，顶栏顺带紧凑化 |
+| `8476e31` | fix(widget): 修掉平板右栏滚动条、左卡中缝补第二行，并标注只在大格子生效的预设 |
+| `028cb44` | chore(widget): 补验收证据、修正估算高估，并勾选 PRD 验收项 |
+
+### Testing
+
+- [OK] Android 单测 132 全绿；Web 14 files / 72 用例；pnpm lint 0 problems；cap:build:android + asset check 通过
+- [OK] 手机 2×2（紧凑）与上一轮基线逐像素相同（差异包围盒 None）；平板 4×3 双栏 fill=167 font=200；pin 端到端 preset_applied 恰好一次
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 左卡中缝约 90dp 空白需新内容才能填满（接明天/倒计时已否）；OEM launcher 与 fontScale≥1.5 未验证

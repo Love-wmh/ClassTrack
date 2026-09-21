@@ -53,8 +53,91 @@ public final class WidgetDiagnostics {
      * @param layoutStyle 样式存储值。
      * @param finishedPolicy 已上完策略存储值。
      */
-    public static void styleConfigured(String layoutStyle, String finishedPolicy) {
-        Log.i(TAG, "phase=style_configured style=" + safeStyle(layoutStyle) + " finished=" + safeFinishedPolicy(finishedPolicy));
+    public static void styleConfigured(String layoutStyle, String finishedPolicy, String wideLayout) {
+        Log.i(TAG, "phase=style_configured style=" + safeStyle(layoutStyle) + " finished=" + safeFinishedPolicy(finishedPolicy)
+                + " wide=" + safeWideLayout(wideLayout));
+    }
+
+    /**
+     * 记录一次渲染用到的排版度量。
+     *
+     * <p>`scale` 是「度量相对基准放大到几成」，以百分数整数表示（131 = 1.31 倍），`dual` 表示这一帧
+     * 是否真的分了栏 —— 「选了双栏但没分栏」有两种完全不同的原因（尺寸不够 / 渲染坏了），这条日志
+     * 让它们在 logcat 里就能分开，不必猜。
+     *
+     * <p>与其它诊断一样：只有数值与白名单枚举，不含任何课程内容。
+     *
+     * @param scalePercent 缩放百分比（100 表示与基准一致）。
+     * @param wideLayout 「大格子表现」存储值。
+     * @param dual 这一帧是否分了两栏。
+     */
+    public static void layoutMetrics(int scalePercent, String wideLayout, boolean dual) {
+        Log.i(TAG, "phase=layout_metrics scale=" + Math.max(0, scalePercent) + " wide=" + safeWideLayout(wideLayout)
+                + " dual=" + dual);
+    }
+
+    /**
+     * 记录一次「添加到桌面」的请求（只记白名单枚举）。
+     *
+     * @param preset 预设标识；不在白名单内归 `unknown`。
+     */
+    public static void pinRequested(String preset) {
+        Log.i(TAG, "phase=pin_requested preset=" + safePreset(preset));
+    }
+
+    /**
+     * 记录一次「添加到桌面」的结果。
+     *
+     * @param supported 系统/launcher 是否支持一键添加。
+     * @param requested 是否真的发起了请求。
+     */
+    public static void pinResult(boolean supported, boolean requested) {
+        Log.i(TAG, "phase=pin_result supported=" + supported + " requested=" + requested);
+    }
+
+    /**
+     * 记录配置页按预设预填了一次选项。
+     *
+     * @param preset 预设标识；不在白名单内归 `unknown`。
+     */
+    public static void presetApplied(String preset) {
+        Log.i(TAG, "phase=preset_applied preset=" + safePreset(preset));
+    }
+
+    /**
+     * 预设标识的白名单化：只放行已知的五个值，其余归 `unknown`。
+     *
+     * @param value 原始标识。
+     * @return 可直接写进日志的值。
+     */
+    private static String safePreset(String value) {
+        String parsed = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+        switch (parsed) {
+            case "phone_minimal":
+            case "phone_standard":
+            case "phone_wide":
+            case "tablet_dual":
+            case "tablet_wide":
+                return parsed;
+            default:
+                return "unknown";
+        }
+    }
+
+    /**
+     * 记录一次「铺满」求解的结果（只记数值，**不记任何课程内容**）。
+     *
+     * <p>字号上界由格子尺寸给（格子越大字号越大），实际字号会被收到「内容刚好放下」处 —— 这条日志把
+     * 「字号被收了多少、行距分到多少、内容占了可用高度的几成」摊开，验收时不必只靠看截图猜。
+     *
+     * @param fontScalePercent 实际字号系数（百分比，100 = 基准）。
+     * @param gapTenthDp 行距（0.1dp 为单位，避免日志里出现小数）。
+     * @param fillPercent 内容占可用高度的百分比。
+     * @param lineCount 参与估算的文本行数（内容量的直接量度：同样的填充率、行数不同说明喂进去的内容不同）。
+     */
+    public static void layoutFill(int fontScalePercent, int gapTenthDp, int fillPercent, int lineCount) {
+        Log.i(TAG, "phase=layout_fill font=" + Math.max(0, fontScalePercent) + " gap=" + Math.max(0, gapTenthDp) / 10f
+                + " fill=" + Math.max(0, fillPercent) + " lines=" + Math.max(0, lineCount));
     }
 
     /**
@@ -125,6 +208,15 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 渲染缓存发布时与其它快照撞车（冲突重试后仍未成功，已退回普通赋值）。
+     *
+     * 这是**可自愈**的情况：写进去的值仍然是最新解析结果，只是没能参与事务合并。按警告记录，
+     * 不带任何异常堆栈与内容。
+     */
+    public static void renderCacheConflict() {
+        Log.w(TAG, "phase=render_cache_conflict");
+    }
+    /**
      * 记录配置页预览用的尺寸。
      *
      * 预览与真实小工具必须画在同一个尺寸上，否则预览就是在撒谎。这条日志与 `phase=widget_sized`
@@ -176,6 +268,23 @@ public final class WidgetDiagnostics {
             case "show_dim":
             case "hide":
             case "collapse":
+                return value;
+            default:
+                return "unknown";
+        }
+    }
+
+    /**
+     * 与 {@link #safeStyle} 同理：「大格子表现」值只允许白名单内的固定枚举进入日志。
+     *
+     * @param value 候选表现值。
+     * @return 白名单内的值；否则返回 `unknown`。
+     */
+    private static String safeWideLayout(String value) {
+        switch (value == null ? "" : value) {
+            case "adaptive":
+            case "dense":
+            case "two_column":
                 return value;
             default:
                 return "unknown";

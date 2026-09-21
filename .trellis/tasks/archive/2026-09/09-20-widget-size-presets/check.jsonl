@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/09-20-widget-size-presets/prd.md", "reason": "逐条核对 A1-A9：预设模型单测、填充安全性断言、行序列不变、门禁、四个预设尺寸证据、2×2 逐像素、pin 尺寸提示结论、预设落实例、入口与顶栏"}
+{"file": ".trellis/tasks/09-20-widget-size-presets/design.md", "reason": "核对实现是否与设计一致：预设不是尺寸查表、填充只放大不承载文本的量、字号上限 1.6、两天内容与 R11 边界、pin 降级路径"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "核对 spec 是否随实现更新（预设/填充/两天视图/pin 入口与降级），且没有把 R11 或 D16 写松"}
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "核对顶栏尺寸口径是否同步，触控目标与可访问性标签是否有回归"}
+{"file": ".trellis/tasks/archive/2026-09/09-20-android-widget-adaptive-space/verification.md", "reason": "核对「不回归」的边界是否按新口径执行：2×2 仍逐像素、4×3 允许变化并有前后对比"}

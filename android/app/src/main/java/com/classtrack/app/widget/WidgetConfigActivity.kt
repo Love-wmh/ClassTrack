@@ -18,6 +18,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import com.classtrack.app.R
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
+import com.classtrack.app.WidgetPendingPreset
 import com.classtrack.app.WidgetStyleConfig
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -56,6 +57,10 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var finishedGroup: RadioGroup
     private lateinit var finishedSection: TextView
     private lateinit var finishedHint: TextView
+    private lateinit var wideGroup: RadioGroup
+    private lateinit var wideSection: TextView
+    private lateinit var wideHint: TextView
+    private lateinit var presetHint: TextView
     private lateinit var previewDayList: FrameLayout
     private lateinit var previewNextUp: FrameLayout
     private lateinit var previewCompact: FrameLayout
@@ -81,13 +86,26 @@ class WidgetConfigActivity : AppCompatActivity() {
         finishedGroup = findViewById(R.id.widget_config_finished_group)
         finishedSection = findViewById(R.id.widget_config_finished_section)
         finishedHint = findViewById(R.id.widget_config_finished_hint)
+        wideGroup = findViewById(R.id.widget_config_wide_group)
+        wideSection = findViewById(R.id.widget_config_wide_section)
+        wideHint = findViewById(R.id.widget_config_wide_hint)
+        presetHint = findViewById(R.id.widget_config_preset_hint)
         previewDayList = findViewById(R.id.widget_config_preview_day_list)
         previewNextUp = findViewById(R.id.widget_config_preview_next_up)
         previewCompact = findViewById(R.id.widget_config_preview_compact)
 
-        layoutGroup.setOnCheckedChangeListener { _, _ -> updateFinishedSectionState() }
+        layoutGroup.setOnCheckedChangeListener { _, _ ->
+            // 「紧凑」既不显示列表，也就同时让「已上完」与「大格子表现」失效，两处灰显一起更新。
+            updateFinishedSectionState()
+            updateWideSectionState()
+        }
         // 预览随「已上完」的选项实时重渲：这个选项直接决定列表里有几行。
         finishedGroup.setOnCheckedChangeListener { _, _ -> requestPreviews() }
+        // 「大格子表现」同样会改变列表内容，改一个选项就要重渲三张预览。
+        wideGroup.setOnCheckedChangeListener { _, _ ->
+            updateWideSectionState()
+            requestPreviews()
+        }
         findViewById<Button>(R.id.widget_config_confirm).setOnClickListener { saveAndFinish() }
         findViewById<Button>(R.id.widget_config_cancel).setOnClickListener { finish() }
 
@@ -127,9 +145,23 @@ class WidgetConfigActivity : AppCompatActivity() {
                 WidgetStyleConfig.defaults()
             }
 
-            layoutGroup.check(layoutRadioId(stored.layoutStyle))
-            finishedGroup.check(finishedRadioId(stored.finishedPolicy))
+            // 应用内「添加到桌面」带过来的预设：**只在本次配置流程里预选**，用户改了就按用户改的存。
+            // 一次性消费（读取即清），因此不会影响之后新增的实例。
+            val preset = WidgetPendingPreset.consume(System.currentTimeMillis())
+            val effective = if (preset == null) {
+                stored
+            } else {
+                WidgetDiagnostics.presetApplied(preset.getId())
+                presetHint.text = getString(R.string.widget_config_preset_hint, preset.getCellLabel())
+                presetHint.visibility = View.VISIBLE
+                WidgetStyleConfig(preset.getLayoutStyle(), stored.finishedPolicy, preset.getWideLayout())
+            }
+
+            layoutGroup.check(layoutRadioId(effective.layoutStyle))
+            finishedGroup.check(finishedRadioId(effective.finishedPolicy))
+            wideGroup.check(wideRadioId(effective.wideLayout))
             updateFinishedSectionState()
+            updateWideSectionState()
         }
     }
 
@@ -140,7 +172,11 @@ class WidgetConfigActivity : AppCompatActivity() {
      * 写在自己作用域上会随页面取消，表现为「设置了但没生效」。
      */
     private fun saveAndFinish() {
-        WidgetConfigBridge.save(applicationContext, appWidgetId, WidgetStyleConfig(selectedLayout(), selectedFinishedPolicy()))
+        WidgetConfigBridge.save(
+            applicationContext,
+            appWidgetId,
+            WidgetStyleConfig(selectedLayout(), selectedFinishedPolicy(), selectedWideLayout())
+        )
         setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId))
         finish()
     }
@@ -160,6 +196,25 @@ class WidgetConfigActivity : AppCompatActivity() {
             finishedGroup.getChildAt(index).isEnabled = effective
         }
         finishedHint.visibility = if (effective) View.GONE else View.VISIBLE
+    }
+
+    /**
+     * 「大格子表现」在「紧凑」样式下三项都无从生效，因此整组弱化并说明，而不是默默无视。
+     *
+     * 与 [updateFinishedSectionState] 同一判据（都来自 [WidgetStyleConfig.isWideLayoutEffective]），
+     * 页面与渲染层因此不会出现「页面说有效、渲染却不生效」的矛盾。
+     */
+    private fun updateWideSectionState() {
+        val effective = WidgetStyleConfig(selectedLayout(), selectedFinishedPolicy(), selectedWideLayout())
+            .isWideLayoutEffective
+        val alpha = if (effective) ENABLED_ALPHA else DISABLED_ALPHA
+
+        wideSection.alpha = alpha
+        wideGroup.alpha = alpha
+        for (index in 0 until wideGroup.childCount) {
+            wideGroup.getChildAt(index).isEnabled = effective
+        }
+        wideHint.visibility = if (effective) View.GONE else View.VISIBLE
     }
 
     /**
@@ -292,6 +347,18 @@ class WidgetConfigActivity : AppCompatActivity() {
         WidgetStyleConfig.LayoutStyle.NEXT_UP -> R.id.widget_config_layout_next_up
         WidgetStyleConfig.LayoutStyle.COMPACT -> R.id.widget_config_layout_compact
         else -> R.id.widget_config_layout_day_list
+    }
+
+    private fun selectedWideLayout(): WidgetStyleConfig.WideLayout = when (wideGroup.checkedRadioButtonId) {
+        R.id.widget_config_wide_dense -> WidgetStyleConfig.WideLayout.DENSE
+        R.id.widget_config_wide_two_column -> WidgetStyleConfig.WideLayout.TWO_COLUMN
+        else -> WidgetStyleConfig.WideLayout.ADAPTIVE
+    }
+
+    private fun wideRadioId(wide: WidgetStyleConfig.WideLayout): Int = when (wide) {
+        WidgetStyleConfig.WideLayout.DENSE -> R.id.widget_config_wide_dense
+        WidgetStyleConfig.WideLayout.TWO_COLUMN -> R.id.widget_config_wide_two_column
+        else -> R.id.widget_config_wide_adaptive
     }
 
     private fun finishedRadioId(policy: WidgetStyleConfig.FinishedPolicy): Int = when (policy) {

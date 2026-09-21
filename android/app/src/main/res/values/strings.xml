@@ -30,8 +30,16 @@
     <string name="widget_tomorrow_count">明天 %1$d 节</string>
     <string name="widget_finished_count">已上完 %1$d 节</string>
     <string name="widget_today_remaining_count">今天还有 %1$d 节</string>
+    <!-- 双栏富内容（静态数据，不需要额外刷新） -->
+    <string name="widget_counts_summary">已上完 %1$d 节 · 还有 %2$d 节</string>
+    <string name="widget_mid_next">下一节 %1$s %2$s</string>
+    <string name="widget_mid_next_second">再下一节 %1$s %2$s</string>
+    <!-- hero 本身就是「接下来」那一节时，它之后的课要再退一级称呼，否则会出现「接下来 A / 下一节 B」这种自相矛盾的读法。 -->
+    <string name="widget_mid_next_third">再之后 %1$s %2$s</string>
+    <string name="widget_footer_last">今天最后一节 %1$s %2$s</string>
     <string name="widget_next_other_day_line">下一节 · %1$s %2$s %3$s</string>
     <string name="widget_style_entry">样式</string>
+    <string name="widget_sections_suffix">第%1$s节</string>
 
     <!-- 没有任何可展示课程时的引导文案：五种原因必须分开，避免误导用户 -->
     <string name="widget_prompt_sync">打开 ClassTrack 同步课表到桌面</string>
@@ -53,6 +61,8 @@
 
     <!-- 配置页（放置时或从 widget 内的「样式」入口打开） -->
     <string name="widget_config_title">小工具样式</string>
+    <!-- 应用内「添加到桌面」按预设打开配置页时的提示。文案里只出现格子的尺寸与「可修改」，不承诺任意尺寸都完美。 -->
+    <string name="widget_config_preset_hint">已按推荐预设预填（推荐 %1$s 格子）。放好后可以随意改，拖到别的尺寸也能用。</string>
     <string name="widget_config_intro">样式按这个小工具实例单独保存，桌面上可以放多个样式不同的实例。</string>
     <string name="widget_config_layout_section">布局样式</string>
     <string name="widget_config_layout_day_list">全天课表</string>
@@ -66,6 +76,14 @@
     <string name="widget_config_finished_hide">不显示</string>
     <string name="widget_config_finished_collapse">折叠成一行计数</string>
     <string name="widget_config_finished_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
+    <string name="widget_config_wide_section">大格子表现</string>
+    <string name="widget_config_wide_adaptive">跟随尺寸</string>
+    <string name="widget_config_wide_adaptive_desc">字号与间距随格子大小一起放大；小格子上与以前完全一致。</string>
+    <string name="widget_config_wide_dense">信息加密</string>
+    <string name="widget_config_wide_dense_desc">在放大的基础上，课名放宽到两行，课程行补「第几节」，汇总行补当天已上完的节数。</string>
+    <string name="widget_config_wide_two_column">双栏</string>
+    <string name="widget_config_wide_two_column_desc">左栏放当前或接下来的一节课，右栏放当天课表；格子不够宽时自动保持单栏。</string>
+    <string name="widget_config_wide_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
     <string name="widget_config_confirm">确定</string>
     <string name="widget_config_cancel">取消</string>
 
