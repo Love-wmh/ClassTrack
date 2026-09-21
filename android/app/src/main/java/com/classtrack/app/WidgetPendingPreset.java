@@ -84,25 +84,7 @@ public final class WidgetPendingPreset {
         return WidgetPreset.parse(id);
     }
 
-    /**
-     * **原子地**领取槽位：读取成功即消费，读不到返回 `null`。
-     *
-     * <p>渲染侧必须用它而不是「先 {@link #peek()} 再 {@link #consume()}」：同一时刻可能有多个实例在渲染，
-     * 两步之间被插队会让**两个实例都套用同一个预设**（真机日志里出现过两条 `preset_applied`）。
-     * 领取之后即便写盘失败也不再归还 —— 宁可少一次预设，也不能让预设落到多个实例上。
-     *
-     * @return 领取到的预设；没有或已超时返回 `null`。
-     */
-    public static synchronized WidgetPreset claim() {
-        WidgetPreset preset = peek(System.currentTimeMillis());
-        if (preset != null) {
-            pendingId = null;
-            writtenAtMs = 0L;
-        }
-        return preset;
-    }
-
-    /** 消费槽位（配置页那条路径用；渲染侧请用 {@link #claim()}）。 */
+    /** 消费槽位（调用方确认成功写入之后调用）。 */
     public static synchronized void consume() {
         pendingId = null;
         writtenAtMs = 0L;

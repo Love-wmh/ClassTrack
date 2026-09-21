@@ -26,6 +26,10 @@ describe('桌面小工具插件封装', () => {
     })
   })
 
+  it('Web 上读取 pin 确认结果如实返回未确认（没有原生侧就没有「被系统确认的放置」）', async () => {
+    expect(await widgetSnapshotPlugin.consumePinResult()).toEqual({ confirmed: false, appWidgetId: null })
+  })
+
   it('pushSnapshot 在 Web 上以 UNAVAILABLE 明确失败，而不是静默成功', async () => {
     await expect(widgetSnapshotPlugin.pushSnapshot({ snapshotJson: '{}' })).rejects.toThrow('当前环境不支持桌面小工具')
   })

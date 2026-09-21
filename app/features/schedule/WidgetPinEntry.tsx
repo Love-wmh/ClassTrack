@@ -3,7 +3,7 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '~/components/ui/sheet'
 import { useWidgetPin } from './hooks/useWidgetPin'
-import { WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPresets'
+import { WIDGET_PIN_MANUAL_STEPS, WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPresets'
 
 /**
  * 课表页顶栏的「添加到桌面」入口。
@@ -16,7 +16,7 @@ import { WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPres
  * 我们只能请求系统去放置，最终摆放尺寸取决于 launcher。
  */
 export default function WidgetPinEntry() {
-  const { supported, pending, message, added, pin } = useWidgetPin()
+  const { supported, pending, outcome, message, added, pin } = useWidgetPin()
 
   if (!supported) return null
 
@@ -44,6 +44,8 @@ export default function WidgetPinEntry() {
         <div className="mt-4 grid gap-3">
           {WIDGET_PIN_PRESETS.map((preset) => {
             const isPending = pending === preset.id
+            // 「等待确认」与「正在添加」是两件事：前者已受理、正等系统回调，此时绝不能给出成功暗示。
+            const isWaiting = isPending && outcome === 'requesting'
             const isAdded = added === preset.id
             return (
               <div key={preset.id} className="rounded-lg border border-border bg-card p-3">
@@ -67,7 +69,7 @@ export default function WidgetPinEntry() {
                     className="shrink-0"
                   >
                     {isAdded ? <Check className="size-3.5" /> : null}
-                    {isPending ? '正在添加…' : isAdded ? '已添加' : '添加到桌面'}
+                    {isWaiting ? '等待确认…' : isPending ? '正在添加…' : isAdded ? '已添加' : '添加到桌面'}
                   </Button>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{preset.description}</p>
@@ -79,10 +81,24 @@ export default function WidgetPinEntry() {
         </div>
 
         {message ? (
-          <p className="mt-3 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground" role="status">
+          <p
+            className="mt-3 rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground"
+            role="status"
+            data-outcome={outcome}
+            aria-live={outcome === 'requesting' ? 'polite' : 'assertive'}
+          >
             {message}
           </p>
         ) : null}
+
+        {/*
+          手动步骤**常驻**到底部，不只在失败时出现：会静默吞掉 pin 请求的桌面上（实测 ColorOS），
+          它才是唯一可靠的路径，藏起来等于让用户卡死在一个不生效的按钮上。
+        */}
+        <div className="mt-3 rounded-md border border-dashed border-border px-3 py-2">
+          <p className="text-xs font-medium text-foreground">手动添加</p>
+          <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_MANUAL_STEPS}</p>
+        </div>
       </SheetContent>
     </Sheet>
   )

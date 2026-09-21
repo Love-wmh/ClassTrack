@@ -1,4 +1,4 @@
-import type { WidgetPresetId } from '~/lib/native-widget-snapshot'
+import type { WidgetPinConfirmation, WidgetPinResult, WidgetPresetId } from '~/lib/native-widget-snapshot'
 
 /**
  * 应用内「添加到桌面」提供的预设。
@@ -78,11 +78,84 @@ export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
  * 这段文案必须**如实**：我们只能请求系统去放置，最终尺寸由 launcher 决定，因此不能承诺
  * 「一定会按目标格子放好」。
  */
-export const WIDGET_PIN_MANUAL_HINT =
-  '当前系统不支持从应用内一键添加。可以长按桌面空白处 → 小工具 → 找到课表 → 拖到桌面上，再按卡片上的格子数调整大小。'
+export const WIDGET_PIN_MANUAL_HINT = '当前系统不支持从应用内一键添加。请用下面的方式手动添加。'
 
 /** 只有横向够宽的格子才分两栏时的提示（手机竖屏、窄格子）。 */
 export const WIDGET_PIN_NARROW_CELL_HINT = '当前格子不够宽，会先按单栏显示；横放或用平板时自动分两栏。'
 
+/**
+ * 「请求已发出、还没等到系统确认」时的中性说明。
+ *
+ * `requestPinAppWidget` 的返回值只表示「请求已受理」，**与是否真的放下无关**（真机 ColorOS 实测：launcher
+ * 起了确认界面却从不显示、一个小工具都没放下）。所以在收到确认回调之前，文案必须是中性的，
+ * 绝不能写成「已添加」。
+ */
+export const WIDGET_PIN_REQUESTING_HINT = '已请求系统添加。若弹出确认界面，请点确认；否则请用手动步骤添加。'
+
+/**
+ * 迟迟等不到确认时的**如实**说明。
+ *
+ * 这不是「出错了」，而是有些厂商桌面会直接忽略这个请求（已实测）。因此文案要让用户知道
+ * 手动路径是可靠的，并且**不要**说成「失败，请重试」——重试同一个请求同样不会生效。
+ */
+export const WIDGET_PIN_UNCONFIRMED_HINT = '系统没有完成添加（部分厂商桌面会忽略这个请求）。请用下面的手动步骤添加。'
+
 /** 系统弹窗被取消（或 launcher 没有真的放下）时的说明。 */
-export const WIDGET_PIN_CANCELLED_HINT = '没有添加成功。可以再点一次，或长按桌面空白处手动添加。'
+export const WIDGET_PIN_CANCELLED_HINT = '没有添加成功。可以再点一次，或按下面的手动步骤添加。'
+
+/**
+ * 「添加到桌面」这次操作的**状态**。
+ *
+ * 关键区分：`'requesting'`（已请求、还没等到系统确认）**不等于**成功。`requestPinAppWidget` 的返回值只表示
+ * 「请求已受理」，真机上出现过「受理了但什么都没放下」；因此只有 `'added'`（收到确认回调）才允许显示「已添加」。
+ */
+export type WidgetPinOutcome = 'idle' | 'requesting' | 'added' | 'cancelled' | 'unconfirmed' | 'unsupported'
+
+/**
+ * 请求刚返回时的下一步：轮询等确认、直接判定、还是走手动说明。
+ *
+ * 抽成纯函数是为了可测试（vitest）：hook 里的定时器难测，但
+ * 「什么返回值对应什么状态」是纯映射，必须被测试钉住。
+ */
+export function resolvePinStartOutcome(result: WidgetPinResult): 'requesting' | 'cancelled' | 'unsupported' {
+  if (!result.supported) {
+    return 'unsupported'
+  }
+  // 支持但没受理：用户多半在系统弹窗上取消了（也可能 launcher 直接拒绝）。
+  return result.requested ? 'requesting' : 'cancelled'
+}
+
+/**
+ * 轮询结束时的判定：收到确认才算成功，否则如实说「系统没有完成添加」。
+ *
+ * 超过等待时间**不是错误**，所以不给「重试」措辞 —— 重试同一个请求同样会被静默吞掉。
+ */
+export function resolvePinPollOutcome(confirmation: WidgetPinConfirmation): 'added' | 'unconfirmed' {
+  return confirmation.confirmed ? 'added' : 'unconfirmed'
+}
+
+/**
+ * 每个状态对应的提示文案；`null` 表示这一状态下不给任何提示（不打扰用户）。
+ */
+export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
+  switch (outcome) {
+    case 'requesting':
+      return WIDGET_PIN_REQUESTING_HINT
+    case 'unconfirmed':
+      return WIDGET_PIN_UNCONFIRMED_HINT
+    case 'unsupported':
+      return WIDGET_PIN_MANUAL_HINT
+    case 'cancelled':
+      return WIDGET_PIN_CANCELLED_HINT
+    case 'added':
+    case 'idle':
+      return null
+  }
+}
+
+/**
+ * 面板底部**常驻**的手动步骤说明。
+ *
+ * 不只在失败时出现：会静默吞掉请求的桌面上，它是唯一可靠的路径，因此始终可见。
+ */
+export const WIDGET_PIN_MANUAL_STEPS = '长按桌面空白处 → 小工具 → 找到课表 → 拖到桌面上，再按卡片上的格子数调整大小。'

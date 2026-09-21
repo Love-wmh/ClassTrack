@@ -1,6 +1,7 @@
 package com.classtrack.app;
 
 import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -11,6 +12,7 @@ import android.os.Build;
 import android.provider.Settings;
 
 import com.classtrack.app.widget.ClassTrackWidgetReceiver;
+import com.classtrack.app.widget.WidgetPinResultReceiver;
 import com.classtrack.app.widget.WidgetRefreshBridge;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -28,6 +30,9 @@ import java.nio.charset.StandardCharsets;
  */
 @CapacitorPlugin(name = "WidgetSnapshot")
 public class WidgetSnapshotPlugin extends Plugin {
+    /** 确认回调的 PendingIntent request code（固定值即可：同一时刻只会有一个待确认的放置请求）。 */
+    private static final int PIN_CALLBACK_REQUEST_CODE = 4711;
+
     @PluginMethod
     public void pushSnapshot(PluginCall call) {
         String snapshotJson = call.getString("snapshotJson");
@@ -102,6 +107,7 @@ public class WidgetSnapshotPlugin extends Plugin {
         if (!supported) {
             // 不支持就不要留下槽位：否则用户下次从桌面手动放置时会被塞进这次选的预设。
             WidgetPendingPreset.clear();
+            WidgetPinBaseline.clear();
             WidgetDiagnostics.pinResult(false, false);
             JSObject unsupported = new JSObject();
             unsupported.put("supported", false);
@@ -111,27 +117,57 @@ public class WidgetSnapshotPlugin extends Plugin {
         }
 
         WidgetPendingPreset.set(preset.getId(), System.currentTimeMillis());
+        // 记录「请求前已有哪些实例」：回调带回的 id 不可信（实测 AOSP Launcher3 发回 0），
+        // 需要用它做差集找出用户刚放下的实例（见 WidgetPinTargets）。
+        WidgetPinBaseline.record(
+                manager.getAppWidgetIds(new ComponentName(context, ClassTrackWidgetReceiver.class)),
+                System.currentTimeMillis());
 
         Bundle extras = new Bundle();
         extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, Math.round(preset.getWidthDp()));
         extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, Math.round(preset.getHeightDp()));
 
+        // 必须传 successCallback：它的返回值只表示「请求已受理」，与是否真的放下无关。
+        // 系统在用户确认后广播到这个 receiver，并带回新实例 id（见 WidgetPinResultReceiver）。
+        PendingIntent callback = PendingIntent.getBroadcast(
+                context,
+                PIN_CALLBACK_REQUEST_CODE,
+                new Intent(context, WidgetPinResultReceiver.class)
+                        .setAction(WidgetPinResultReceiver.ACTION_PIN_CONFIRMED),
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         boolean requested;
         try {
             requested = manager.requestPinAppWidget(
-                    new ComponentName(context, ClassTrackWidgetReceiver.class), extras, null);
+                    new ComponentName(context, ClassTrackWidgetReceiver.class), extras, callback);
         } catch (RuntimeException error) {
             // 个别 ROM 在这里抛（例如 launcher 未实现该 API）：按「没发起」如实返回，不崩。
             requested = false;
         }
         if (!requested) {
             WidgetPendingPreset.clear();
+            WidgetPinBaseline.clear();
         }
 
         WidgetDiagnostics.pinResult(true, requested);
         JSObject result = new JSObject();
         result.put("supported", true);
         result.put("requested", requested);
+        call.resolve(result);
+    }
+
+    /**
+     * 读取并清空「刚刚真的放下了一个小工具」的确认结果。
+     *
+     * <p>Web 侧的面板在请求之后轮询它：只有 `confirmed=true` 才显示"已添加"。
+     * 与 `consumePendingRoute` 同构的一次性读取；`appWidgetId` 为空时返回 `null`。
+     */
+    @PluginMethod
+    public void consumePinResult(PluginCall call) {
+        int appWidgetId = WidgetPinResult.consumeConfirmed(System.currentTimeMillis());
+        JSObject result = new JSObject();
+        result.put("confirmed", appWidgetId >= 0);
+        result.put("appWidgetId", appWidgetId >= 0 ? appWidgetId : JSObject.NULL);
         call.resolve(result);
     }
 

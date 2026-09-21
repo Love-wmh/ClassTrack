@@ -79,6 +79,15 @@
           因此可以声明在 manifest 上并被投递，且与 targetSdk 无关。exported=false 即可：
           投递方是系统，不需要对外导出。
         -->
+        <!--
+          「添加到桌面」的确认回调。**不导出**：系统是经由我们创建的 PendingIntent 投递这个广播的，
+          PendingIntent 的语义就是"以我们的身份发送"，因此无需 exported，外部应用也无法伪造
+          （伪造也无法得到实例 id：id 由系统在确认时填入）。
+        -->
+        <receiver
+            android:name=".widget.WidgetPinResultReceiver"
+            android:exported="false" />
+
         <receiver
             android:name=".widget.WidgetTimeChangeReceiver"
             android:exported="false">

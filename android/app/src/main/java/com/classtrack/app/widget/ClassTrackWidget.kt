@@ -54,7 +54,6 @@ import com.classtrack.app.WidgetFillPlan
 import com.classtrack.app.WidgetLayoutMetrics
 import com.classtrack.app.WidgetLinePolicy
 import com.classtrack.app.WidgetOccurrence
-import com.classtrack.app.WidgetPendingPreset
 import com.classtrack.app.WidgetPendingRoute
 import com.classtrack.app.WidgetStyleConfig
 import java.io.IOException
@@ -91,11 +90,9 @@ class ClassTrackWidget : GlanceAppWidget() {
             WidgetRefreshController.resolveCurrentState(context, System.currentTimeMillis())
         }
         val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        // 从应用内「添加到桌面」进来时，用户选的预设先落在待消费槽位里。绝大多数 launcher 会在放置后
-        // 拉起配置页（那条路径由配置页消费），但实测 AOSP 的 pin 流程会**直接按默认配置落位**、不拉配置页
-        // —— 于是这里兜一手：**只对从未写过配置的新实例**套用待消费预设，写进去之后槽位即被消费。
-        // 套用之后必须**重新读一次**配置：上面的写是「先落盘再渲染」，重读保证渲染用的是刚落盘的这份。
-        withContext(Dispatchers.IO) { applyPendingPreset(context, id, appWidgetId) }
+        // 预设的落地**不在这里**：应用内「添加到桌面」的确认回调拿到了准确的实例 id，由
+        // `WidgetPinResultReceiver` 直接写进那一个实例（见该类的注释与 design D2/D4）。
+        // 这里只负责读配置 —— 不再"猜哪个实例是新的"，那条兜底会带来两个实例抢同一预设的竞态。
         val config = withContext(Dispatchers.IO) { readConfigSafely(context, id) }
 
         // 配置与状态一样按实例缓存：`provideGlance` 不会随每次 update 重新执行，若不缓存，
@@ -110,49 +107,6 @@ class ClassTrackWidget : GlanceAppWidget() {
                 WidgetRenderCache.latestConfig(appWidgetId, config),
                 appWidgetId
             )
-        }
-    }
-
-    /**
-     * 把「待消费预设」套用到新实例上。
-     *
-     * <p>三条约束：
-     *
-     * <ol>
-     *   <li>**只写给从未配置过的实例**：已配置过的实例（老实例、或用户已经手动调过的）一律不动 ——
-     *       槽位也**不消费**，留给真正的新实例；</li>
-     *   <li>**消费即一次性**：写成功之后立刻清空，避免影响到之后新增的实例；</li>
-     *   <li>写失败（IO 异常）时吞掉并记一条 phase：小工具宁可显示默认样式，也不能崩。</li>
-     * </ol>
-     *
-     * @param context 任意 Context。
-     * @param glanceId 本次渲染的实例 id。
-     * @param appWidgetId 该实例的 appWidgetId。
-     * @return 是否真的套用了预设（仅用于诊断与测试观察）。
-     */
-    private suspend fun applyPendingPreset(context: Context, glanceId: GlanceId, appWidgetId: Int): Boolean {
-        // 先判断「这个实例是不是新的」再领取：已配置过的实例不该把槽位吃掉（那是留给新实例的）。
-        return try {
-            if (WidgetStyleState.isConfigured(context, glanceId)) {
-                return false
-            }
-            // 原子领取：同一时刻可能有多个实例在渲染，两步走会让预设落到两个实例上。
-            val preset = WidgetPendingPreset.claim() ?: return false
-            WidgetStyleState.write(context, glanceId, WidgetStyleConfig(
-                preset.layoutStyle,
-                WidgetStyleConfig.defaults().finishedPolicy,
-                preset.wideLayout
-            ))
-            WidgetDiagnostics.presetApplied(preset.id)
-            WidgetRenderCache.publishConfig(appWidgetId, WidgetStyleConfig(preset.layoutStyle,
-                WidgetStyleConfig.defaults().finishedPolicy, preset.wideLayout))
-            true
-        } catch (error: RuntimeException) {
-            WidgetDiagnostics.styleWriteFailed()
-            false
-        } catch (error: IOException) {
-            WidgetDiagnostics.styleWriteFailed()
-            false
         }
     }
 

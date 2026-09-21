@@ -47,22 +47,20 @@ public class WidgetPendingPresetTest {
         assertNull(WidgetPendingPreset.consume(NOW));
     }
 
-    /** 领取是**原子**的：连续两次 claim 只有第一次拿得到，因此预设不可能落到两个实例上。 */
+    /**
+     * `peek` 不消费、`consume` 才消费。
+     *
+     * <p>确认回调里必须先 peek（拿到要写的预设）、写成功之后再 consume —— 写失败时槽位要留着，
+     * 用户下次手动放置仍能拿到这个预设。
+     */
     @Test
-    public void claimIsAtomicAndOneShot() {
-        WidgetPendingPreset.set(WidgetPreset.ID_TABLET_DUAL, NOW);
-
-        assertEquals(WidgetPreset.ID_TABLET_DUAL, WidgetPendingPreset.claim().getId());
-        assertNull(WidgetPendingPreset.claim());
-    }
-
-    /** peek 不消费：渲染侧要先把「实例是不是新的」判断完，才决定要不要领取。 */
-    @Test
-    public void peekDoesNotConsume() {
+    public void peekDoesNotConsumeButConsumeDoes() {
         WidgetPendingPreset.set(WidgetPreset.ID_TABLET_WIDE, NOW);
 
         assertEquals(WidgetPreset.ID_TABLET_WIDE, WidgetPendingPreset.peek(NOW).getId());
-        assertEquals("peek 之后仍然可以被领取", WidgetPreset.ID_TABLET_WIDE, WidgetPendingPreset.claim().getId());
+        assertEquals(WidgetPreset.ID_TABLET_WIDE, WidgetPendingPreset.peek(NOW).getId());
+        WidgetPendingPreset.consume();
+        assertNull("consume 之后必须为空", WidgetPendingPreset.peek(NOW));
     }
 
     @Test

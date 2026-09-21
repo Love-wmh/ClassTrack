@@ -65,8 +65,23 @@ export type WidgetPresetId = 'phone_minimal' | 'phone_standard' | 'phone_wide' |
 export type WidgetPinResult = {
   /** 系统/launcher 是否支持一键添加。 */
   supported: boolean
-  /** 是否真的发起了放置请求。 */
+  /** 是否真的发起了放置请求（**不代表放下** —— 它只是 API 的返回值）。 */
   requested: boolean
+}
+
+/**
+ * 「刚刚真的有一个小工具被放下」的确认结果。
+ *
+ * `requestPinAppWidget` 的返回值与真实结果无关，唯一可信的信号是它的成功回调；原生侧把回调收到的实例
+ * id 存成一次性槽位，Web 侧的面板轮询它。**只有 `confirmed === true` 才能显示「已添加」。**
+ *
+ * 与 `consumePendingRoute` 同构：读一次就清空，因此不会让之后打开的面板误显示成功。
+ */
+export type WidgetPinConfirmation = {
+  /** 是否收到了系统的确认回调。 */
+  confirmed: boolean
+  /** 新实例的 appWidgetId；没有确认时为 `null`。 */
+  appWidgetId: number | null
 }
 
 /** 跳转系统设置页的结果。 */
@@ -88,6 +103,8 @@ export interface WidgetSnapshotPlugin {
   requestExactAlarmPermission(): Promise<WidgetExactAlarmRequestResult>
   /** 请求 launcher 按预设放置一个小工具实例（Android 8+，且 launcher 支持时）。 */
   requestPinWidget(options: { preset: WidgetPresetId }): Promise<WidgetPinResult>
+  /** 读取并清空「小工具真的被放下了」的确认结果（面板在请求之后轮询它）。 */
+  consumePinResult(): Promise<WidgetPinConfirmation>
   /** 订阅原生事件；原生侧在 `handleOnResume()` 中发出 `resumed`。 */
   addListener(eventName: 'resumed', listenerFunc: () => void): Promise<PluginListenerHandle>
 }
@@ -118,6 +135,11 @@ class WidgetSnapshotWeb extends WebPlugin implements WidgetSnapshotPlugin {
   async requestPinWidget(): Promise<WidgetPinResult> {
     // 浏览器 / PWA / iOS 上不存在「桌面」，如实返回不支持，由调用方展示手动添加说明。
     return { supported: false, requested: false }
+  }
+
+  async consumePinResult(): Promise<WidgetPinConfirmation> {
+    // 没有原生侧，就不存在「被系统确认的放置」；如实返回未确认而不是假装成功。
+    return { confirmed: false, appWidgetId: null }
   }
 }
 

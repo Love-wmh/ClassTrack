@@ -96,6 +96,28 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 记录一次**真的被系统确认**的小工具放置（只有这条才算成功）。
+     *
+     * <p>它与 `pin_result` 的区别是承重的：`pin_result requested=true` 只表示"请求已受理"，
+     * 真机上出现过"受理了但什么都没放下"（ColorOS 的 launcher 起了确认界面却从不显示）。
+     *
+     * @param appWidgetId 系统通过 `EXTRA_APPWIDGET_ID` 带回的新实例 id（数值，不含任何内容）。
+     */
+    public static void pinConfirmed(int appWidgetId) {
+        Log.i(TAG, "phase=pin_confirmed widget=" + Math.max(0, appWidgetId));
+    }
+
+    /**
+     * 确认回调来了，但无法确定用户刚放下的实例。
+     *
+     * <p>此时**什么都不写**（不猜一个实例，否则会把预设盖到用户的旧卡片上），预设槽位也保留着
+     * 给可能随后被拉起的配置页。
+     */
+    public static void pinConfirmedUnresolved() {
+        Log.w(TAG, "phase=pin_confirmed_unresolved");
+    }
+
+    /**
      * 记录配置页按预设预填了一次选项。
      *
      * @param preset 预设标识；不在白名单内归 `unknown`。

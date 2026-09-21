@@ -42,24 +42,6 @@ internal object WidgetStyleState {
     }
 
     /**
-     * 判断某个实例**是否已经被配置过**（至少写过一次样式键）。
-     *
-     * <p>为什么需要它：从应用内「添加到桌面」请求放置时，用户选的预设只能先存在待消费槽位里，
-     * 等新实例出现再套用。而「新实例」的判据不能是「读到的值等于默认值」（老实例回退默认时也相等），
-     * 只能是「三个键一个都没写过」。
-     *
-     * @param context 任意 Context。
-     * @param glanceId 该实例的 Glance id。
-     * @return 是否写过配置。
-     */
-    suspend fun isConfigured(context: Context, glanceId: GlanceId): Boolean {
-        val preferences = getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)
-        return preferences[layoutStyleKey] != null
-                || preferences[finishedPolicyKey] != null
-                || preferences[wideLayoutKey] != null
-    }
-
-    /**
      * 写入某个实例的配置。
      *
      * @param context 任意 Context。
