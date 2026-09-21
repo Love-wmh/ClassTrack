@@ -1,4 +1,11 @@
-import type { WidgetPinAttempt, WidgetPinConfirmation, WidgetPinResult, WidgetPresetId } from '~/lib/native-widget-snapshot'
+import type {
+  WidgetPinAttempt,
+  WidgetPinConfirmation,
+  WidgetPinObservation,
+  WidgetPinResult,
+  WidgetVendorFamily,
+  WidgetPresetId,
+} from '~/lib/native-widget-snapshot'
 
 /**
  * 应用内「添加到桌面」提供的预设。
@@ -109,8 +116,56 @@ export const WIDGET_PIN_UNCONFIRMED_HINT = '系统没有完成添加（部分厂
 /** 系统弹窗被取消（或 launcher 没有真的放下）时的说明。 */
 export const WIDGET_PIN_CANCELLED_HINT = '没有添加成功。可以再点一次，或按下面的手动步骤添加。'
 
+/**
+ * 空间不足时的补充说明。
+ *
+ * 四家厂商里至少荣耀/华为**不会**自动新建一页来放，只会提示「当前页面空间不足」，
+ * 所以手动步骤后面统一补这一句，免得用户以为是小工具太大放不下。
+ */
+export const WIDGET_PIN_SPACE_HINT = '当前页放不下时，先滑到有空位的页面'
+
+/**
+ * 复核命中时的说明（**如实措辞，不是「系统已确认」**）。
+ *
+ * 我们只知道**桌面上多了一张课表卡片**，不知道是谁放的 —— 用户可能同时自己从拾取器拖了一张。
+ * 因此这里给出的是「观察到的现象 + 若不是你加的就忽略」，而不是断言成功。
+ *
+ * 与回调命中的区别：那条（`added`）不给任何提示（模态自己会收起），因为它是系统的权威结论。
+ */
+export const WIDGET_PIN_OBSERVED_HINT = '检测到桌面上新增了一张课表卡片。如果不是你刚添加的，请忽略。'
+
+/**
+ * 小米「创建桌面快捷方式」权限的说明。
+ *
+ * 这条依据是**社区实测口径**（非厂商官方文档），所以措辞是「可能不会生效」而不是断言 ——
+ * 权限开关我们也**不检测**（公开 SDK 里没有对应的 op），只提示 + 给一个跳转入口。
+ */
+export const WIDGET_PIN_XIAOMI_PERMISSION_HINT = '小米手机需要为课表打开「创建桌面快捷方式」权限，否则一键添加可能不会生效。'
+
+/** 小米权限引导按钮的文案（只是导航，不承诺一定能到那个开关）。 */
+export const WIDGET_PIN_XIAOMI_PERMISSION_ACTION = '去开启权限'
+
+/**
+ * vivo 组件库跳转的说明。
+ *
+ * **不得**写成「这里一定能看到课表」：未上架审核的组件会不会出现在组件库里是未知的（开放项 V5），
+ * 所以只说「打开组件库，在里面找课表」，手动步骤也继续常驻。
+ */
+export const WIDGET_PIN_VIVO_GALLERY_HINT = '也可以打开组件库，在里面找到课表并添加。'
+
+/** vivo 组件库跳转按钮的文案。 */
+export const WIDGET_PIN_VIVO_GALLERY_ACTION = '打开组件库'
+
 /** 「添加到桌面」这次操作的**状态**。 */
-export type WidgetPinOutcome = 'idle' | 'requesting' | 'added' | 'cancelled' | 'no_confirmation' | 'unconfirmed' | 'unsupported'
+export type WidgetPinOutcome =
+  | 'idle'
+  | 'requesting'
+  | 'added'
+  | 'added_observed'
+  | 'cancelled'
+  | 'no_confirmation'
+  | 'unconfirmed'
+  | 'unsupported'
 
 /**
  * 快探针命中时的说明（**推断，不是失败结论**）。
@@ -155,6 +210,19 @@ export function resolvePinFinalOutcome(probeFired: boolean): 'no_confirmation' |
 }
 
 /**
+ * 「无回调复核」结论 → 面板状态。
+ *
+ * 复核命中同样点亮「已添加」（用户的心智是「我刚加了它」），但走 `added_observed` 这一支，
+ * 与回调命中的 `added` 在**文案上可区分**：我们只知道桌面上多了一张卡片，不知道是谁放的。
+ *
+ * @param observation 原生 `consumePinObservation()` 的结论。
+ * @returns `added_observed` 或 `unconfirmed`。
+ */
+export function resolvePinOutcomeFromObservation(observation: WidgetPinObservation): 'added_observed' | 'unconfirmed' {
+  return observation.observed ? 'added_observed' : 'unconfirmed'
+}
+
+/**
  * 每个状态对应的提示文案；`null` 表示这一状态下不给任何提示（不打扰用户）。
  */
 export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
@@ -169,6 +237,9 @@ export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
       return WIDGET_PIN_MANUAL_HINT
     case 'cancelled':
       return WIDGET_PIN_CANCELLED_HINT
+    case 'added_observed':
+      // 复核命中：卡片确实在桌面上，但给不出「系统已确认」这种口径。
+      return WIDGET_PIN_OBSERVED_HINT
     case 'added':
     case 'idle':
       return null
@@ -176,12 +247,46 @@ export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
 }
 
 /**
- * 面板底部**常驻**的手动步骤说明。
+ * 各家的手动添加入口**各不相同**（入口名与层级都不一样），所以文案必须按厂商取。
+ *
+ * 为什么不能留一句通用的：既有那句「长按桌面空白处 → 小工具 → …」在四家上**都是错的指路** ——
+ * 小米要点「小部件」并进「安卓小部件」；OPPO 要点「卡片」再搜；vivo 要进「应用挂件」；荣耀要经「服务卡片」。
+ *
+ * 来源：两个互相独立的生产 App 用户文档（见 research.md §4）。通用句只留给未识别厂商与老系统。
+ */
+export const MANUAL_HINT_BY_FAMILY: Record<WidgetVendorFamily, string> = {
+  xiaomi: '双指捏合桌面 → 底部「小部件」→ 小部件中心点「搜索」→ 进「安卓小部件」→ 找到课表',
+  oppo: '长按桌面空白处 → 「卡片」→ 直接搜索「课表」',
+  vivo: '长按桌面空白处 → 「组件」→ 底部「应用挂件」→ 下滑找到课表',
+  honor: '双指捏合桌面 → 「服务卡片 / 桌面卡片」→ 滑到底 → 「窗口小工具 / 经典小工具」→ 找到课表',
+  other: '长按桌面空白处 → 「小工具 / 小组件」→ 找到课表',
+}
+
+/**
+ * 尺寸清单从预设表生成，避免「面板写一种、拾取器里是另一种」的错位。
+ *
+ * @returns 形如 `2×2 / 2×3 / 4×2 / 4×3 / 6×3`。
+ */
+export function widgetPinSizeList(): string {
+  return WIDGET_PIN_PRESETS.map((preset) => preset.cell).join(' / ')
+}
+
+/**
+ * 面板底部**常驻**的手动步骤说明（按厂商取）。
  *
  * 不只在失败时出现：会静默吞掉请求的桌面上，它是唯一可靠的路径，因此始终可见。
- * 尺寸清单从预设表生成，避免"面板写一种、拾取器里是另一种"的错位。
+ *
+ * @param family 厂商族；决定入口名与层级。
+ * @param sizeList 尺寸清单；默认从预设表生成。
+ * @returns 一句话步骤（含尺寸与空间不足的补充说明）。
  */
-export const WIDGET_PIN_MANUAL_STEPS = `长按桌面空白处 → 小工具 → 找到课表 → 按尺寸选（${WIDGET_PIN_PRESETS.map((preset) => preset.cell).join(' / ')}）→ 拖到桌面上，再按卡片上的格子数调整大小`
+export function manualSteps(family: WidgetVendorFamily, sizeList: string = widgetPinSizeList()): string {
+  // 显式标注 `string | undefined`：原生理论上可能送来一个还没认识的族名，这时要退回通用句而不是渲染出 undefined。
+  const hint: string | undefined = MANUAL_HINT_BY_FAMILY[family]
+  const path = hint ?? MANUAL_HINT_BY_FAMILY.other
+  const space = family === 'other' ? '' : `（${WIDGET_PIN_SPACE_HINT}）`
+  return `${path} → 按尺寸选（${sizeList}）→ 拖到桌面上，再按卡片上的格子数调整大小${space}`
+}
 
 /**
  * 模态框当前该显示什么。
@@ -204,7 +309,11 @@ export function resolvePinModalState(outcome: WidgetPinOutcome, dismissed: boole
   if (outcome === 'idle') {
     return 'hidden'
   }
-  return dismissed ? 'hidden' : outcome === 'added' ? 'added' : 'failed'
+  if (outcome === 'added' || outcome === 'added_observed') {
+    // 两种「加上了」共用同一个模态；差异只在提示语（见 pinOutcomeMessage）。
+    return dismissed ? 'hidden' : 'added'
+  }
+  return dismissed ? 'hidden' : 'failed'
 }
 
 /**

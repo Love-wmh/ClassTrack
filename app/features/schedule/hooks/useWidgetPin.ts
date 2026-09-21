@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isNativeWidgetSnapshotAvailable, widgetSnapshotPlugin } from '~/lib/native-widget-snapshot'
-import type { WidgetPresetId } from '~/lib/native-widget-snapshot'
+import type { WidgetPinCapability, WidgetPresetId } from '~/lib/native-widget-snapshot'
 import {
   pinOutcomeMessage,
   resolvePinFinalOutcome,
   resolvePinModalState,
+  resolvePinOutcomeFromObservation,
   resolvePinProbeOutcome,
   resolvePinPollOutcome,
   resolvePinStartOutcome,
@@ -31,6 +32,14 @@ const PROBE_POLLS = 3
 /** 成功态模态停留多久后自动收起（用户已经看到"已添加"，不必手动关）。 */
 const SUCCESS_MODAL_LINGER_MS = 1500
 
+/**
+ * 在拿到原生答案之前的厂商分诊值。
+ *
+ * 默认用 `other` 而不是先猜一家：猜错会让用户看到**别人**的入口名（比不给还糟）。两个入口开关都默认 false，
+ * 所以这个默认值只会让面板先按通用文案渲染，随后被真实值替换。
+ */
+const NEUTRAL_CAPABILITY: WidgetPinCapability = { family: 'other', modern: false, shortcutHint: false, galleryButton: false }
+
 export type WidgetPinState = {
   /** 当前环境是否支持应用内添加（仅 Android 原生为真）。 */
   supported: boolean
@@ -48,6 +57,12 @@ export type WidgetPinState = {
   dismissModal: () => void
   /** 按预设请求添加。 */
   pin: (preset: WidgetPresetId) => Promise<void>
+  /** 厂商分诊结果：决定手动步骤文案与显示哪些入口（不决定能力）。 */
+  capability: WidgetPinCapability
+  /** 小米「创建桌面快捷方式」权限引导；跳不动就静默。 */
+  openShortcutPermission: () => Promise<void>
+  /** vivo「去组件库添加」；跳不动就静默。 */
+  openWidgetGallery: () => Promise<void>
 }
 
 /**
@@ -61,6 +76,8 @@ export type WidgetPinState = {
  * 2. 失败**一旦判定出来就立刻**给反馈：被取消/不支持是即时的；「系统压根没弹确认界面」由原生快探针在
  *    约 2 秒判定（实测 ColorOS 起确认页却从不置前）；最后 10 秒无回调兜底。
  * 3. 探针命中**不是终态**：仍然继续等确认回调，真成功了要翻成成功并收起模态框。
+ * 4. 等不到回调时还有一条**无回调复核**：再比对一次实例集合，真多了一张卡片就判「已添加（复核）」，
+ *    但文案带限定句（我们不知道是谁放的）。这条专治「成功放下却不发回调」的厂商桌面。
  */
 export function useWidgetPin(): WidgetPinState {
   const supported = isNativeWidgetSnapshotAvailable()
@@ -68,6 +85,7 @@ export function useWidgetPin(): WidgetPinState {
   const [outcome, setOutcome] = useState<WidgetPinOutcome>('idle')
   const [added, setAdded] = useState<WidgetPresetId | null>(null)
   const [modalDismissed, setModalDismissed] = useState(false)
+  const [capability, setCapability] = useState<WidgetPinCapability>(NEUTRAL_CAPABILITY)
   const pendingRef = useRef<WidgetPresetId | null>(null)
 
   const modal = resolvePinModalState(outcome, modalDismissed)
@@ -80,6 +98,45 @@ export function useWidgetPin(): WidgetPinState {
   }, [modal])
 
   const dismissModal = useCallback(() => setModalDismissed(true), [])
+
+  // 厂商分诊只问一次：它只决定文案与显示哪些入口，**不参与能力判断**。
+  useEffect(() => {
+    if (!supported) return
+    let cancelled = false
+    widgetSnapshotPlugin
+      .getPinCapability()
+      .then((value) => {
+        if (!cancelled) setCapability(value)
+      })
+      .catch(() => {
+        // 拿不到就保持中性值：文案退化成通用句，但绝不因此弹错或阻塞面板。
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [supported])
+
+  /**
+   * 小米：把用户送到「创建桌面快捷方式」权限页。
+   *
+   * **失败不是功能失败**：跳不动（页面不存在/不可导出）时用户仍能从系统设置里找到它，所以静默即可。
+   */
+  const openShortcutPermission = useCallback(async () => {
+    try {
+      await widgetSnapshotPlugin.openPinShortcutPermissionSettings()
+    } catch {
+      // 导航失败不影响任何功能路径；不弹红错。
+    }
+  }, [])
+
+  /** vivo：把用户送到原子组件库本应用页面。跳不动就静默退回手动步骤。 */
+  const openWidgetGallery = useCallback(async () => {
+    try {
+      await widgetSnapshotPlugin.openWidgetGallery()
+    } catch {
+      // 同上。
+    }
+  }, [])
 
   const pin = useCallback(async (preset: WidgetPresetId) => {
     if (pendingRef.current !== null) return
@@ -117,6 +174,17 @@ export function useWidgetPin(): WidgetPinState {
             setOutcome('no_confirmation')
           }
         }
+
+        if (attempt === POLL_ATTEMPTS - 1) {
+          // 最后一轮再问一次「桌面上是不是真的多了一张卡片」：部分厂商桌面（华为/荣耀一类）**成功放下却
+          // 不发回调**，只认回调会让它们永远显示「未完成」。复核命中走 `added_observed`，文案带限定句。
+          const observation = await widgetSnapshotPlugin.consumePinObservation()
+          if (resolvePinOutcomeFromObservation(observation) === 'added_observed') {
+            setAdded(preset)
+            setOutcome('added_observed')
+            return
+          }
+        }
         await delay(POLL_INTERVAL_MS)
       }
       // 等不到确认：不是错误，是有些桌面会静默吞掉请求 —— 如实告知并给手动步骤。
@@ -132,7 +200,19 @@ export function useWidgetPin(): WidgetPinState {
     }
   }, [])
 
-  return { supported, pending, outcome, message: pinOutcomeMessage(outcome), added, modal, dismissModal, pin }
+  return {
+    supported,
+    pending,
+    outcome,
+    message: pinOutcomeMessage(outcome),
+    added,
+    modal,
+    dismissModal,
+    capability,
+    openShortcutPermission,
+    openWidgetGallery,
+    pin,
+  }
 }
 
 function delay(ms: number): Promise<void> {
