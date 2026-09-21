@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
+- **Total Sessions**: 12
 - **Last Active**: 2026-09-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~372 | Active |
+| `journal-1.md` | ~406 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-09-21 | 小工具 pin 真机复验：不再撒谎的「添加到桌面」 | `585d91c` | `master` |
 | 11 | 2026-09-21 | 小工具「添加到桌面」：回调式确认 + 两段式目标判决 + 诚实文案 | `0d7fbdd` | `master` |
 | 10 | 2026-09-21 | 小工具预设尺寸与前台「添加到桌面」入口：字号随尺寸放大 + 双栏静态富内容 + pin 流程 | `f147d9f`, `d3f086c`, `8476e31`, `028cb44` | `feat/widget-adaptive-space` |
 | 9 | 2026-09-20 | 小工具大格子适配：双栏左卡吃满纵向 + 修掉配置页快照冲突崩溃 | `471af70` | `feat/widget-adaptive-space` |

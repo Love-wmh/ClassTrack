@@ -370,3 +370,37 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Next Steps
 
 - 真机（PKR110/ColorOS）空闲时补 A4 a/b/c 现场证据：确认不再出现假「已添加」、超时文案与常驻手动步骤出现、记录 AddItemActivity 是否置前
+
+
+## Session 12: 小工具 pin 真机复验：不再撒谎的「添加到桌面」
+<!-- trellis-session: v=2 fp=f487b7605756fccc -->
+
+**Date**: 2026-09-21
+**Task**: 小工具 pin 真机复验：不再撒谎的「添加到桌面」
+**Branch**: `master`
+
+### Summary
+
+推送 master 触发 CI 出 1.0.6-beta（sha256 校验一致）覆盖安装到 PKR110，现场复验失败路径：无假「已添加」、超时如实文案、手动步骤常驻、launcher 起 AddItemActivity 却从未置前
+
+### Main Changes
+
+- verification.md 补真机证据表与截图（evidence/real-1..3），PRD A4 勾选，新增 2 条取证陷阱到 verification 与项目 skill
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `585d91c` | chore(widget): 补真机验收证据并勾选 A4 |
+
+### Testing
+
+- [OK] Android 157 例、Web 80 例、pnpm lint 0 error；真机 logcat 三段日志 + dumpsys 实例数 + 截图
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 归档 09-21-widget-pin-confirm（A1-A6 全部完成）；如需在真机真放下小工具，只能走面板底部的手动步骤
