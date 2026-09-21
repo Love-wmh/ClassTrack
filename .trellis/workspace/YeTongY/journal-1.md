@@ -440,3 +440,37 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Next Steps
 
 - 待补：模态失败分支（探针命中）与拖动改尺寸的真机现场；两处都已写进 verification.md 的待办
+
+
+## Session 14: 小工具：模拟器验掉拖动改尺寸与模态失败分支（并修出两个真缺陷）
+<!-- trellis-session: v=2 fp=ef8e4b4c0be03864 -->
+
+**Date**: 2026-09-21
+**Task**: 小工具：模拟器验掉拖动改尺寸与模态失败分支（并修出两个真缺陷）
+**Branch**: `master`
+
+### Summary
+
+用 input motionevent 真实拖拽手势验证尺寸变化自动匹配（2列 adaptive ↔ 3列 two_column，显式时不变）；用受控实验触发探针失败方向，发现并修掉探针结论被兜底文案降级的缺陷
+
+### Main Changes
+
+- useWidgetPin 改为 resolvePinFinalOutcome(probeFired)；配置页 AUTO 下灰显说明改用另一条文案；verification.md 补设备证据与手势方法；MainActivity 的实验补丁已回滚
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3b35a8e` | fix(widget): 修掉探针结论被兜底文案降级、以及 AUTO 下灰显说明写错原因 |
+
+### Testing
+
+- [OK] Android 186 例、Web 92 例、lint 0 error、typecheck；模拟器实测见 verification.md（含 5 张证据截图）
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 真机复验：探针修复后的文案在 ColorOS 现场确认、ColorOS 下拾取器尺寸标签；随后归档任务
