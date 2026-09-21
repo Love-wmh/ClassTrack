@@ -1,5 +1,6 @@
 package com.classtrack.app;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
@@ -20,6 +21,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * Web → 原生 的快照通道，以及小工具精度等级的查询/授权入口。
@@ -138,9 +140,28 @@ public class WidgetSnapshotPlugin extends Plugin {
         // 用户可能从任何一档放下实例，只记 4×3 会让其它档的差集算错。
         WidgetPinBaseline.record(WidgetProviders.allAppWidgetIds(context), System.currentTimeMillis());
 
+        // 厂商分诊：**只用来决定 extras 与提示**，不用来判断能力（能力结论只来自行为探测）。
+        WidgetVendorFamily family = WidgetVendorFamily.detect(Build.MANUFACTURER, Build.BRAND);
+        boolean modern = WidgetVendorSupport.isModern(Build.VERSION.SDK_INT, family);
+        boolean detailPageSupported = WidgetVendorProbe.detailPageSupported(context, family);
+        WidgetDiagnostics.pinVendor(family.wireName(), modern, detailPageSupported);
+
         Bundle extras = new Bundle();
-        extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, Math.round(preset.getWidthDp()));
-        extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, Math.round(preset.getHeightDp()));
+        WidgetPinExtras.apply(
+                WidgetPinExtras.plan(family, modern, detailPageSupported,
+                        context.getPackageName(), provider.getClassName(),
+                        Math.round(preset.getWidthDp()), Math.round(preset.getHeightDp())),
+                new WidgetPinExtras.Sink() {
+                    @Override
+                    public void putString(String key, String value) {
+                        extras.putString(key, value);
+                    }
+
+                    @Override
+                    public void putInt(String key, int value) {
+                        extras.putInt(key, value);
+                    }
+                });
 
         // 必须传 successCallback：它的返回值只表示「请求已受理」，与是否真的放下无关。
         // 系统在用户确认后广播到这个 receiver，并带回新实例 id（见 WidgetPinResultReceiver）。
@@ -202,6 +223,185 @@ public class WidgetSnapshotPlugin extends Plugin {
         result.put("requestedAtMs", requestedAtMs);
         result.put("shouldFailFast", PinAttempt.shouldFailFast(requestedAtMs, nowMs, backgroundedAtMs));
         call.resolve(result);
+    }
+
+    /**
+     * 问一次厂商分诊结果，供 Web 面板决定「显示哪些引导」。
+     *
+     * <p>无副作用、可重复调用：只做纯字符串识别 + 一次小米能力探测（按进程缓存）。
+     *
+     * <p>**它不回答「能不能 pin」** —— 那是行为探测的结论（探针 + 确认回调 + 无回调复核）。
+     * 返回的 `shortcutHint` / `galleryButton` 都只是「该不该显示入口」，不是「这条路一定有效」。
+     */
+    @PluginMethod
+    public void getPinCapability(PluginCall call) {
+        Context context = getContext();
+        WidgetVendorFamily family = WidgetVendorFamily.detect(Build.MANUFACTURER, Build.BRAND);
+        boolean modern = WidgetVendorSupport.isModern(Build.VERSION.SDK_INT, family);
+        boolean detailPageSupported = WidgetVendorProbe.detailPageSupported(context, family);
+        if (family == WidgetVendorFamily.XIAOMI) {
+            // 真机取证的唯一入口（开放项 V1/V3）：要能区分「不支持小米Widget」与「支持但不支持详情页」。
+            WidgetDiagnostics.widgetCenterProbe(WidgetVendorProbe.widgetSupported(context, family), detailPageSupported);
+        }
+
+        JSObject result = new JSObject();
+        result.put("family", family.wireName());
+        result.put("modern", modern);
+        result.put("shortcutHint", WidgetVendorSupport.showsShortcutPermissionHint(Build.VERSION.SDK_INT, family));
+        result.put("galleryButton", WidgetVendorSupport.showsWidgetGalleryButton(Build.VERSION.SDK_INT, family));
+        call.resolve(result);
+    }
+
+    /**
+     * 「无回调复核」：等待窗口末尾用实例差集判断「桌面上是不是真的多出来一张卡片」。
+     *
+     * <p><b>为什么需要它</b>：确认回调「成功才触发」，而部分厂商桌面**根本不触发**（见 spec 的 pin 条目）。
+     * 只认回调的实现在那些设备上会永远显示「未完成」，哪怕卡片已经躺在桌面上。
+     *
+     * <p><b>两条边界</b>：
+     *
+     * <ol>
+     *   <li>确认回调已经到过 → 一律 `observed=false`：回调是权威信号，不该被「观察到」的措辞覆盖。</li>
+     *   <li>基线不可用（`peek` 返回 `null`，没记录或已超时）→ 差集不成立，`WidgetPinTargets.resolve` 会返回空数组，
+     *       因此**不会**误判成功（把差集当全集会把预设写到用户所有旧卡片上）。</li>
+     * </ol>
+     *
+     * <p>只返回 `{observed, count}`，**不返回实例 id**。重复调用会重新计算（差集是确定性的，结论一致）。
+     */
+    @PluginMethod
+    public void consumePinObservation(PluginCall call) {
+        Context context = getContext();
+        long nowMs = System.currentTimeMillis();
+
+        int observedCount = WidgetPinObservation.consume(nowMs);
+        if (observedCount == 0 && !WidgetPinResult.hasConfirmed(nowMs)) {
+            // 基线用 peek（不消费）：回调可能在复核之后才到，那时还要用同一份基线兜「回调 id 不可信」。
+            int[] fresh = WidgetPinTargets.resolve(
+                    WidgetPinBaseline.peek(nowMs), WidgetProviders.allAppWidgetIds(context), -1);
+            if (fresh.length > 0) {
+                WidgetPinObservation.record(fresh.length, nowMs);
+                observedCount = WidgetPinObservation.consume(nowMs);
+                WidgetDiagnostics.pinObserved(observedCount);
+            }
+        }
+
+        JSObject result = new JSObject();
+        result.put("observed", observedCount > 0);
+        result.put("count", observedCount);
+        call.resolve(result);
+    }
+
+    /**
+     * 小米：「创建桌面快捷方式」权限的导航入口。
+     *
+     * <p>**只跳转，不判断权限** —— 公开 SDK 里没有 `OP_REQUEST_PIN_SHORTCUT`，想检测只能反射 + 硬编码
+     * 操作码，那是私有 API 直连（见 design D4）。所以这里永远只是「把用户送到可能能改的地方」。
+     *
+     * <p>优先级：MIUI 权限编辑页 → 系统应用详情页 → 什么都不做。任何一步抛 `RuntimeException`
+     *（页面存在但不可导出也是常见情形）都按「没启动」如实返回，不崩、不弹红错。
+     */
+    @PluginMethod
+    public void openPinShortcutPermissionSettings(PluginCall call) {
+        Context context = getContext();
+        String packageName = context.getPackageName();
+
+        Intent miui = new Intent("miui.intent.action.APP_PERM_EDITOR")
+                .setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+                .putExtra("extra_pkgname", packageName)
+                .putExtra("extra_type", 1);
+        Intent appDetails = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse("package:" + packageName));
+
+        WidgetPinNavigation.Step step = WidgetPinNavigation.shortcutPermissionStep(
+                isResolvable(context, miui), isResolvable(context, appDetails));
+
+        boolean launched = false;
+        if (step == WidgetPinNavigation.Step.MIUI_PERMISSION) {
+            launched = startQuietly(miui);
+        } else if (step == WidgetPinNavigation.Step.APP_DETAILS) {
+            launched = startQuietly(appDetails);
+        }
+        WidgetDiagnostics.pinNavigation(step.wireName(), launched);
+
+        JSObject result = new JSObject();
+        result.put("launched", launched);
+        result.put("step", step.wireName());
+        call.resolve(result);
+    }
+
+    /**
+     * vivo：跳到「原子组件库」里本应用的页面（vivo 官方适配指南第 7 节）。
+     *
+     * <p>**同样只跳转**：未上架审核的组件会不会出现在组件库里是未知的（开放项 V5），所以面板上的按钮
+     * 只说「打开组件库」，手动步骤仍然常驻。跳不动就静默退回文案。
+     */
+    @PluginMethod
+    public void openWidgetGallery(PluginCall call) {
+        Context context = getContext();
+        Intent gallery = widgetGalleryIntent(context);
+        WidgetPinNavigation.Step step = WidgetPinNavigation.galleryStep(
+                gallery != null && isResolvable(context, gallery));
+
+        boolean launched = step == WidgetPinNavigation.Step.WIDGET_GALLERY && startQuietly(gallery);
+        WidgetDiagnostics.pinNavigation(step.wireName(), launched);
+
+        JSObject result = new JSObject();
+        result.put("launched", launched);
+        result.put("step", step.wireName());
+        call.resolve(result);
+    }
+
+    /**
+     * 构造 vivo 组件库跳转 Intent。
+     *
+     * <p>`classname` 取**注册表里的第一档 provider**：官方文档描述的目标是「该应用适配的所有原子组件的
+     * 页面」（不是某一个组件），所以取哪一档不影响落点；取不到任何 provider 时返回 `null`，由调用方按
+     * 「这条路走不通」处理。
+     */
+    private Intent widgetGalleryIntent(Context context) {
+        List<ComponentName> renderers = WidgetProviders.renderers(context);
+        if (renderers.isEmpty()) {
+            return null;
+        }
+        String providerClassName = renderers.get(0).getClassName();
+        return new Intent(Intent.ACTION_VIEW)
+                .setPackage(WidgetPinNavigation.VIVO_LAUNCHER_PACKAGE)
+                .setData(Uri.parse(WidgetPinNavigation.widgetGalleryUri(context.getPackageName(), providerClassName)));
+    }
+
+    /** @return 该 Intent 是否在系统里能解析到目标页；异常一律按「不能」处理。 */
+    private boolean isResolvable(Context context, Intent intent) {
+        if (context == null || intent == null) {
+            return false;
+        }
+        try {
+            return context.getPackageManager().resolveActivity(intent, 0) != null;
+        } catch (RuntimeException error) {
+            return false;
+        }
+    }
+
+    /**
+     * 启动一个「走不通也无所谓」的页面。
+     *
+     * <p>`resolveActivity` 通过但 `startActivity` 抛 `SecurityException`（页面存在、但**不可导出**）是
+     * MIUI 权限页上真实存在的情形，因此这里必须捕获；返回 `false` 表示「什么都没发生」，调用方只记一条诊断。
+     */
+    private boolean startQuietly(Intent intent) {
+        if (intent == null) {
+            return false;
+        }
+        try {
+            Activity activity = getActivity();
+            if (activity != null) {
+                activity.startActivity(intent);
+            } else {
+                getContext().startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            }
+            return true;
+        } catch (RuntimeException error) {
+            return false;
+        }
     }
 
     /**

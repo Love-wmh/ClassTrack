@@ -176,4 +176,11 @@
       刻意**不**声明 USE_EXACT_ALARM：它只面向闹钟/日历类应用，会自动授予，不适用于本场景。
     -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!--
+      vivo 桌面（OriginOS）的「原子组件库详情页」跳转权限。
+      vivo 官方适配指南第 7 节写着「获得此能力需要：（1）申请权限 （2）使用显式 intent」，
+      这里的「申请权限」= 声明本权限即可，**不是平台审批**。
+      它只为跳转而声明，不授予任何系统能力；跳不动时调用方静默退回文案（见 WidgetPinNavigation）。
+    -->
+    <uses-permission android:name="com.bbk.launcher2.permission.JUMP_ORIGIN" />
 </manifest>
