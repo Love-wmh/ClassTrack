@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WIDGET_PIN_MANUAL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPresets'
+import { WIDGET_PIN_MANUAL_HINT, WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPresets'
 
 /**
  * 预设目录的**跨层契约**：这张表里的标识就是原生 `WidgetPreset.java` 的白名单。
@@ -24,6 +24,13 @@ describe('小工具预设目录', () => {
       expect(preset.description.length, preset.id).toBeGreaterThan(8)
       expect(preset.hint.length, preset.id).toBeGreaterThan(4)
     }
+  })
+
+  it('只有宽格才生效的预设被如实标记，且带一句退化成单栏的说明', () => {
+    const wideOnly = WIDGET_PIN_PRESETS.filter((preset) => preset.needsWideCell).map((preset) => preset.id)
+
+    expect(wideOnly).toEqual(['tablet_dual', 'tablet_wide'])
+    expect(WIDGET_PIN_NARROW_CELL_HINT).toContain('单栏')
   })
 
   it('手动添加说明如实告诉用户怎么放、以及尺寸要自己调', () => {

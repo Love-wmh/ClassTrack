@@ -3,7 +3,7 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '~/components/ui/sheet'
 import { useWidgetPin } from './hooks/useWidgetPin'
-import { WIDGET_PIN_PRESETS } from './widgetPinPresets'
+import { WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPresets'
 
 /**
  * 课表页顶栏的「添加到桌面」入口。
@@ -53,6 +53,11 @@ export default function WidgetPinEntry() {
                     <Badge variant="secondary" className="font-mono text-[0.7rem]">
                       {preset.cell}
                     </Badge>
+                    {preset.needsWideCell ? (
+                      <Badge variant="outline" className="text-[0.7rem] text-muted-foreground">
+                        需宽格
+                      </Badge>
+                    ) : null}
                   </div>
                   <Button
                     variant={isAdded ? 'secondary' : 'default'}
@@ -67,6 +72,7 @@ export default function WidgetPinEntry() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{preset.description}</p>
                 <p className="mt-1 text-xs text-muted-foreground">适合：{preset.hint}</p>
+                {preset.needsWideCell ? <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_NARROW_CELL_HINT}</p> : null}
               </div>
             )
           })}

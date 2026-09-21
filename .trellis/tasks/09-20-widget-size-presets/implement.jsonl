@@ -1,0 +1,6 @@
+{"file": ".trellis/tasks/09-20-widget-size-presets/design.md", "reason": "本次唯一技术依据：D1 预设模型（预设=内容组合+样式+是否允许放大字号）、D2 填充算法与行高系数标定、D3 两天内容与 R11 边界、D4 左卡三段分布、D5 pin 流程与待消费槽位、D6 Web 入口、D7 日志"}
+{"file": ".trellis/tasks/09-20-widget-size-presets/implement.md", "reason": "阶段顺序与每阶段的命令/完成判据：P0 spike 的结论决定 D2.1 与 D5.1 的最终写法，不能跳过"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "小工具契约：D16 收窄修订、连续度量缩放、双栏判据、子卡片只在双栏、点击/集合型 widget 的既有教训；本次要在其基础上加预设、填充与 pin 入口"}
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "首页移动端布局契约：顶栏紧凑化会动这份面，需要按其口径（md: 断点、触控目标）同步"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "spec 层的索引与语言规则（英文），新增条目要挂到对应文件"}
+{"file": ".trellis/tasks/archive/2026-09/09-20-android-widget-adaptive-space/verification.md", "reason": "上一轮验收证据：手机 2×2 逐像素基线、平板四档截图与 phase 日志、已知环境坑（force-stop 重摆、6×4 不可达）—— A6/A5 的比对基准"}

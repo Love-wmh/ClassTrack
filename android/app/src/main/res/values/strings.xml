@@ -33,6 +33,9 @@
     <!-- 双栏富内容（静态数据，不需要额外刷新） -->
     <string name="widget_counts_summary">已上完 %1$d 节 · 还有 %2$d 节</string>
     <string name="widget_mid_next">下一节 %1$s %2$s</string>
+    <string name="widget_mid_next_second">再下一节 %1$s %2$s</string>
+    <!-- hero 本身就是「接下来」那一节时，它之后的课要再退一级称呼，否则会出现「接下来 A / 下一节 B」这种自相矛盾的读法。 -->
+    <string name="widget_mid_next_third">再之后 %1$s %2$s</string>
     <string name="widget_footer_last">今天最后一节 %1$s %2$s</string>
     <string name="widget_next_other_day_line">下一节 · %1$s %2$s %3$s</string>
     <string name="widget_style_entry">样式</string>

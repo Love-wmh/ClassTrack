@@ -412,13 +412,15 @@ private fun ColumnScope.DualColumnBody(context: Context, state: WidgetDisplaySta
                 if (heroLine != null) {
                     HeroHeading(context, state, hero, appWidgetId, leftMetrics, heroLine.titleMaxLines)
                 }
-                Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight())
+                // Glance 的 `defaultWeight()` 不支持自定义权重（只能等权），因此用**份数**表达 2 : 3 ——
+                // 中缝略靠下，读起来像「顶部信息 + 下半部分的时间/下一节」，而不是三块等距的孤岛。
+                repeat(SPACER_UNITS_ABOVE_MID) { Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) }
                 for (line in headerLines) {
                     if (line.kind == WidgetBodyLine.Kind.MID_NEXT) {
                         BodyLineView(context, state, plan, hero, appWidgetId, leftMetrics, leftFill, line)
                     }
                 }
-                Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight())
+                repeat(SPACER_UNITS_BELOW_MID) { Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) }
                 HeroDetail(context, hero, leftMetrics)
                 if (bottomLine != null) {
                     Text(text = bottomLine, maxLines = 1,
@@ -454,9 +456,10 @@ private fun headerTextLines(context: Context, state: WidgetDisplayState, hero: W
                 out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, widthDp)
             }
             else -> {
-                val text = nextUpAfterHero(state)?.occurrence
-                val label = if (text == null) "" else context.getString(R.string.widget_mid_next, text.startLabel, text.name)
-                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 2, label.length, widthDp)
+                // 中缝可能是一行或两行：按真实行数估算，别让字号因为少算一行而放得过大。
+                for (text in midNextTexts(context, state)) {
+                    out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, text.length, widthDp)
+                }
             }
         }
     }
@@ -510,6 +513,10 @@ private fun metaLength(context: Context, item: WidgetDayItem, showSections: Bool
     return length
 }
 
+/** 左卡中缝上下的余量份数（2 : 3）：`defaultWeight()` 只能等权，用份数表达比例。 */
+private const val SPACER_UNITS_ABOVE_MID = 2
+private const val SPACER_UNITS_BELOW_MID = 3
+
 /** 行高估算用的字号基准值：与行判决给出的字体角色一一对应。 */
 private const val TITLE_BASE_SP = 16f
 private const val BODY_BASE_SP = 13f
@@ -549,13 +556,40 @@ private fun SummaryCountsRow(context: Context, state: WidgetDisplayState, plan: 
         style = captionStyle(metrics, R.color.widget_text_muted))
 }
 
-/** 双栏左卡中缝：「下一节 16:00 线性代数 D402」。当天没有后续课时不画。 */
+/**
+ * 双栏左卡中缝：最多两行「下一节 …」/「再下一节 …」。
+ *
+ * <p>放两行的原因：左卡只有三块内容，一行中缝会让卡片中部留出一大块空白（真机比对时很明显）。第二行是
+ * **真信息**（当天更靠后的那节课），不是填充用的占位文案。
+ */
 @Composable
 private fun MidNextRow(context: Context, state: WidgetDisplayState, metrics: WidgetLayoutMetrics) {
-    val item = nextUpAfterHero(state) ?: return
-    val occurrence = item.occurrence
-    Text(text = context.getString(R.string.widget_mid_next, occurrence.startLabel, occurrence.name), maxLines = 2,
-        style = bodyStyle(metrics, R.color.widget_text_secondary))
+    val texts = midNextTexts(context, state)
+    if (texts.isEmpty()) return
+    Text(text = texts.first(), maxLines = 1, style = bodyStyle(metrics, R.color.widget_text_secondary))
+    if (texts.size > 1) {
+        Text(text = texts[1], maxLines = 1, style = captionStyle(metrics, R.color.widget_text_muted))
+    }
+}
+
+/**
+ * @return 中缝要显示的行文案（最多两行：下一节、再下一节）；当天没有后续课时返回空列表。
+ */
+private fun midNextTexts(context: Context, state: WidgetDisplayState): List<String> {
+    val upcoming = upcomingAfterHero(state)
+    // hero 状态决定措辞：hero 正在上 → 中缝是「下一节 / 再下一节」；hero 本身就是「接下来」那一节时，
+    // 它之后的课要再退一级，否则会出现「接下来 大学物理 / 下一节 14:00 毛泽东思想」这种自相矛盾的读法。
+    val heroInProgress = state.todayItems.any { it.occurrence == state.hero && it.isInProgress }
+    val labels = if (heroInProgress) {
+        listOf(R.string.widget_mid_next, R.string.widget_mid_next_second)
+    } else {
+        listOf(R.string.widget_mid_next_second, R.string.widget_mid_next_third)
+    }
+    val texts = mutableListOf<String>()
+    upcoming.take(labels.size).forEachIndexed { index, item ->
+        texts += context.getString(labels[index], item.occurrence.startLabel, item.occurrence.name)
+    }
+    return texts
 }
 
 /** 双栏列表底部：「今天最后一节 19:00 数据结构 A101」。 */
@@ -572,18 +606,22 @@ private fun FooterLastRow(context: Context, state: WidgetDisplayState, metrics: 
  * <p>用 hero 在当天的位置做切分，而不是比较时间：这样「hero 是正在上的那一节」与「hero 是接下来那一节」
  * 两种情况都成立，也不会因为秒级误差选错行。
  */
-private fun nextUpAfterHero(state: WidgetDisplayState): WidgetDayItem? {
-    val hero = state.hero ?: return null
+private fun upcomingAfterHero(state: WidgetDisplayState): List<WidgetDayItem> {
+    val hero = state.hero ?: return emptyList()
     var passedHero = false
+    val upcoming = mutableListOf<WidgetDayItem>()
     for (item in state.todayItems) {
         if (!passedHero) {
             if (item.occurrence == hero) passedHero = true
             continue
         }
-        if (item.phase == WidgetDayItem.Phase.UPCOMING) return item
+        if (item.phase == WidgetDayItem.Phase.UPCOMING) upcoming += item
     }
-    return null
+    return upcoming
 }
+
+/** @return hero 之后第一节「还没开始」的课；没有则为 `null`。 */
+private fun nextUpAfterHero(state: WidgetDisplayState): WidgetDayItem? = upcomingAfterHero(state).firstOrNull()
 
 /**
  * 汇总行：左侧说明这是哪一天、多少节课，右侧「样式」入口。

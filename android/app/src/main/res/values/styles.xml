@@ -19,4 +19,21 @@
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
     </style>
+
+    <!--
+      关掉小工具里课程列表的滚动条（覆盖 Glance 库里的同名空样式）。
+
+      为什么不逐份拷贝布局：Glance 1.2.0 里承载 `LazyColumn` 的 `ListView` 有两套布局 —— 基础的
+      `res/layout/glance_list.xml`，以及 **API 33+ 才用的** `res/layout-v33/glance_list_*.xml`（11 个
+      按对齐方向命名的变体）。它们各自独立声明 `ListView`，只在同一个 `style="@style/Glance.AppWidget.List"`
+      上会合，而库里这个样式是**空的**。因此之前的做法（只覆盖基础布局）在 Android 13+ 上失效：launcher 用的
+      是 v33 变体，滚动条又回来了（2026-09-20 在 API 37 模拟器上实测到）。
+
+      重定义这个样式一处即可覆盖两套布局、以及将来新增的变体。代价与覆盖布局一样是版本耦合：升级 Glance 时
+      要重新看库里这个样式是不是还是空的（`unzip -p <aar> res/values/values.xml | grep 'Glance.AppWidget.List'`），
+      若上游加了属性要同步过来。
+    -->
+    <style name="Glance.AppWidget.List" parent="">
+        <item name="android:scrollbars">none</item>
+    </style>
 </resources>

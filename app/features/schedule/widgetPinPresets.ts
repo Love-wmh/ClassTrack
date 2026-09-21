@@ -21,6 +21,14 @@ export type WidgetPinPreset = {
   description: string
   /** 何时该选它；写在卡片上避免用户逐个试。 */
   hint: string
+  /**
+   * 是否只有横向够宽的格子才看得出效果。
+   *
+   * 双栏要求「宽度 ≥ 320dp 且宽度 ≥ 高度 × 1.25」，**手机竖屏的 4×3 不满足**（373×321 → 宽高比 1.16），
+   * 于是在手机上它会老老实实按单栏渲染 —— 不报错，但和名字给人的预期不符。这条标记让卡片如实说明
+   * 「手机上会退化成单栏」，而不是把选项藏起来（手机横放或宽矮格子时它确实能分栏）。
+   */
+  needsWideCell?: boolean
 }
 
 /** 预设清单；顺序就是卡片顺序（从最简到最全）。 */
@@ -52,6 +60,7 @@ export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
     cell: '4×3',
     description: '左栏是当前课程卡片，右栏是今天课表。',
     hint: '平板横屏；字更大、信息更多。',
+    needsWideCell: true,
   },
   {
     id: 'tablet_wide',
@@ -59,6 +68,7 @@ export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
     cell: '6×3',
     description: '左卡 + 更宽的右侧课表，教室就在课名下面。',
     hint: '平板横向 6 列以上的宽格。',
+    needsWideCell: true,
   },
 ]
 
@@ -70,6 +80,9 @@ export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
  */
 export const WIDGET_PIN_MANUAL_HINT =
   '当前系统不支持从应用内一键添加。可以长按桌面空白处 → 小工具 → 找到课表 → 拖到桌面上，再按卡片上的格子数调整大小。'
+
+/** 只有横向够宽的格子才分两栏时的提示（手机竖屏、窄格子）。 */
+export const WIDGET_PIN_NARROW_CELL_HINT = '当前格子不够宽，会先按单栏显示；横放或用平板时自动分两栏。'
 
 /** 系统弹窗被取消（或 launcher 没有真的放下）时的说明。 */
 export const WIDGET_PIN_CANCELLED_HINT = '没有添加成功。可以再点一次，或长按桌面空白处手动添加。'
