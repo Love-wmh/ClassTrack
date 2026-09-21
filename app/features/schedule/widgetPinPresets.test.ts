@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs'
+// 用 fileURLToPath 而不是 URL.pathname：仓库路径含中文，pathname 会带百分号编码。
+import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   WIDGET_PIN_MANUAL_STEPS,
@@ -17,6 +21,16 @@ import {
  * 因此这里把同一份字面量再写一遍并比对 —— 两边改动时，这个测试会立刻失败。
  */
 const NATIVE_WHITELIST = ['cell_2x2', 'cell_2x3', 'cell_4x2', 'cell_4x3', 'cell_6x3'] as const
+
+/**
+ * 跨层断言用的路径（相对仓库根）：直接读**真实的** Android 资源与清单。
+ *
+ * 为什么读文件而不是再抄一遍字面量：预设名、格子数、provider 标签现在同时存在于
+ * Web 预设表、`res/xml/widget_info_*.xml`、`res/values/strings.xml` 与 `WidgetProviderRegistry.java`。
+ * 抄一遍只能证明"我抄对了"，读文件才能证明"两边真的一样"。
+ */
+const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url))
+const WIDGET_CELLS = ['2x2', '2x3', '4x2', '4x3', '6x3'] as const
 
 describe('小工具预设目录', () => {
   it('标识与原生白名单逐字一致、且不重复', () => {
@@ -104,6 +118,70 @@ describe('添加到桌面的三态判决', () => {
  * 产品口径（2026-09-21）：点击后**立刻**出现「正在尝试添加」，失败**一判定出来就立刻**切成失败态 ——
  * 所以这里要钉住三件事：进行中永远可见、失败态可见且可关、成功态只在确认回调之后出现。
  */
+/**
+ * 五档 provider 与 Web 侧预设的跨层一致性。
+ *
+ * 出错时的表现很隐蔽（某个尺寸放下去是错的样式 / 拾取器里显示错尺寸），因此把四处对齐：
+ * 预设表 → `WidgetProviderRegistry.java`（receiver 类名 ↔ 预设）→ `widget_info_*.xml`（targetCell）
+ * → `strings.xml`（provider 标签）。
+ */
+describe('五档 provider 的跨层一致性', () => {
+  it('注册表里恰好五档，且每档对应预设表里的一个标识', () => {
+    const registry = readFileSync(join(REPO_ROOT, 'android/app/src/main/java/com/classtrack/app/WidgetProviderRegistry.java'), 'utf8')
+    const registered = [...registry.matchAll(/new Entry\(PACKAGE \+ "(\w+)", WidgetPreset\.ID_CELL_(\w+)\)/g)].map((match) => ({
+      receiver: match[1],
+      cells: match[2].toLowerCase(),
+    }))
+
+    expect(registered).toHaveLength(WIDGET_CELLS.length)
+    for (const entry of registered) {
+      expect(WIDGET_CELLS).toContain(entry.cells as (typeof WIDGET_CELLS)[number])
+    }
+    // 每档都要有 receiver：类名一律以 Cell<尺寸> 结尾，唯独 4×3 沿用旧类名（改名会让既有实例失效）。
+    for (const cells of WIDGET_CELLS) {
+      const entry = registered.find((candidate) => candidate.cells === cells)
+      expect(entry, cells).toBeTruthy()
+      expect(entry?.receiver, cells).toBe(cells === '4x3' ? 'ClassTrackWidgetReceiver' : `Cell${cells}WidgetReceiver`)
+    }
+  })
+
+  it('每档的元数据文件声明的格子数与预设一致，且各指向自己的预览', () => {
+    for (const preset of WIDGET_PIN_PRESETS) {
+      const cells = preset.id.replace('cell_', '').replace('x', 'x')
+      const [width, height] = cells.split('x')
+      const info = readFileSync(join(REPO_ROOT, `android/app/src/main/res/xml/widget_info_${cells}.xml`), 'utf8')
+
+      expect(info, preset.id).toContain(`android:targetCellWidth="${width}"`)
+      expect(info, preset.id).toContain(`android:targetCellHeight="${height}"`)
+      expect(info, preset.id).toContain(`@layout/widget_preview_${cells}`)
+      expect(info, preset.id).toContain(`@drawable/widget_preview_${cells}`)
+      // 卡片上写的格子必须与元数据一致（"卡片写着 4×3、拾取器里是 2×3" 是用户能直接看到的谎）。
+      expect(preset.cell, preset.id).toBe(`${width}×${height}`)
+    }
+  })
+
+  it('provider 标签与面板卡片名逐字一致', () => {
+    const strings = readFileSync(join(REPO_ROOT, 'android/app/src/main/res/values/strings.xml'), 'utf8')
+
+    for (const preset of WIDGET_PIN_PRESETS) {
+      const cells = preset.id.replace('cell_', '')
+      const label = (strings.match(new RegExp(`<string name="widget_label_${cells}">([^<]+)</string>`)) || [])[1]
+      // 标签="课表 · " + 卡片名：面板与拾取器里必须叫同一个名字，否则用户对不上。
+      expect(label, preset.id).toBe(`课表 · ${preset.name}`)
+    }
+  })
+
+  it('清单注册了五条 provider，且旧类名仍在', () => {
+    const manifest = readFileSync(join(REPO_ROOT, 'android/app/src/main/AndroidManifest.xml'), 'utf8')
+
+    expect([...manifest.matchAll(/android.appwidget.action.APPWIDGET_UPDATE/g)]).toHaveLength(WIDGET_CELLS.length)
+    expect(manifest).toContain('android:name=".widget.ClassTrackWidgetReceiver"')
+    for (const cells of WIDGET_CELLS) {
+      expect(manifest, cells).toContain(`@xml/widget_info_${cells}`)
+    }
+  })
+})
+
 describe('添加到桌面的模态框状态机', () => {
   it('请求进行中永远显示：点完不能没反应', () => {
     expect(resolvePinModalState('requesting', false)).toBe('requesting')

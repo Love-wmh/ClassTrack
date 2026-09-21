@@ -2,7 +2,6 @@ package com.classtrack.app.widget
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -19,6 +18,7 @@ import com.classtrack.app.R
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetDisplayState
 import com.classtrack.app.WidgetPendingPreset
+import com.classtrack.app.WidgetProviders
 import com.classtrack.app.WidgetStyleConfig
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -75,8 +75,9 @@ class WidgetConfigActivity : AppCompatActivity() {
         appWidgetId = intent?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
-        if (!belongsToThisApp(appWidgetId)) {
-            WidgetDiagnostics.configRejected(REJECT_REASON)
+        val rejectReason = rejectReason(appWidgetId)
+        if (rejectReason != null) {
+            WidgetDiagnostics.configRejected(rejectReason)
             finish()
             return
         }
@@ -126,11 +127,18 @@ class WidgetConfigActivity : AppCompatActivity() {
      * @param id 来自 Intent 的实例 id。
      * @return 该 id 有效，且其 provider 就是本应用的小工具接收器。
      */
-    private fun belongsToThisApp(id: Int): Boolean {
-        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return false
-
-        val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(id) ?: return false
-        return info.provider == ComponentName(this, ClassTrackWidgetReceiver::class.java)
+    /**
+     * 校验 widgetId 确实属于本应用。
+     *
+     * @param id 来自 Intent 的实例 id。
+     * @return `null` 表示通过；否则是**白名单里的**拒绝原因（写日志用，不含任何用户数据）。
+     */
+    private fun rejectReason(id: Int): String? {
+        if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return REJECT_REASON_INVALID
+        val info = AppWidgetManager.getInstance(this).getAppWidgetInfo(id) ?: return REJECT_REASON_UNKNOWN_INSTANCE
+        // 接受**全部** provider（2×2 / 2×3 / 4×2 / 4×3 / 6×3）：只认某一个会让其它档的实例
+        // 点「样式」时被我们自己的校验拒掉，用户看到的是「设置打不开」。
+        return if (WidgetProviders.isOurs(info.provider)) null else REJECT_REASON_FOREIGN_PROVIDER
     }
 
     /** 读取该实例已保存的配置并回显到选项上。 */
@@ -334,7 +342,9 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun selectedLayout(): WidgetStyleConfig.LayoutStyle = when (layoutGroup.checkedRadioButtonId) {
         R.id.widget_config_layout_next_up -> WidgetStyleConfig.LayoutStyle.NEXT_UP
         R.id.widget_config_layout_compact -> WidgetStyleConfig.LayoutStyle.COMPACT
-        else -> WidgetStyleConfig.LayoutStyle.DAY_LIST
+        R.id.widget_config_layout_day_list -> WidgetStyleConfig.LayoutStyle.DAY_LIST
+        // 默认（含未选中）都是「自动」：它也是新实例的默认状态。
+        else -> WidgetStyleConfig.LayoutStyle.AUTO
     }
 
     private fun selectedFinishedPolicy(): WidgetStyleConfig.FinishedPolicy = when (finishedGroup.checkedRadioButtonId) {
@@ -346,7 +356,8 @@ class WidgetConfigActivity : AppCompatActivity() {
     private fun layoutRadioId(style: WidgetStyleConfig.LayoutStyle): Int = when (style) {
         WidgetStyleConfig.LayoutStyle.NEXT_UP -> R.id.widget_config_layout_next_up
         WidgetStyleConfig.LayoutStyle.COMPACT -> R.id.widget_config_layout_compact
-        else -> R.id.widget_config_layout_day_list
+        WidgetStyleConfig.LayoutStyle.DAY_LIST -> R.id.widget_config_layout_day_list
+        else -> R.id.widget_config_layout_auto
     }
 
     private fun selectedWideLayout(): WidgetStyleConfig.WideLayout = when (wideGroup.checkedRadioButtonId) {
@@ -369,7 +380,13 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     private companion object {
         /** 拒绝原因分类；必须与 `WidgetDiagnostics` 的白名单一致。 */
-        const val REJECT_REASON = "invalid_widget_id"
+        const val REJECT_REASON_INVALID = "invalid_widget_id"
+
+        /** 系统查不到这个实例（已删除 / 尚未绑定）。 */
+        const val REJECT_REASON_UNKNOWN_INSTANCE = "unknown_instance"
+
+        /** 实例的 provider 不是我们的小工具。 */
+        const val REJECT_REASON_FOREIGN_PROVIDER = "foreign_provider"
 
         /** 取不到实例尺寸时的退化尺寸（约 4×3 格），避免预览塌成 0 高。 */
         const val DEFAULT_PREVIEW_WIDTH_DP = 250

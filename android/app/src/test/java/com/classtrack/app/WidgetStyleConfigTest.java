@@ -14,10 +14,12 @@ import org.junit.Test;
  */
 public class WidgetStyleConfigTest {
     @Test
-    public void defaultsAreNextUpWithDimmedFinishedClasses() {
+    public void defaultsAreAutoWithDimmedFinishedClasses() {
         WidgetStyleConfig config = WidgetStyleConfig.defaults();
 
-        assertEquals("默认样式是「接下来」（2026-09-20 起）", WidgetStyleConfig.LayoutStyle.NEXT_UP, config.getLayoutStyle());
+        // 2026-09-21 起默认为「自动（按尺寸）」：产品要求「改尺寸后要匹配上」，实际样式由
+        // WidgetStyleResolver 按当前格子尺寸解析出来（见 WidgetStyleResolverTest）。
+        assertEquals(WidgetStyleConfig.LayoutStyle.AUTO, config.getLayoutStyle());
         assertEquals(WidgetStyleConfig.FinishedPolicy.SHOW_DIM, config.getFinishedPolicy());
     }
 
@@ -26,6 +28,7 @@ public class WidgetStyleConfigTest {
         assertEquals(WidgetStyleConfig.LayoutStyle.DAY_LIST, WidgetStyleConfig.parse("day_list", "show_dim").getLayoutStyle());
         assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, WidgetStyleConfig.parse("next_up", "hide").getLayoutStyle());
         assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, WidgetStyleConfig.parse("compact", "collapse").getLayoutStyle());
+        assertEquals(WidgetStyleConfig.LayoutStyle.AUTO, WidgetStyleConfig.parse("auto", "show_dim").getLayoutStyle());
         assertEquals(WidgetStyleConfig.FinishedPolicy.HIDE, WidgetStyleConfig.parse("next_up", "hide").getFinishedPolicy());
         assertEquals(WidgetStyleConfig.FinishedPolicy.COLLAPSE, WidgetStyleConfig.parse("compact", "collapse").getFinishedPolicy());
     }

@@ -14,6 +14,17 @@ const SHELL_URL_SOURCE = join(ROOT_DIR, 'android', 'app', 'src', 'main', 'java',
 const ROUTES_SOURCE = join(ROOT_DIR, 'app', 'routes.ts')
 const MAX_UNZIP_OUTPUT_BYTES = 32 * 1024 * 1024
 
+// 小工具 provider 的期望清单：格子数 → 元数据文件里的 targetCellWidth/Height。
+// 五档各一个 provider 是 2026-09-21 的产品决定（拾取器里按尺寸选），任何一处写歪都会让
+// "某个尺寸放下去是错的样式" 这种极难复现的问题流出去，所以在这里与清单一起断言。
+const WIDGET_PROVIDER_CELLS = {
+  '2x2': [2, 2],
+  '2x3': [2, 3],
+  '4x2': [4, 2],
+  '4x3': [4, 3],
+  '6x3': [6, 3],
+}
+
 function sha256File(filePath) {
   return createHash('sha256').update(readAssetFile(filePath)).digest('hex')
 }
@@ -106,6 +117,46 @@ export function assertNativeShellContract({ shellUrlSource = SHELL_URL_SOURCE, r
   }
 }
 
+/**
+ * 五份小工具元数据 + 清单里的五条 receiver 必须一一对应。
+ *
+ * 为什么不看 APK 里的二进制 XML：`targetCell*` 会被编进二进制资源，正则解析不可靠；而这些值直接决定
+ * 拾取器显示的尺寸，因此改为在源码/资源层面断言（清单与 res/xml 都在仓库里，且是同一份提交）。
+ */
+export function assertWidgetProviders({
+  xmlDir = join(ROOT_DIR, 'android/app/src/main/res/xml'),
+  manifestPath = join(ROOT_DIR, 'android/app/src/main/AndroidManifest.xml'),
+} = {}) {
+  const manifest = readFileSync(manifestPath, 'utf8')
+
+  for (const [cells, [expectedWidth, expectedHeight]] of Object.entries(WIDGET_PROVIDER_CELLS)) {
+    const infoPath = join(xmlDir, `widget_info_${cells}.xml`)
+    if (!existsSync(infoPath)) throw new Error(`missing widget provider metadata: widget_info_${cells}.xml`)
+
+    const info = readFileSync(infoPath, 'utf8')
+    const width = Number((info.match(/android:targetCellWidth="(\d+)"/) || [])[1])
+    const height = Number((info.match(/android:targetCellHeight="(\d+)"/) || [])[1])
+    if (width !== expectedWidth || height !== expectedHeight) {
+      throw new Error(`widget_info_${cells}.xml declares ${width}x${height}, expected ${expectedWidth}x${expectedHeight}`)
+    }
+    if (!info.includes(`@layout/widget_preview_${cells}`) || !info.includes(`@drawable/widget_preview_${cells}`)) {
+      throw new Error(`widget_info_${cells}.xml must point at its own preview layout and image`)
+    }
+    if (!manifest.includes(`@xml/widget_info_${cells}`)) {
+      throw new Error(`AndroidManifest.xml does not register the ${cells} widget provider`)
+    }
+  }
+
+  // 旧类名必须还在：改名会让桌面上已有的实例全部失效（系统按组件名找回 provider）。
+  if (!manifest.includes('android:name=".widget.ClassTrackWidgetReceiver"')) {
+    throw new Error('AndroidManifest.xml lost the legacy ClassTrackWidgetReceiver (existing widgets would break)')
+  }
+  const receiverCount = (manifest.match(/android.appwidget.action.APPWIDGET_UPDATE/g) || []).length
+  if (receiverCount !== 5) {
+    throw new Error(`manifest declares ${receiverCount} APPWIDGET_UPDATE receivers, expected 5`)
+  }
+}
+
 export function assertAssetMapEqual(label, expected, actual, { allowedExtraPaths = [] } = {}) {
   const allowedExtras = new Set(allowedExtraPaths)
   const missing = [...expected.keys()].filter((assetPath) => !actual.has(assetPath))
@@ -150,6 +201,7 @@ export function readApkAssetDirectory(apkPath) {
 
 export function checkAndroidAssets({ buildDir = BUILD_DIR, syncedAssetsDir = SYNCED_ASSETS_DIR, apkPath = DEFAULT_APK_PATH } = {}) {
   assertNativeShellContract()
+  assertWidgetProviders()
   const buildAssets = readAssetDirectory(buildDir)
   const syncedAssets = readAssetDirectory(syncedAssetsDir)
   assertAssetMapEqual('Capacitor synced assets', buildAssets, syncedAssets, {

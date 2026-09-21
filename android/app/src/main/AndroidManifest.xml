@@ -57,21 +57,80 @@
         </provider>
 
         <!--
-          桌面小工具。
+          桌面小工具的五个 provider（2×2 / 2×3 / 4×2 / 4×3 / 6×3），每个尺寸一个。
+
+          为什么按尺寸注册多个：pin 的尺寸提示（OPTION_APPWIDGET_MIN_WIDTH/HEIGHT）会被 launcher 忽略
+          （实测 Launcher3 只认 provider 自己的 targetCellWidth/Height），而**拾取器里的尺寸标签来自
+          provider 声明**。因此"让用户按尺寸选"只能靠多注册 provider —— 顺带还绕开了 pin 这条不可靠的路：
+          用户从拾取器拖放，放下即带对应样式，不依赖确认回调（真机 ColorOS 会静默丢掉 pin 请求）。
+
+          五个 receiver 共用同一个 `ClassTrackWidget`（渲染逻辑不复制）；差异只在各自的
+          `android:label`（拾取器里显示的名字）与 meta-data 指向的元数据文件。
+          **4×3 那个沿用旧类名 `ClassTrackWidgetReceiver`**：改名会让桌面上已有的实例全部失效
+          （系统按组件名找回 provider）。
 
           exported=true 是 AppWidget 框架的硬要求：小工具宿主（launcher / 系统）必须能向我们投递
-          ACTION_APPWIDGET_UPDATE。该接收器只读取本应用私有偏好并更新自己的 widget，不接受任何
+          ACTION_APPWIDGET_UPDATE。这些接收器只读取本应用私有偏好并更新自己的 widget，不接受任何
           外部输入数据，因此导出不构成数据暴露面。
         -->
         <receiver
             android:name=".widget.ClassTrackWidgetReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/widget_label_4x3">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/class_track_widget_info" />
+                android:resource="@xml/widget_info_4x3" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.Cell2x2WidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_2x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_2x2" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.Cell2x3WidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_2x3">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_2x3" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.Cell4x2WidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_4x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_4x2" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.Cell6x3WidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_label_6x3">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_6x3" />
         </receiver>
 
         <!--

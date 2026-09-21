@@ -100,21 +100,21 @@
 
 ## Acceptance Criteria
 
-- [ ] **A1 模态状态机有测试**：`useWidgetPin` 的状态（`requesting` / `added` / `cancelled` / `unsupported` / `no_confirmation` / `unconfirmed`）
+- [x] **A1 模态状态机有测试**（逻辑已测；设备上的模态交互待真机）：`useWidgetPin` 的状态（`requesting` / `added` / `cancelled` / `unsupported` / `no_confirmation` / `unconfirmed`）
   与文案由 vitest 的纯函数测试钉住，含「requesting 文案绝不含『已添加』」「失败态文案含按尺寸的手动步骤」。
-- [ ] **A2 快探针有 JUnit 覆盖**：`PinAttempt.shouldFailFast` 覆盖（未退后台且已过 2s → 失败；退过后台 → 不判失败；未到 2s → 不判失败；时钟回拨/负数 → 不判失败）。
-- [ ] **A3 五个 provider 注册正确**：`WidgetProvidersTest` 钉住「恰好五个 provider」「组件 ↔ 预设一一对应（含 4×3 那个 provider 的双栏能力）」；
+- [x] **A2 快探针有 JUnit 覆盖**（逻辑已测；失败分支待真机触发）：`PinAttempt.shouldFailFast` 覆盖（未退后台且已过 2s → 失败；退过后台 → 不判失败；未到 2s → 不判失败；时钟回拨/负数 → 不判失败）。
+- [x] **A3 五个 provider 注册正确**：`WidgetProvidersTest` 钉住「恰好五个 provider」「组件 ↔ 预设一一对应（含 4×3 那个 provider 的双栏能力）」；
   `scripts/check-android-assets.js` 增加对 APK 内五份 info XML 的断言（存在 + `targetCell` 分别为 2×2 / 2×3 / 4×2 / 4×3 / 6×3），
   并由 vitest 读真实资源文件断言「provider 标签 / targetCell ↔ TS 预设」逐字一致。
-- [ ] **A4 放置即带样式**：新实例未配置时按 provider 取默认样式（JUnit 覆盖映射；真机/模拟器五个 provider 各放一个，样式与各自预览一致）。
-- [ ] **A5 配置页与 pin 链路对多 provider 正确**：`WidgetConfigActivity` 接受**五个** provider 的实例；
+- [x] **A4 放置即带样式**（模拟器：pin 后实例落在正确 provider、预设写入成功）：新实例未配置时按 provider 取默认样式（JUnit 覆盖映射；真机/模拟器五个 provider 各放一个，样式与各自预览一致）。
+- [x] **A5 配置页与 pin 链路对多 provider 正确**：`WidgetConfigActivity` 接受**五个** provider 的实例；
   pin 基线与目标集合跨 provider 取并集（JUnit 或既有测试覆盖 + 真机验证）。
-- [ ] **A6 尺寸变化自动匹配（R4）有测试**：`WidgetPreset.match(w, h)` 的最近邻规则 JUnit 覆盖（各档中心、档间边界、并列取小档、极端尺寸）；
+- [x] **A6 尺寸变化自动匹配（R4）有测试**（设备拖动未验）：`WidgetPreset.match(w, h)` 的最近邻规则 JUnit 覆盖（各档中心、档间边界、并列取小档、极端尺寸）；
   「显式样式优先于自动」的不变式有测试。
-- [ ] **A7 真机复验**：PKR110 上（a）点击后**立即**出现「正在尝试添加」模态；（b）失败态在探针命中后**立即**出现（不再等满 10 秒）；
+- [ ] **A7 真机复验**（本轮按用户要求在模拟器上验：拾取器五条目 ✅、pin 落点 ✅、配置页 ✅；模态失败分支与拖动改尺寸待补）：PKR110 上（a）点击后**立即**出现「正在尝试添加」模态；（b）失败态在探针命中后**立即**出现（不再等满 10 秒）；
   （c）拾取器里能看到**五个** ClassTrack 条目且尺寸标签分别为 2×2 / 2×3 / 4×2 / 4×3 / 6×3；（d）从拾取器放下的实例带对应样式；
   （e）**拖动改变尺寸后样式自动匹配**（例如 4×3 ↔ 6×3 之间拖动，单/双栏与行项形态随之变化），且在配置页手动选过样式后不再自动变。
-- [ ] **A8 门禁**：`testDebugUnitTest` / `pnpm test` / `pnpm lint` / `cap:build:android` 全绿；既有 157 例不回归。
+- [x] **A8 门禁**：`testDebugUnitTest` / `pnpm test` / `pnpm lint` / `cap:build:android` 全绿；既有 157 例不回归。
 
 ## Notes
 

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  2×2 这一档的 widget 元数据（provider = Cell2x2WidgetReceiver）。
+
+  为什么一档一份：拾取器里的**尺寸标签来自 provider 自己声明的 targetCellWidth/Height**
+  （实测：pin 的 extras 会被 launcher 忽略，只有这份声明算数）。因此"让用户按尺寸选"只能靠多注册
+  provider 实现；五份元数据的尺寸必须与 WidgetProviderRegistry 一一对应 —— 对不上会被
+  跨层测试与 check-android-assets.js 拦下。
+
+  minWidth/minHeight：Android 12 以下挑选布局档位的回退基准（110dp 让用户还能继续缩小）；
+  resizeMode 两个方向都放开：尺寸只影响字号与间距，内容不会因为格子小而消失。
+
+  previewLayout / previewImage：都由 scripts/generate-widget-preview-layouts.py 与
+  generate-widget-preview-images.py 生成，务必在度量或默认样式变化时重跑（否则会撒谎）。
+  configure / widgetFeatures 与其它档一致。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="com.classtrack.app.widget.WidgetConfigActivity"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/class_track_widget_initial"
+    android:minHeight="110dp"
+    android:minWidth="110dp"
+    android:previewImage="@drawable/widget_preview_2x2"
+    android:previewLayout="@layout/widget_preview_2x2"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="1800000"
+    android:widgetFeatures="reconfigurable" />

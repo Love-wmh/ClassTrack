@@ -56,6 +56,8 @@ import com.classtrack.app.WidgetLinePolicy
 import com.classtrack.app.WidgetOccurrence
 import com.classtrack.app.WidgetPendingRoute
 import com.classtrack.app.WidgetStyleConfig
+import com.classtrack.app.WidgetStyleResolver
+import com.classtrack.app.WidgetProviders
 import java.io.IOException
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -148,16 +150,21 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
                            preview: Boolean = false) {
     val context = LocalContext.current
     val hero = state.hero
-    // 「列今天还是列明天」的裁决只在这里做一次：三种样式共用，避免各自重算导致文案与列表打架。
-    val plan = WidgetDayPlan.resolve(state.todayItems, state.nextDayItems, config.finishedPolicy)
-    // 度量与行序列都按真实格子尺寸算：预览走同一份代码，因此预览不可能与桌面漂移。
+    // 度量与尺寸解析都按真实格子尺寸算：预览走同一份代码，因此预览不可能与桌面漂移。
     val size = LocalSize.current
     val metrics = WidgetLayoutMetrics.resolve(size.width.value, size.height.value)
-    val dualColumn = isDualColumn(config, metrics)
-    val body = WidgetLinePolicy.resolve(config, plan, dualColumn)
+    // 样式解析必须在知道尺寸之后：`AUTO`（未显式选择）时，样式 / 宽格表现 / 行项形态都由**当前尺寸**决定。
+    // 显式选择永远优先（手动优先），尺寸不可用时退回该实例 provider 那档。
+    val effectiveConfig = WidgetStyleResolver.effective(config, size.width.value, size.height.value,
+        WidgetProviders.presetForAppWidgetId(context, appWidgetId))
+    // 「列今天还是列明天」的裁决只在这里做一次：三种样式共用，避免各自重算导致文案与列表打架。
+    val plan = WidgetDayPlan.resolve(state.todayItems, state.nextDayItems, effectiveConfig.finishedPolicy)
+    val dualColumn = isDualColumn(effectiveConfig, metrics)
+    val body = WidgetLinePolicy.resolve(effectiveConfig, plan, dualColumn)
+
 
     if (!preview) {
-        WidgetDiagnostics.widgetSized(size.width.value.toInt(), size.height.value.toInt())
+        WidgetDiagnostics.widgetSized(appWidgetId, size.width.value.toInt(), size.height.value.toInt())
     }
     // 字号与行距的方案：字号上界由格子尺寸给（格子越大字号越大），再收到「内容刚好放下」处。
     // 传入的是一行行文本的字号基准值（hero 是纵向三行；双栏的课程行是双行行项），顺序与渲染一致。
@@ -171,8 +178,9 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
         false
     )
     WidgetDiagnostics.layoutMetrics(
+        appWidgetId,
         (metrics.scale * PERCENT).roundToInt(),
-        config.wideLayoutStorageValue(),
+        effectiveConfig.wideLayoutStorageValue(),
         dualColumn
     )
     WidgetDiagnostics.layoutFill(
@@ -198,7 +206,7 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
                 style = captionStyle(metrics, R.color.widget_text_muted))
         } else {
             // 字号用「尺寸驱动 + 刚好放下」之后的版本；列宽/留白仍旧用 metrics（收字号不该挤窄时间列）。
-            WidgetBody(context, state, config, plan, body, hero, appWidgetId,
+            WidgetBody(context, state, effectiveConfig, plan, body, hero, appWidgetId,
                 metrics.withFontBoost(fill.localBoost), size, dualColumn, fill, preview)
         }
     }

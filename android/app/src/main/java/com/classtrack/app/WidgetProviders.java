@@ -58,6 +58,26 @@ public final class WidgetProviders {
         return WidgetProviderRegistry.presetFor(component.getClassName());
     }
 
+    /**
+     * 某一档预设对应的 provider 组件（应用内 pin 的目标）。
+     *
+     * @param context 任意 Context。
+     * @param preset 目标预设。
+     * @return 对应组件；找不到时返回 `null`（调用方应如实报「不支持」而不是猜一个）。
+     */
+    public static ComponentName rendererFor(Context context, WidgetPreset preset) {
+        if (preset == null) {
+            return null;
+        }
+        for (ComponentName component : renderers(context)) {
+            WidgetPreset candidate = presetFor(component);
+            if (candidate != null && candidate.getId().equals(preset.getId())) {
+                return component;
+            }
+        }
+        return null;
+    }
+
     /** @return 该组件是否是我们的小工具 provider（配置页的归属校验用）。 */
     public static boolean isOurs(ComponentName component) {
         return presetFor(component) != null;

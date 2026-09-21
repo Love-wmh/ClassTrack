@@ -71,9 +71,9 @@ public final class WidgetDiagnostics {
      * @param wideLayout 「大格子表现」存储值。
      * @param dual 这一帧是否分了两栏。
      */
-    public static void layoutMetrics(int scalePercent, String wideLayout, boolean dual) {
-        Log.i(TAG, "phase=layout_metrics scale=" + Math.max(0, scalePercent) + " wide=" + safeWideLayout(wideLayout)
-                + " dual=" + dual);
+    public static void layoutMetrics(int appWidgetId, int scalePercent, String wideLayout, boolean dual) {
+        Log.i(TAG, "phase=layout_metrics widget=" + Math.max(0, appWidgetId) + " scale=" + Math.max(0, scalePercent)
+                + " wide=" + safeWideLayout(wideLayout) + " dual=" + dual);
     }
 
     /**
@@ -196,8 +196,11 @@ public final class WidgetDiagnostics {
      * @param widthDp 实际渲染宽度（dp）。
      * @param heightDp 实际渲染高度（dp）。
      */
-    public static void widgetSized(int widthDp, int heightDp) {
-        Log.i(TAG, "phase=widget_sized w=" + Math.max(0, widthDp) + " h=" + Math.max(0, heightDp));
+    public static void widgetSized(int appWidgetId, int widthDp, int heightDp) {
+        // 带上实例 id（纯数值）：多实例下"哪个实例什么尺寸/什么形态"必须能对上，
+        // 否则「拖大之后样式有没有跟着变」这类结论无法从日志里读出来。
+        Log.i(TAG, "phase=widget_sized widget=" + Math.max(0, appWidgetId)
+                + " w=" + Math.max(0, widthDp) + " h=" + Math.max(0, heightDp));
     }
 
     /**
@@ -372,6 +375,8 @@ public final class WidgetDiagnostics {
             case "invalid":
             case "read_failed":
             case "invalid_widget_id":
+            case "unknown_instance":
+            case "foreign_provider":
             case "cancelled":
                 return value;
             default:

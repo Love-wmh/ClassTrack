@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  预览示意图里「双栏左卡」的表面（与运行期 HeroHeading 那张卡的层次一致：比卡片底色略深一点的表面）。
+
+  只在 widget_preview_6x3.xml 这类**双栏** mock 里使用 —— 单栏从不画内层卡片（那是产品明确否掉的：
+  单栏上加一层无意义的框只会把留白换成内边距）。运行期这张卡的层次由 Glance 的 background + cornerRadius 画。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_surface_inner" />
+    <corners android:radius="16dp" />
+</shape>

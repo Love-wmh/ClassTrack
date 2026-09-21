@@ -2,7 +2,6 @@ package com.classtrack.app.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -10,6 +9,7 @@ import com.classtrack.app.PinAttemptState
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetPendingPreset
 import com.classtrack.app.WidgetPinBaseline
+import com.classtrack.app.WidgetProviders
 import com.classtrack.app.WidgetPinConfirmation
 import com.classtrack.app.WidgetPinResult
 import com.classtrack.app.WidgetPinTargets
@@ -57,9 +57,8 @@ class WidgetPinResultReceiver : BroadcastReceiver() {
         PinAttemptState.clear()
 
         val applicationContext = context.applicationContext
-        val provider = ComponentName(applicationContext, ClassTrackWidgetReceiver::class.java)
-        val manager = AppWidgetManager.getInstance(applicationContext)
-        val current = manager.getAppWidgetIds(provider)
+        // 跨**全部** provider 取实例并集：用户可能从任何一档尺寸放下实例，只看某一档会让差集算错。
+        val current = WidgetProviders.allAppWidgetIds(applicationContext)
         val baseline = WidgetPinBaseline.consume(System.currentTimeMillis())
         val targets = WidgetPinTargets.resolve(baseline, current, callbackAppWidgetId)
         if (targets.isEmpty()) {

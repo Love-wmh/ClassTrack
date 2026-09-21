@@ -19,7 +19,8 @@ public class WidgetPinConfirmationTest {
         WidgetStyleConfig config = WidgetPinConfirmation.planFor(42, WidgetPreset.parse("cell_4x3"));
 
         assertNotNull(config);
-        assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, config.getLayoutStyle());
+        // 写成 AUTO：用户选的是"这一档摆法"，实例之后被拖动改尺寸仍要跟着匹配（2026-09-21 口径）。
+        assertEquals(WidgetStyleConfig.LayoutStyle.AUTO, config.getLayoutStyle());
         assertEquals(WidgetStyleConfig.WideLayout.TWO_COLUMN, config.getWideLayout());
         // 预设没有表达过「已上完」策略，不该替用户决定 → 沿用默认值。
         assertEquals(WidgetStyleConfig.defaults().getFinishedPolicy(), config.getFinishedPolicy());
@@ -30,7 +31,7 @@ public class WidgetPinConfirmationTest {
         WidgetStyleConfig config = WidgetPinConfirmation.planFor(7, WidgetPreset.parse("cell_2x2"));
 
         assertNotNull(config);
-        assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, config.getLayoutStyle());
+        assertEquals(WidgetStyleConfig.LayoutStyle.AUTO, config.getLayoutStyle());
         assertEquals(WidgetStyleConfig.WideLayout.ADAPTIVE, config.getWideLayout());
     }
 

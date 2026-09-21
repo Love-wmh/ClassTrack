@@ -11,7 +11,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 
-import com.classtrack.app.widget.ClassTrackWidgetReceiver;
 import com.classtrack.app.widget.WidgetPinResultReceiver;
 import com.classtrack.app.widget.WidgetRefreshBridge;
 import com.getcapacitor.JSObject;
@@ -119,12 +118,25 @@ public class WidgetSnapshotPlugin extends Plugin {
             return;
         }
 
+        // pin 的目标是**这一档预设对应的 provider**（五个 provider 各管一档尺寸）。
+        ComponentName provider = WidgetProviders.rendererFor(context, preset);
+        if (provider == null) {
+            // 理论上不可能（预设表与 provider 注册表一一对应）；如实报「不支持」，不猜一个组件。
+            WidgetPendingPreset.clear();
+            WidgetPinBaseline.clear();
+            WidgetDiagnostics.pinResult(false, false);
+            JSObject unmapped = new JSObject();
+            unmapped.put("supported", false);
+            unmapped.put("requested", false);
+            call.resolve(unmapped);
+            return;
+        }
+
         WidgetPendingPreset.set(preset.getId(), System.currentTimeMillis());
         // 记录「请求前已有哪些实例」：回调带回的 id 不可信（实测 AOSP Launcher3 发回 0），
-        // 需要用它做差集找出用户刚放下的实例（见 WidgetPinTargets）。
-        WidgetPinBaseline.record(
-                manager.getAppWidgetIds(new ComponentName(context, ClassTrackWidgetReceiver.class)),
-                System.currentTimeMillis());
+        // 需要用它做差集找出用户刚放下的实例（见 WidgetPinTargets）。**跨全部 provider** 取并集 ——
+        // 用户可能从任何一档放下实例，只记 4×3 会让其它档的差集算错。
+        WidgetPinBaseline.record(WidgetProviders.allAppWidgetIds(context), System.currentTimeMillis());
 
         Bundle extras = new Bundle();
         extras.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, Math.round(preset.getWidthDp()));
@@ -141,8 +153,7 @@ public class WidgetSnapshotPlugin extends Plugin {
 
         boolean requested;
         try {
-            requested = manager.requestPinAppWidget(
-                    new ComponentName(context, ClassTrackWidgetReceiver.class), extras, callback);
+            requested = manager.requestPinAppWidget(provider, extras, callback);
         } catch (RuntimeException error) {
             // 个别 ROM 在这里抛（例如 launcher 未实现该 API）：按「没发起」如实返回，不崩。
             requested = false;

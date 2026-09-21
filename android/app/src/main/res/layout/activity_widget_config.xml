@@ -58,6 +58,20 @@
             android:orientation="vertical">
 
             <RadioButton
+                android:id="@+id/widget_config_layout_auto"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/widget_config_layout_auto" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:text="@string/widget_config_layout_auto_desc"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="13sp" />
+
+            <RadioButton
                 android:id="@+id/widget_config_layout_day_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -24,9 +24,11 @@ public final class WidgetPinConfirmation {
         if (appWidgetId < 0 || pendingPreset == null) {
             return null;
         }
-        // 只覆盖样式与「大格子表现」：已上完策略沿用默认值 —— 预设没有表达过这一项，不该替用户决定。
+        // 写成 `AUTO`（而不是把预设的样式写死）：用户选的是"这一档摆法"，实例之后被拖动改尺寸时
+        // 仍然应该跟着匹配（2026-09-21 口径）。显式选择只来自配置页，因此这里不算替用户决定样式。
+        // 「已上完策略」沿用默认值 —— 预设没有表达过这一项。
         return new WidgetStyleConfig(
-                pendingPreset.getLayoutStyle(),
+                WidgetStyleConfig.LayoutStyle.AUTO,
                 WidgetStyleConfig.defaults().getFinishedPolicy(),
                 pendingPreset.getWideLayout());
     }
