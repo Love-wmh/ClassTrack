@@ -100,6 +100,9 @@ public class WidgetSnapshotPlugin extends Plugin {
         }
 
         WidgetDiagnostics.pinRequested(preset.getId());
+        // 开始一次新尝试：记下请求时刻并清掉上一次「退过后台」的记录 —— 旧记录会让这次误判成
+        // 「确认界面已经出现过」，于是面板不肯提前提示用户（见 PinAttemptState 的注释）。
+        PinAttemptState.reset(System.currentTimeMillis());
 
         Context context = getContext();
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
@@ -168,6 +171,25 @@ public class WidgetSnapshotPlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("confirmed", appWidgetId >= 0);
         result.put("appWidgetId", appWidgetId >= 0 ? appWidgetId : JSObject.NULL);
+        call.resolve(result);
+    }
+
+    /**
+     * 读取本次「添加到桌面」尝试的观测事实，供面板判定「系统有没有弹出确认界面」。
+     *
+     * <p>只返回两个时刻（毫秒）与一个纯判定结果：Web 侧据此在约 2 秒后就能催促用户走手动步骤，
+     * 而不是干等满超时。**这不是失败结论** —— 面板必须继续轮询 {@link #consumePinResult}，
+     * 确认回调到达时仍要翻成成功（真机 ColorOS 丢请求，但别的 launcher 可能只是慢）。
+     */
+    @PluginMethod
+    public void getPinAttempt(PluginCall call) {
+        long requestedAtMs = PinAttemptState.requestedAtMs();
+        long backgroundedAtMs = PinAttemptState.backgroundedAtMs();
+        long nowMs = System.currentTimeMillis();
+        JSObject result = new JSObject();
+        result.put("requested", requestedAtMs > 0);
+        result.put("requestedAtMs", requestedAtMs);
+        result.put("shouldFailFast", PinAttempt.shouldFailFast(requestedAtMs, nowMs, backgroundedAtMs));
         call.resolve(result);
     }
 

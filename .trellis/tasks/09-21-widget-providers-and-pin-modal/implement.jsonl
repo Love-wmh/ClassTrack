@@ -1,0 +1,14 @@
+{"file": ".trellis/tasks/09-21-widget-providers-and-pin-modal/design.md", "reason": "本次唯一技术依据：D2 两个 provider 的结构与「沿用旧类名」原因、D3 放置即带样式的判据、D4 快探针（Activity 是否退后台）与纯函数口径、D5 模态状态机、D6 预览与资产断言、D7 安全与回滚粒度"}
+{"file": ".trellis/tasks/09-21-widget-providers-and-pin-modal/prd.md", "reason": "需求与验收：R1 模态（点击即弹、失败立刻切态）、R2 探针的诚实边界、R3 只做手机 2×3 与平板 4×3、R4 多 provider 后的安全校验、A1-A7"}
+{"file": ".trellis/tasks/09-21-widget-providers-and-pin-modal/implement.md", "reason": "阶段与门禁：P1 探针 / P2 模态 / P3 多 provider / P4 落样式 / P5 删旧预设 / P6 门禁 / P7 真机四项，以及各阶段回滚粒度"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "既有 widget 契约：pin 的真实 API 契约与「确认 id 不可信」的两级判决、provider 元数据（targetCell/previewLayout/previewImage）要求、单 provider 假设的遗留位置、静态预览的同步条件"}
+{"file": "android/app/src/main/java/com/classtrack/app/widget/ClassTrackWidget.kt", "reason": "渲染入口：provideGlance 里读配置与缓存的位置（P4 要在「从未配置」时按 provider 写默认配置），以及 onDeleted 清配置的既有语义"}
+{"file": "android/app/src/main/java/com/classtrack/app/widget/WidgetConfigActivity.kt", "reason": "第 133 行的单 provider 归属校验必须改多 provider（否则新 provider 的实例点『样式』会被拒），预填逻辑也要改成按 provider"}
+{"file": "android/app/src/main/java/com/classtrack/app/WidgetSnapshotPlugin.java", "reason": "pin 请求发起点：基线集合、目标组件、以及新增 getPinAttempt 的位置（均为只含数值的契约）"}
+{"file": "android/app/src/main/java/com/classtrack/app/WidgetPreset.java", "reason": "预设白名单与 layoutStyle/wideLayout 的映射：P5 要删掉 2×2/4×2/6×3 三档，并新增 provider 默认样式的映射"}
+{"file": "android/app/src/main/java/com/classtrack/app/WidgetPinConfirmation.java", "reason": "既有的「预设 → WidgetStyleConfig」纯逻辑，P4 的按 provider 默认配置应复用同一处映射避免两套口径"}
+{"file": "app/features/schedule/hooks/useWidgetPin.ts", "reason": "Web 侧状态机现状（requesting/unconfirmed/added + 10 次轮询）：P2 要加入 attempt 探针轮询与模态状态，且保持『不撒谎』约束"}
+{"file": "app/features/schedule/widgetPinPresets.ts", "reason": "文案与跨层白名单的唯一来源：P2 新增 no_confirmation 文案、P5 收敛预设、以及跨层标签断言要读同一处常量"}
+{"file": "app/features/schedule/WidgetPinEntry.tsx", "reason": "面板 UI：现有卡片/状态文案/常驻手动步骤的挂载点，P2 要在此接入 Radix Dialog 模态"}
+{"file": "scripts/check-android-assets.js", "reason": "资产与 APK 门禁脚本：P3 增加两份 info XML 存在性与 targetCell 断言的位置（脚本已具备读源码文件与解包 APK 的能力）"}
+{"file": "android/app/src/test/java/com/classtrack/app/WidgetPinTargetsTest.java", "reason": "既有两级判决测试的写法参照；P3/P4 的新单测（WidgetProvidersTest、跨 provider 并集）应沿用同一风格"}

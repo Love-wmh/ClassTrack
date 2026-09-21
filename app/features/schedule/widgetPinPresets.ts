@@ -1,4 +1,4 @@
-import type { WidgetPinConfirmation, WidgetPinResult, WidgetPresetId } from '~/lib/native-widget-snapshot'
+import type { WidgetPinAttempt, WidgetPinConfirmation, WidgetPinResult, WidgetPresetId } from '~/lib/native-widget-snapshot'
 
 /**
  * 应用内「添加到桌面」提供的预设。
@@ -109,7 +109,16 @@ export const WIDGET_PIN_CANCELLED_HINT = '没有添加成功。可以再点一�
  * 关键区分：`'requesting'`（已请求、还没等到系统确认）**不等于**成功。`requestPinAppWidget` 的返回值只表示
  * 「请求已受理」，真机上出现过「受理了但什么都没放下」；因此只有 `'added'`（收到确认回调）才允许显示「已添加」。
  */
-export type WidgetPinOutcome = 'idle' | 'requesting' | 'added' | 'cancelled' | 'unconfirmed' | 'unsupported'
+export type WidgetPinOutcome = 'idle' | 'requesting' | 'added' | 'cancelled' | 'no_confirmation' | 'unconfirmed' | 'unsupported'
+
+/**
+ * 快探针命中时的说明（**推断，不是失败结论**）。
+ *
+ * 取舍：宁可说「系统没有弹出确认界面」并补一句「如果你在桌面上看到了确认界面，请先把它点完」，
+ * 也不要断言失败 —— 极少数 launcher 会在同一任务里弹对话框，那时我们并没有退到后台。
+ */
+export const WIDGET_PIN_NO_CONFIRMATION_HINT =
+  '系统没有弹出确认界面（部分厂商桌面会忽略这个请求）。如果你在桌面上看到了确认界面，请先把它点完；否则请用手动步骤添加。'
 
 /**
  * 请求刚返回时的下一步：轮询等确认、直接判定、还是走手动说明。
@@ -141,6 +150,8 @@ export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
   switch (outcome) {
     case 'requesting':
       return WIDGET_PIN_REQUESTING_HINT
+    case 'no_confirmation':
+      return WIDGET_PIN_NO_CONFIRMATION_HINT
     case 'unconfirmed':
       return WIDGET_PIN_UNCONFIRMED_HINT
     case 'unsupported':
@@ -158,4 +169,37 @@ export function pinOutcomeMessage(outcome: WidgetPinOutcome): string | null {
  *
  * 不只在失败时出现：会静默吞掉请求的桌面上，它是唯一可靠的路径，因此始终可见。
  */
-export const WIDGET_PIN_MANUAL_STEPS = '长按桌面空白处 → 小工具 → 找到课表 → 拖到桌面上，再按卡片上的格子数调整大小。'
+export const WIDGET_PIN_MANUAL_STEPS = `长按桌面空白处 → 小工具 → 找到课表 → 按尺寸选（${WIDGET_PIN_PRESETS.map((preset) => preset.cell).join(' / ')}）→ 拖到桌面上，再按卡片上的格子数调整大小`
+
+/**
+ * 模态框当前该显示什么。
+ *
+ * - `requesting`：点击后**立刻**出现（用户要知道我们正在尝试，而不是点完没反应）；
+ * - `failed`：任何失败/疑似失败都走这里（被取消、不支持、系统没弹确认界面、超时未确认）；
+ * - `added`：只有确认回调到达才出现，随后自动收起；
+ * - `hidden`：没请求，或用户已经把这次失败关掉了（不再重复打扰）。
+ */
+export type WidgetPinModalState = 'hidden' | 'requesting' | 'failed' | 'added'
+
+/**
+ * 由状态与「用户是否关掉了本次失败」推出模态该显示什么（纯映射，vitest 覆盖）。
+ */
+export function resolvePinModalState(outcome: WidgetPinOutcome, dismissed: boolean): WidgetPinModalState {
+  if (outcome === 'requesting') {
+    // 进行中永远显示：这一态存在的意义就是让用户知道「点完不是没反应」。
+    return 'requesting'
+  }
+  if (outcome === 'idle') {
+    return 'hidden'
+  }
+  return dismissed ? 'hidden' : outcome === 'added' ? 'added' : 'failed'
+}
+
+/**
+ * 快探针轮询的映射：还没到判定窗口就继续等，命中就切「系统没有弹出确认界面」。
+ *
+ * 注意 `no_confirmation` **不是终态**：调用方必须继续轮询确认回调，到了就翻成成功。
+ */
+export function resolvePinProbeOutcome(attempt: WidgetPinAttempt): 'waiting' | 'no_confirmation' {
+  return attempt.requested && attempt.shouldFailFast ? 'no_confirmation' : 'waiting'
+}

@@ -1,0 +1,9 @@
+{"file": ".trellis/tasks/09-21-widget-providers-and-pin-modal/prd.md", "reason": "验收基准：A1 模态状态机测试、A2 探针单测、A3 两个 provider 与跨层标签断言、A4 放置即带样式、A5 多 provider 正确性、A6 真机四项、A7 门禁；检查时逐条对照"}
+{"file": ".trellis/tasks/09-21-widget-providers-and-pin-modal/design.md", "reason": "实现是否守住设计边界：探针必须是纯函数、失败态必须继续监听回调、手机 provider 不得改名、面板收敛后不得留死预设"}
+{"file": ".trellis/tasks/09-21-widget-providers-and-pin-modal/verification.md", "reason": "本任务的证据落点（阶段完成后新建）：真机模态时延、拾取器两个条目与尺寸标签、两个 provider 的实例样式"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "检查时必须同步的 spec 条目：单 provider 假设（provider 元数据、pin 目标组件、配置页归属校验）、静态预览同步条件、pin 的真实契约与诚实文案"}
+{"file": "android/app/src/test/java/com/classtrack/app/WidgetPinTargetsTest.java", "reason": "回归基线：上一轮两级判决的语义不得因多 provider 改动而变（并集必须去重、未知基线不得放宽为全集）"}
+{"file": "android/app/src/test/java/com/classtrack/app/WidgetPendingPresetTest.java", "reason": "回归基线：一次性槽位语义（peek 不消费 / consume 才消费）在 P4 改预填来源后仍须成立"}
+{"file": "app/features/schedule/widgetPinPresets.test.ts", "reason": "跨层契约测试：预设白名单、三态判决文案、以及新增的「读真实 Android 资源文件」断言都要在这里通过"}
+{"file": "app/lib/native-widget-snapshot.test.ts", "reason": "Web 兜底行为测试：新增 getPinAttempt 后，浏览器环境必须如实返回「未请求」而不是假装成功"}
+{"file": "android/app/src/main/AndroidManifest.xml", "reason": "多 provider 注册的正确性：两个 receiver 都 exported + APPWIDGET_UPDATE + meta-data，且旧类名保持不变"}

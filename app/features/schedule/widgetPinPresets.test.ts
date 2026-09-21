@@ -4,6 +4,8 @@ import {
   WIDGET_PIN_NARROW_CELL_HINT,
   WIDGET_PIN_PRESETS,
   pinOutcomeMessage,
+  resolvePinModalState,
+  resolvePinProbeOutcome,
   resolvePinPollOutcome,
   resolvePinStartOutcome,
 } from './widgetPinPresets'
@@ -93,5 +95,58 @@ describe('添加到桌面的三态判决', () => {
     expect(pinOutcomeMessage('cancelled')).toBeTruthy()
     expect(pinOutcomeMessage('idle')).toBeNull()
     expect(pinOutcomeMessage('added')).toBeNull()
+  })
+})
+
+/**
+ * 模态框状态机与快探针映射。
+ *
+ * 产品口径（2026-09-21）：点击后**立刻**出现「正在尝试添加」，失败**一判定出来就立刻**切成失败态 ——
+ * 所以这里要钉住三件事：进行中永远可见、失败态可见且可关、成功态只在确认回调之后出现。
+ */
+describe('添加到桌面的模态框状态机', () => {
+  it('请求进行中永远显示：点完不能没反应', () => {
+    expect(resolvePinModalState('requesting', false)).toBe('requesting')
+    // 即使用户刚关过失败态，下一次请求仍然要弹出来。
+    expect(resolvePinModalState('requesting', true)).toBe('requesting')
+  })
+
+  it('失败态（含探针命中的 no_confirmation）显示为醒目标态框', () => {
+    expect(resolvePinModalState('no_confirmation', false)).toBe('failed')
+    expect(resolvePinModalState('cancelled', false)).toBe('failed')
+    expect(resolvePinModalState('unsupported', false)).toBe('failed')
+    expect(resolvePinModalState('unconfirmed', false)).toBe('failed')
+  })
+
+  it('用户关掉之后不再重复打扰同一次失败', () => {
+    expect(resolvePinModalState('no_confirmation', true)).toBe('hidden')
+    expect(resolvePinModalState('unconfirmed', true)).toBe('hidden')
+  })
+
+  it('只有确认回调才显示成功，且成功态可自动收起', () => {
+    expect(resolvePinModalState('added', false)).toBe('added')
+    expect(resolvePinModalState('added', true)).toBe('hidden')
+    expect(resolvePinModalState('idle', false)).toBe('hidden')
+  })
+
+  it('探针只在「有尝试 + 命中」时才催用户，且它不是终态', () => {
+    expect(resolvePinProbeOutcome({ requested: true, requestedAtMs: 1, shouldFailFast: true })).toBe('no_confirmation')
+    expect(resolvePinProbeOutcome({ requested: true, requestedAtMs: 1, shouldFailFast: false })).toBe('waiting')
+    // 没有进行中的尝试（例如面板刚打开）绝不能催。
+    expect(resolvePinProbeOutcome({ requested: false, requestedAtMs: 0, shouldFailFast: false })).toBe('waiting')
+  })
+
+  it('no_confirmation 文案说明这是推断，并给出「先点完确认界面」的出路', () => {
+    const message = pinOutcomeMessage('no_confirmation') ?? ''
+
+    expect(message).toContain('没有弹出确认界面')
+    expect(message).toContain('如果你在桌面上看到了确认界面')
+    expect(message).not.toContain('已添加')
+  })
+
+  it('手动步骤按尺寸指名，且与预设表的格子一致', () => {
+    for (const preset of WIDGET_PIN_PRESETS) {
+      expect(WIDGET_PIN_MANUAL_STEPS, preset.id).toContain(preset.cell)
+    }
   })
 })

@@ -1,9 +1,12 @@
-import { CalendarPlus, Check } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, Check, Loader2 } from 'lucide-react'
+import { useState } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '~/components/ui/sheet'
 import { useWidgetPin } from './hooks/useWidgetPin'
-import { WIDGET_PIN_MANUAL_STEPS, WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS } from './widgetPinPresets'
+import type { WidgetPresetId } from '~/lib/native-widget-snapshot'
+import { WIDGET_PIN_MANUAL_STEPS, WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESETS, WIDGET_PIN_REQUESTING_HINT } from './widgetPinPresets'
 
 /**
  * 课表页顶栏的「添加到桌面」入口。
@@ -16,7 +19,9 @@ import { WIDGET_PIN_MANUAL_STEPS, WIDGET_PIN_NARROW_CELL_HINT, WIDGET_PIN_PRESET
  * 我们只能请求系统去放置，最终摆放尺寸取决于 launcher。
  */
 export default function WidgetPinEntry() {
-  const { supported, pending, outcome, message, added, pin } = useWidgetPin()
+  const { supported, pending, outcome, message, added, modal, dismissModal, pin } = useWidgetPin()
+  // 「再试一次」要知道用户上次点的是哪个预设：hook 只保留结果，不保留入参。
+  const [lastPreset, setLastPreset] = useState<WidgetPresetId | null>(null)
 
   if (!supported) return null
 
@@ -65,7 +70,10 @@ export default function WidgetPinEntry() {
                     variant={isAdded ? 'secondary' : 'default'}
                     size="sm"
                     disabled={pending !== null}
-                    onClick={() => void pin(preset.id)}
+                    onClick={() => {
+                      setLastPreset(preset.id)
+                      void pin(preset.id)
+                    }}
                     className="shrink-0"
                   >
                     {isAdded ? <Check className="size-3.5" /> : null}
@@ -100,6 +108,64 @@ export default function WidgetPinEntry() {
           <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_MANUAL_STEPS}</p>
         </div>
       </SheetContent>
+
+      {/*
+        醒目标态框：点击后**立刻**出现「正在尝试添加」，失败一判定出来就立刻切成失败态。
+        用 Dialog 而不是 Sheet —— 要的是打断式的醒目提示，不是又一层可以滑走的面板。
+      */}
+      <Dialog open={modal !== 'hidden'} onOpenChange={(openValue) => (openValue ? undefined : dismissModal())}>
+        <DialogContent className="max-w-sm" data-modal-state={modal}>
+          {modal === 'requesting' ? (
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                正在尝试添加…
+              </DialogTitle>
+              <DialogDescription>{WIDGET_PIN_REQUESTING_HINT}</DialogDescription>
+            </DialogHeader>
+          ) : null}
+
+          {modal === 'added' ? (
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Check className="size-5 text-primary" />
+                已添加到桌面
+              </DialogTitle>
+              <DialogDescription>样式已按你选的摆法设置好，之后还能随时改。</DialogDescription>
+            </DialogHeader>
+          ) : null}
+
+          {modal === 'failed' ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="size-5 text-destructive" />
+                  没有添加成功
+                </DialogTitle>
+                <DialogDescription className="text-foreground">{message}</DialogDescription>
+              </DialogHeader>
+              <div className="rounded-md border border-dashed border-border px-3 py-2">
+                <p className="text-xs font-medium text-foreground">手动添加</p>
+                <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_MANUAL_STEPS}</p>
+              </div>
+              <DialogFooter className="gap-2 sm:justify-end">
+                <Button variant="outline" onClick={dismissModal}>
+                  知道了
+                </Button>
+                <Button
+                  disabled={pending !== null}
+                  onClick={() => {
+                    dismissModal()
+                    if (lastPreset) void pin(lastPreset)
+                  }}
+                >
+                  再试一次
+                </Button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }

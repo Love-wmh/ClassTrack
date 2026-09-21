@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import com.classtrack.app.PinAttemptState
 import com.classtrack.app.WidgetDiagnostics
 import com.classtrack.app.WidgetPendingPreset
 import com.classtrack.app.WidgetPinBaseline
@@ -52,6 +53,8 @@ class WidgetPinResultReceiver : BroadcastReceiver() {
             AppWidgetManager.INVALID_APPWIDGET_ID
         )
         WidgetDiagnostics.pinConfirmed(callbackAppWidgetId)
+        // 这次尝试结束了：清掉观测事实，面板下一次请求从零开始（否则旧的「退过后台」会污染下次判定）。
+        PinAttemptState.clear()
 
         val applicationContext = context.applicationContext
         val provider = ComponentName(applicationContext, ClassTrackWidgetReceiver::class.java)

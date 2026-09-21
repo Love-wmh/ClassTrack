@@ -84,6 +84,22 @@ export type WidgetPinConfirmation = {
   appWidgetId: number | null
 }
 
+/**
+ * 本次「添加到桌面」尝试的观测事实。
+ *
+ * `shouldFailFast` 是原生侧的**推断**：请求发出约 2 秒后，如果我们一直没有退到后台
+ * （即 launcher 的确认界面压根没出现，实测 ColorOS 的失败现场就是这样），就认为 `shouldFailFast === true`。
+ * **它不代表请求已经失败** —— 面板必须继续轮询 `consumePinResult()`，确认回调到达时仍要翻成成功。
+ */
+export type WidgetPinAttempt = {
+  /** 当前是否有进行中的尝试。 */
+  requested: boolean
+  /** 请求发出的时刻；没有尝试时为 0。 */
+  requestedAtMs: number
+  /** 是否已经可以催促用户走手动步骤（推断，不等于失败）。 */
+  shouldFailFast: boolean
+}
+
 /** 跳转系统设置页的结果。 */
 export type WidgetExactAlarmRequestResult = {
   /** 是否真的拉起了系统设置页。 */
@@ -105,6 +121,8 @@ export interface WidgetSnapshotPlugin {
   requestPinWidget(options: { preset: WidgetPresetId }): Promise<WidgetPinResult>
   /** 读取并清空「小工具真的被放下了」的确认结果（面板在请求之后轮询它）。 */
   consumePinResult(): Promise<WidgetPinConfirmation>
+  /** 读取本次尝试的观测事实，用于判定「系统有没有弹出确认界面」（约 2 秒即可判定）。 */
+  getPinAttempt(): Promise<WidgetPinAttempt>
   /** 订阅原生事件；原生侧在 `handleOnResume()` 中发出 `resumed`。 */
   addListener(eventName: 'resumed', listenerFunc: () => void): Promise<PluginListenerHandle>
 }
@@ -140,6 +158,11 @@ class WidgetSnapshotWeb extends WebPlugin implements WidgetSnapshotPlugin {
   async consumePinResult(): Promise<WidgetPinConfirmation> {
     // 没有原生侧，就不存在「被系统确认的放置」；如实返回未确认而不是假装成功。
     return { confirmed: false, appWidgetId: null }
+  }
+
+  async getPinAttempt(): Promise<WidgetPinAttempt> {
+    // 浏览器里没有「添加到桌面」，因此如实返回「没有进行中的尝试」。
+    return { requested: false, requestedAtMs: 0, shouldFailFast: false }
   }
 }
 

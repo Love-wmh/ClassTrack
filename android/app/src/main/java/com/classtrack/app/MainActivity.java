@@ -6,8 +6,25 @@ import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+
+    /**
+     * 上报「我们退到后台了」。
+     *
+     * <p>只用来判定「添加到桌面」时系统有没有弹出确认界面（见 {@link PinAttempt} 与 {@link PinAttemptState}）：确认界面真的出现时会把
+     * 我们挤到后台，于是这里会先被调用；ColorOS 那种「起了界面却从不置前」的失败现场则不会。
+     *
+     * <p>刻意**不**在 `onResume` 里清空：「本次请求期间退过后台」这个事实必须保留到下一次请求开始，
+     * 否则用户切回来之后，面板就会把已经出现过的确认界面误判成「系统没有弹出确认界面」。
+     */
+    @Override
+    public void onPause() {
+        PinAttemptState.recordBackgrounded(System.currentTimeMillis());
+        super.onPause();
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        PinAttemptState.clear();
         registerPlugin(CourseImportPlugin.class);
         // 桌面小工具的快照通道：Web 侧推送课表快照，原生侧落盘并刷新小工具。
         registerPlugin(WidgetSnapshotPlugin.class);
