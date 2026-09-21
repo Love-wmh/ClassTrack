@@ -28,6 +28,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CourseImportPlugin.class);
         // 桌面小工具的快照通道：Web 侧推送课表快照，原生侧落盘并刷新小工具。
         registerPlugin(WidgetSnapshotPlugin.class);
+        // 维护面收敛：把收起档（2×2 / 2×3 / 4×2 / 4×3 / 6×3）的 receiver 禁用掉，让系统拾取器里只剩
+        // 3×2 与 1×2 两档。判决是纯函数（WidgetProviderScope），这里是幂等的执行侧 —— 每次启动跑一次。
+        WidgetProviderScopeGate.apply(this);
         // 小工具点击带来的待跳转路由必须在这里先记下来：Web 层可能在稍后才消费它。
         capturePendingRoute(getIntent());
         super.onCreate(savedInstanceState);

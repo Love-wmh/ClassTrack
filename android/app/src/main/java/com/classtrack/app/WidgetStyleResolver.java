@@ -1,24 +1,26 @@
 package com.classtrack.app;
 
 /**
- * 把实例的**存储配置**与**当前实际尺寸**解析成一份可直接渲染的配置。
+ * 把实例的**存储配置**解析成一份可直接渲染的配置。
  *
- * <p>存在的理由：产品要求「用户改了格子尺寸后样式要匹配上」（2026-09-21），因此当实例处于
- * {@link WidgetStyleConfig.LayoutStyle#AUTO} 时，样式、宽格表现与行项形态都要由**当前尺寸**决定。
- * 尺寸只有渲染那一刻才知道（Glance 的 `LocalSize`），所以这一步必须在合成时做、且必须是纯函数
- * （可 JUnit 覆盖，见 {@code WidgetStyleResolverTest}）。
+ * <p>为什么还需要这一层：存储值来自外部（配置页写入的 Glance 状态、pin 判决写入的配置），
+ * 可能是脏值、也可能是历史口径留下的值（`auto` / `two_column`）。渲染侧不该自己判这些，
+ * 因此这里做一次纯函数解析，保证送进渲染的配置**一定不是 `AUTO`**。
  *
  * <p>优先级（从高到低）：
  *
  * <ol>
- *   <li>**用户显式选择**（`day_list` / `next_up` / `compact`）——手动永远优先，尺寸变化不再改它；</li>
- *   <li>`AUTO` + 可用尺寸 → {@link WidgetPreset#match}（连续最近邻，无阈值分支）；</li>
- *   <li>`AUTO` + 尺寸不可用（0 / 负 / 还没测量到）→ 该实例的 provider 对应预设；</li>
- *   <li>都没有 → 最小档预设（宁可给一个确定的形态，也不留"未定义"）。</li>
+ *   <li>**用户显式选择**（`day_list` / `next_up` / `compact`）—— 原样返回，不做任何改写；</li>
+ *   <li>`AUTO`（历史存储值 / 从未配置）→ **该实例 provider 那档预设的样式**（见 {@link WidgetPreset}）；</li>
+ *   <li>连 provider 都不知道 → 默认配置（「接下来」+ 跟随尺寸）。</li>
  * </ol>
  *
- * <p>注意「已上完的课怎么处理」**不参与**这套解析：它是用户独立的显式选择，自动匹配只决定
- * 样式 + 宽格表现 + 行项形态（design D3b）。
+ * <p>**2026-09-21 口径变更**：这里原先还有一条「按当前尺寸最近邻匹配预设」的路径（连同
+ * {@code WidgetPreset.match} 一起删除）。现在样式不再随尺寸变化 —— 尺寸只影响度量与自适应填充。
+ * 保留第 2 条而不是直接落默认，是为了让「pin 时写入失败 / 槽位超时」这类异常路径仍能落回该档
+ * 正确的样式（1×2 的默认样式是「紧凑」，不能落成「接下来」）。
+ *
+ * <p>注意「已上完的课怎么处理」**不参与**这套解析：它是用户独立的显式选择，解析只决定样式与宽格表现。
  */
 public final class WidgetStyleResolver {
 
@@ -29,36 +31,22 @@ public final class WidgetStyleResolver {
      * 解析出真正用于渲染的配置。
      *
      * @param config 实例的存储配置；`null` 时按默认配置处理。
-     * @param widthDp 当前格子宽度（dp）；`<= 0` 视为不可用。
-     * @param heightDp 当前格子高度（dp）；`<= 0` 视为不可用。
      * @param providerPreset 该实例的 provider 对应的预设（见 {@code WidgetProviders.presetForAppWidgetId}）；
-     *     尺寸不可用时用它兜底，可为 `null`。
+     *     未显式选择时用它决定样式，可为 `null`。
      * @return 可直接渲染的配置：`layoutStyle` 一定不是 `AUTO`。
      */
-    public static WidgetStyleConfig effective(WidgetStyleConfig config, float widthDp, float heightDp,
-                                              WidgetPreset providerPreset) {
+    public static WidgetStyleConfig effective(WidgetStyleConfig config, WidgetPreset providerPreset) {
         WidgetStyleConfig base = config == null ? WidgetStyleConfig.defaults() : config;
         if (base.getLayoutStyle() != WidgetStyleConfig.LayoutStyle.AUTO) {
-            // 手动优先：用户显式选过样式就原样返回，尺寸变化不再影响它。
+            // 手动优先：用户显式选过样式就原样返回，尺寸与 provider 都不再影响它。
             return base;
         }
-
-        WidgetPreset matched = matchPreset(widthDp, heightDp, providerPreset);
-        return new WidgetStyleConfig(matched.getLayoutStyle(), base.getFinishedPolicy(), matched.getWideLayout());
-    }
-
-    /**
-     * 选一档预设：优先按真实尺寸最近邻，尺寸不可用时退回 provider 那档。
-     *
-     * @param widthDp 当前宽度（dp）。
-     * @param heightDp 当前高度（dp）。
-     * @param providerPreset provider 对应的预设；可为 `null`。
-     * @return 选中的预设；永不为 `null`。
-     */
-    public static WidgetPreset matchPreset(float widthDp, float heightDp, WidgetPreset providerPreset) {
-        if (!(widthDp > 0f) || !(heightDp > 0f)) {
-            return providerPreset != null ? providerPreset : WidgetPreset.all().get(0);
+        if (providerPreset == null) {
+            // 连 provider 都不知道（实例已被删除的瞬间、或外部组件）：给一个确定的默认形态。
+            return new WidgetStyleConfig(WidgetStyleConfig.DEFAULT_LAYOUT_STYLE, base.getFinishedPolicy(),
+                    WidgetStyleConfig.DEFAULT_WIDE_LAYOUT);
         }
-        return WidgetPreset.match(widthDp, heightDp);
+        return new WidgetStyleConfig(providerPreset.getLayoutStyle(), base.getFinishedPolicy(),
+                providerPreset.getWideLayout());
     }
 }

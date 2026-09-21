@@ -1,0 +1,6 @@
+{"file": ".trellis/tasks/09-21-widget-scope-narrowing/prd.md", "reason": "验收基准：逐条对照 A1-A8（两档 provider、禁用生效、样式不再按尺寸变、pin 即带样式、UI 收起、真机验收、门禁全绿、spec 同步）"}
+{"file": ".trellis/tasks/09-21-widget-scope-narrowing/design.md", "reason": "检查实现是否守住设计边界：禁用清单必须由注册表推导（不得手写清单）、AUTO/TWO_COLUMN 枚举必须保留可解析、D3 与 D4 同进同退、二级区必须能自动展开、1×2 的 minWidth 必须低于一列宽"}
+{"file": ".trellis/tasks/09-21-widget-scope-narrowing/implement.md", "reason": "核对每阶段的门禁命令是否真的跑过（而不是只看代码改了），以及回滚清单是否被写进最终交付物"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "A8 的落点：检查 spec 是否已从「五个 provider + AUTO 匹配 + 双栏选项」改为「两档维护 + 五档收起（运行时禁用）」，并记录禁用组件对存量实例的代价"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "质量门禁口径：检查 lint/typecheck/vitest 与实际执行结果一致，且没有靠 disable 注释绕过"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层一致性检查表：Web 预设表 ↔ 原生白名单 ↔ 清单 ↔ 7 份 metadata ↔ 标签 ↔ 预览资产 ↔ 断言，逐项确认没有只改一半"}

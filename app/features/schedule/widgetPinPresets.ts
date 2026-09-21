@@ -7,14 +7,16 @@ import type { WidgetPinAttempt, WidgetPinConfirmation, WidgetPinResult, WidgetPr
  * 小工具在任何尺寸都能渲染，但只有少数几个尺寸被验证过「内容刚好铺满、不裁切」。预设把这几个尺寸
  * 连同对应的摆法一起推荐给用户，避免用户自己拖出一个没人验证过的尺寸。
  *
- * **按尺寸命名**（2026-09-21 口径变更）：预设同时是系统拾取器里的一个 provider、pin 面板里的一张卡、
- * 以及**尺寸变化后自动匹配的目标**。三处都靠"多大格子"说话，所以标识与名字都以格子为准
- * （`cell_4x3` / 「标准 4×3」），不再用 `phone_standard` 这种与设备绑定的名字
- * —— 同一个 4×3 在手机与平板上都存在，只是渲染结果不同。
+ * **按尺寸命名**（2026-09-21 口径变更）：预设同时是系统拾取器里的一个 provider 与 pin 面板里的一张卡，
+ * 两者都要靠"多大格子"说话，所以标识与名字都以格子为准（`cell_3x2` / 「接下来 3×2」）。
+ *
+ * **2026-09-21 维护面收缩**：只提供两档 —— 3×2「接下来」（核心摆法）与 1×2「紧凑」（窄高摆法）。
+ * 其余五档的 provider 仍留在应用里（存量实例、配置页归属校验要用），但已在启动时被禁用，
+ * 因此**不会**出现在系统拾取器里；面板也不下发它们（列出来只会是点了放不下的死卡）。
  *
  * **标识必须与原生 `WidgetPreset.java` 的白名单逐字一致**（原生只认这几个字符串，拼错会静默回退成
  * 「未选预设」）。这条由 `widgetPinPresets.test.ts` 守住，且那道测试会直接读 Android 侧的
- * `WidgetProviderRegistry.java` 与五份 `widget_info_*.xml`，把三层对齐。
+ * `WidgetProviderRegistry.java` 与七份 `widget_info_*.xml`，把三层对齐。
  */
 export type WidgetPinPreset = {
   /** 与原生白名单一致的标识。 */
@@ -27,54 +29,28 @@ export type WidgetPinPreset = {
   description: string
   /** 何时该选它；写在卡片上避免用户逐个试。 */
   hint: string
-  /**
-   * 是否「宽度够就分两栏」。
-   *
-   * 双栏要求「宽度 ≥ 320dp 且宽度 ≥ 高度 × 1.25」，**手机竖屏的 4×3 不满足**（373×321 → 宽高比 1.16），
-   * 于是在手机上它会老老实实按单栏渲染 —— 不报错，但和名字给人的预期不符。这条标记让卡片如实说明
-   * 「手机上会退化成单栏」，而不是把选项藏起来（手机横放或宽矮格子时它确实能分栏）。
-   */
-  needsWideCell?: boolean
 }
 
-/** 预设清单；顺序就是卡片顺序（从最小到最大），也是拾取器里的 provider 顺序。 */
+/**
+ * 预设清单；顺序 = 拾取器里的 provider 顺序 = 维护档顺序（与原生注册表一致）。
+ *
+ * 卡片名只服务于**应用内面板**：拾取器里两档也叫「课表」（不带样式、不带尺寸），由 launcher 在标签下方
+ * 打出它算出的跨度来区分。因此卡片名要能把两档摆法说清（接下来 / 紧凑），而不是重复 provider 标签。
+ */
 export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
   {
-    id: 'cell_2x2',
-    name: '极简 2×2',
-    cell: '2×2',
-    description: '一张卡突出「现在这节课」，下面跟一行「下一节」。',
-    hint: '桌面位置紧张、只想扫一眼现在上什么。',
+    id: 'cell_3x2',
+    name: '接下来',
+    cell: '3×2',
+    description: '上面一张大卡片突出正在进行或接下来的一节课，下面接今天的课表；今天没课时改列明天。',
+    hint: '手机桌面的主力位，一屏能看清「现在上什么」和「今天还有什么」。',
   },
   {
-    id: 'cell_2x3',
-    name: '手机 2×3',
-    cell: '2×3',
-    description: '上面是当前课程，下面接两行今天的课表。',
-    hint: '手机竖屏的主力位，一屏能看两节。',
-  },
-  {
-    id: 'cell_4x2',
-    name: '宽横 4×2',
-    cell: '4×2',
-    description: '横向铺开、只占两行高度，课表按行滚动。',
-    hint: '顶部空间有限，或喜欢横着放。',
-  },
-  {
-    id: 'cell_4x3',
-    name: '标准 4×3',
-    cell: '4×3',
-    description: '上面是当前课程，下面接今天整天课表；格子够宽时自动分两栏。',
-    hint: '最常用的摆法：手机单栏、平板双栏。',
-    needsWideCell: true,
-  },
-  {
-    id: 'cell_6x3',
-    name: '宽屏 6×3',
-    cell: '6×3',
-    description: '左卡 + 更宽的右侧课表，教室就在课名下面。',
-    hint: '平板横向 6 列以上的宽格。',
-    needsWideCell: true,
+    id: 'cell_1x2',
+    name: '紧凑',
+    cell: '1×2',
+    description: '只放一张当前 / 接下来的课卡片，底部一行今天的节数；信息最少，一眼看到下一节。',
+    hint: '桌面只剩一条窄位时用；信息最少，但一眼能看到下一节。',
   },
 ]
 
@@ -85,9 +61,6 @@ export const WIDGET_PIN_PRESETS: readonly WidgetPinPreset[] = [
  * 「一定会按目标格子放好」。
  */
 export const WIDGET_PIN_MANUAL_HINT = '当前系统不支持从应用内一键添加。请用下面的方式手动添加。'
-
-/** 只有横向够宽的格子才分两栏时的提示（手机竖屏、窄格子）。 */
-export const WIDGET_PIN_NARROW_CELL_HINT = '当前格子不够宽，会先按单栏显示；横放或用平板时自动分两栏。'
 
 /**
  * 「请求已发出、还没等到系统确认」时的中性说明。

@@ -46,6 +46,22 @@ public final class WidgetProviders {
     }
 
     /**
+     * 按类名取 provider 组件（与 {@link #renderers(Context)} 用的是同一套容错解析）。
+     *
+     *     <p>给「启动收敛」用：它只需要那些**非维护档**的组件，而注册表里存的是类名字符串。
+     *
+     * @param className receiver 的完整类名。
+     * @return 对应组件；类不存在时返回 `null`（那一档会被跳过，不影响其它档收敛）。
+     */
+    public static ComponentName componentFor(Context context, String className) {
+        if (context == null || className == null) {
+            return null;
+        }
+        Class<?> receiverClass = resolve(className);
+        return receiverClass == null ? null : new ComponentName(context, receiverClass);
+    }
+
+    /**
      * 某个组件对应的预设。
      *
      * @param component provider 组件；`null` 安全。

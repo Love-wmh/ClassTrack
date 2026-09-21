@@ -8,7 +8,18 @@
     <!-- 桌面小工具 -->
     <string name="widget_label">ClassTrack 课程</string>
 
-    <!-- 拾取器里五档 provider 的标签：与 Web 侧预设名逐字一致（跨层测试会比对） -->
+    <!--
+        拾取器里七档 provider 的标签。
+        2026-09-21 维护面收缩后只有 3×2 / 1×2 两档真的会出现在拾取器里；其余五档的标签保留：
+        存量实例的「样式」入口与归属校验仍要用到它们的名字。
+    -->
+    <!--
+        维护档的标签就是应用名「课表」：**不带样式、也不带尺寸**（2026-09-21 用户要求）。
+        为什么两档同名也不冲突：拾取器里 launcher 会在标签下方自己打出它算出的跨度（如「3 × 2」「2 × 2」），
+        用户按跨度区分；而「接下来 / 紧凑」这种摆法名属于应用内面板（那里必须能区分，见 widgetPinPresets.ts）。
+    -->
+    <string name="widget_label_3x2">课表</string>
+    <string name="widget_label_1x2">课表</string>
     <string name="widget_label_2x2">课表 · 极简 2×2</string>
     <string name="widget_label_2x3">课表 · 手机 2×3</string>
     <string name="widget_label_4x2">课表 · 宽横 4×2</string>
@@ -72,8 +83,9 @@
     <string name="widget_config_preset_hint">已按推荐预设预填（推荐 %1$s 格子）。放好后可以随意改，拖到别的尺寸也能用。</string>
     <string name="widget_config_intro">样式按这个小工具实例单独保存，桌面上可以放多个样式不同的实例。</string>
     <string name="widget_config_layout_section">布局样式</string>
-    <string name="widget_config_layout_auto">自动（按尺寸）</string>
-    <string name="widget_config_layout_auto_desc">推荐：格子拉大或缩小后，样式与行项形态会跟着变；选了下面某一项就不再自动变。</string>
+    <!-- 「更多设置」二级区入口：一级只留「接下来」，其余样式与两组选项默认折叠（2026-09-21 维护面收缩）。 -->
+    <string name="widget_config_advanced_expand">更多设置 ▸</string>
+    <string name="widget_config_advanced_collapse">更多设置 ▾</string>
     <string name="widget_config_layout_day_list">全天课表</string>
     <string name="widget_config_layout_day_list_desc">列出今天一整天的课，正在上的那节高亮；今天没课时改列明天的课，格子放不下时可以上下滑动看完整天。</string>
     <string name="widget_config_layout_next_up">接下来</string>
@@ -84,26 +96,29 @@
     <string name="widget_config_finished_show_dim">灰显保留</string>
     <string name="widget_config_finished_hide">不显示</string>
     <string name="widget_config_finished_collapse">折叠成一行计数</string>
-    <string name="widget_config_finished_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
+    <!-- 原因要写准：2026-09-21 起「紧凑」的主课下方也列课，但它列的只有**主课之后**的课，
+         已上完的行排在主课之前，天然进不来（见 WidgetLinePolicy.firstRowAfterHero）。 -->
+    <string name="widget_config_finished_ineffective">「紧凑」只列主课之后的课，已上完的课不在其中，所以这个选项对它没有效果。</string>
     <string name="widget_config_wide_section">大格子表现</string>
     <string name="widget_config_wide_adaptive">跟随尺寸</string>
     <string name="widget_config_wide_adaptive_desc">字号与间距随格子大小一起放大；小格子上与以前完全一致。</string>
     <string name="widget_config_wide_dense">信息加密</string>
     <string name="widget_config_wide_dense_desc">在放大的基础上，课名放宽到两行，课程行补「第几节」，汇总行补当天已上完的节数。</string>
-    <string name="widget_config_wide_two_column">双栏</string>
-    <string name="widget_config_wide_two_column_desc">左栏放当前或接下来的一节课，右栏放当天课表；格子不够宽时自动保持单栏。</string>
-    <string name="widget_config_wide_ineffective">「紧凑」样式不显示课程列表，所以这个选项对它没有效果。</string>
-    <!-- 「自动（按尺寸）」时同理：宽格表现由匹配到的那一档预设决定，用户在这里选的不会被使用。
-         说清真正的原因，而不是复用「紧凑」那句 —— 否则用户会以为样式被切成了紧凑。 -->
-    <string name="widget_config_wide_ineffective_auto">「自动（按尺寸）」时，宽格表现由当前尺寸匹配到的那一档决定，所以这个选项对它没有效果。</string>
+    <string name="widget_config_wide_ineffective">「紧凑」的课程行是窄卡行项（课名一行、「时间 · 教室」一行），不补「第几节」，所以这个选项对它没有效果。</string>
     <string name="widget_config_confirm">确定</string>
     <string name="widget_config_cancel">取消</string>
 
     <!-- 预览示意图里的示例课程：只是静态 mock，不是任何用户数据；三份示意图复用同一批 -->
     <string name="widget_preview_summary">今天 周三 · 共 6 节</string>
-    <string name="widget_preview_hero_label">正在进行 · 第 3-4 节</string>
+    <!-- 打样状态是「正在进行」：运行期 in-progress 的 hero 标签就是这一个词（widget_hero_in_progress）。
+         上一版这里写「正在进行 · 第 3-4 节」—— 运行期压根没有这种文案（节次只出现在 upcoming 的「接下来 · 第 N 节」里），
+         mock 与真机对不上就是从这一行开始的。 -->
+    <string name="widget_preview_hero_label">正在进行</string>
     <string name="widget_preview_hero_name">数据结构</string>
+    <!-- hero 明细：宽格样式一行写「时间 · 教室」（widget_preview_hero_time）；「紧凑」样式把这两块拆成两行，
+         因为它的格宽只有 82~97dp，一行必被裁掉、而裁掉的正好是教室（2026-09-21 用户明确要求教室不能省）。 -->
     <string name="widget_preview_hero_time">14:00 - 15:35 · C305</string>
+    <string name="widget_preview_hero_time_range">14:00 - 15:35</string>
     <string name="widget_preview_style_entry">样式</string>
     <string name="widget_preview_counter">今天还有 2 节</string>
     <string name="widget_preview_counts">已上完 2 节 · 还有 3 节</string>
@@ -117,4 +132,14 @@
     <string name="widget_preview_room_1">A101</string>
     <string name="widget_preview_room_2">B203</string>
     <string name="widget_preview_room_3">C305</string>
+    <!-- 「紧凑」样式的示例：主课（14:00 数据结构）之后还有两节，与计数行「今天还有 2 节」对得上 -->
+    <string name="widget_preview_time_4">16:00</string>
+    <string name="widget_preview_name_4">线性代数</string>
+    <string name="widget_preview_room_4">D401</string>
+    <string name="widget_preview_time_5">18:00</string>
+    <string name="widget_preview_name_5">体育</string>
+    <string name="widget_preview_room_5">操场</string>
+    <!-- 窄卡行项的第二行「时间 · 教室」：XML 的 android:text 不能拼接两个资源引用，所以各给一句样例文案 -->
+    <string name="widget_preview_meta_4">16:00 · D401</string>
+    <string name="widget_preview_meta_5">18:00 · 操场</string>
 </resources>

@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.RadioButton
 import android.widget.RemoteViews
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -20,6 +22,7 @@ import com.classtrack.app.WidgetDisplayState
 import com.classtrack.app.WidgetPendingPreset
 import com.classtrack.app.WidgetProviders
 import com.classtrack.app.WidgetStyleConfig
+import com.classtrack.app.WidgetStyleResolver
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +67,14 @@ class WidgetConfigActivity : AppCompatActivity() {
     private lateinit var previewDayList: FrameLayout
     private lateinit var previewNextUp: FrameLayout
     private lateinit var previewCompact: FrameLayout
+    /** 「更多设置」二级区的容器与折叠开关（一级只留「接下来」）。 */
+    private lateinit var advancedGroup: LinearLayout
+    private lateinit var advancedToggle: TextView
+    /** 二级区里的两个布局样式选项：它们必须留在同一个 RadioGroup 里才有互斥语义，折叠时单独收起。 */
+    private lateinit var dayListRadio: RadioButton
+    private lateinit var dayListDesc: TextView
+    private lateinit var compactRadio: RadioButton
+    private lateinit var compactDesc: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +105,12 @@ class WidgetConfigActivity : AppCompatActivity() {
         previewDayList = findViewById(R.id.widget_config_preview_day_list)
         previewNextUp = findViewById(R.id.widget_config_preview_next_up)
         previewCompact = findViewById(R.id.widget_config_preview_compact)
+        advancedGroup = findViewById(R.id.widget_config_advanced_group)
+        advancedToggle = findViewById(R.id.widget_config_advanced_toggle)
+        dayListRadio = findViewById(R.id.widget_config_layout_day_list)
+        dayListDesc = findViewById(R.id.widget_config_layout_day_list_desc)
+        compactRadio = findViewById(R.id.widget_config_layout_compact)
+        compactDesc = findViewById(R.id.widget_config_layout_compact_desc)
 
         layoutGroup.setOnCheckedChangeListener { _, _ ->
             // 「紧凑」既不显示列表，也就同时让「已上完」与「大格子表现」失效，两处灰显一起更新。
@@ -107,6 +124,7 @@ class WidgetConfigActivity : AppCompatActivity() {
             updateWideSectionState()
             requestPreviews()
         }
+        advancedToggle.setOnClickListener { setAdvancedExpanded(advancedGroup.visibility != View.VISIBLE) }
         findViewById<Button>(R.id.widget_config_confirm).setOnClickListener { saveAndFinish() }
         findViewById<Button>(R.id.widget_config_cancel).setOnClickListener { finish() }
 
@@ -153,25 +171,66 @@ class WidgetConfigActivity : AppCompatActivity() {
                 WidgetStyleConfig.defaults()
             }
 
-            // 应用内「添加到桌面」带过来的预设：**只在本次配置流程里预选**，用户改了就按用户改的存。
+            // 页面回显的是**实例真正渲染出来的样子**：存储值可能是历史的 `auto`（从未显式选择），而它的
+            // 解析结果取决于该实例 provider 那档预设 —— 1×2 是「紧凑」、3×2 是「接下来」。
+            // 这样页面与桌面不会各说一套；用户点「确定」时就把这个样式显式写回去（见 design D3/D6）。
+
+            val resolved = WidgetStyleResolver.effective(
+                stored,
+                WidgetProviders.presetForAppWidgetId(this@WidgetConfigActivity, appWidgetId)
+            )
             // 一次性消费（读取即清），因此不会影响之后新增的实例。
             val preset = WidgetPendingPreset.consume(System.currentTimeMillis())
-            val effective = if (preset == null) {
-                stored
+            val forUi = if (preset == null) {
+                resolved
             } else {
                 WidgetDiagnostics.presetApplied(preset.getId())
                 presetHint.text = getString(R.string.widget_config_preset_hint, preset.getCellLabel())
                 presetHint.visibility = View.VISIBLE
-                WidgetStyleConfig(preset.getLayoutStyle(), stored.finishedPolicy, preset.getWideLayout())
+                WidgetStyleConfig(preset.getLayoutStyle(), resolved.finishedPolicy, preset.getWideLayout())
+            }
+            // 「双栏」已从 UI 收起：历史值在页面上按「跟随尺寸」回显（页面上没有这一项，不该假装选着）。
+            val wideLayoutForUi = if (forUi.wideLayout == WidgetStyleConfig.WideLayout.TWO_COLUMN) {
+                WidgetStyleConfig.WideLayout.ADAPTIVE
+            } else {
+                forUi.wideLayout
             }
 
-            layoutGroup.check(layoutRadioId(effective.layoutStyle))
-            finishedGroup.check(finishedRadioId(effective.finishedPolicy))
-            wideGroup.check(wideRadioId(effective.wideLayout))
+            layoutGroup.check(layoutRadioId(forUi.layoutStyle))
+            finishedGroup.check(finishedRadioId(forUi.finishedPolicy))
+            wideGroup.check(wideRadioId(wideLayoutForUi))
             updateFinishedSectionState()
             updateWideSectionState()
+            // 二级区默认折叠，但**回显出来的配置若落在二级区里就必须展开** —— 否则用户会以为设置丢了。
+            setAdvancedExpanded(
+                WidgetStyleConfig(forUi.layoutStyle, forUi.finishedPolicy, wideLayoutForUi).needsAdvancedSection()
+            )
         }
     }
+
+    /**
+     * 展开 / 收起「更多设置」二级区。
+     *
+     *     <p>「全天课表 / 紧凑」两个布局样式选项**必须留在同一个 RadioGroup 里**才有互斥语义，所以折叠时由这里
+     *     单独把它们的控件一起收起，而不是把它们包进二级容器里（包进去就不再是 RadioGroup 的直接子项，
+     *     选中状态不会互斥）。
+     *
+     *     <p>折叠本身不影响已保存的配置：进页面时若配置落在二级区，[restoreSelection] 会自动展开。
+     */
+    private fun setAdvancedExpanded(expanded: Boolean) {
+        advancedGroup.visibility = if (expanded) View.VISIBLE else View.GONE
+        advancedToggle.text = getString(
+            if (expanded) R.string.widget_config_advanced_collapse else R.string.widget_config_advanced_expand
+        )
+        val secondary = if (expanded) View.VISIBLE else View.GONE
+        for (view in secondaryLayoutViews) {
+            view.visibility = secondary
+        }
+    }
+
+    /** 二级区里与布局样式相关的控件；折叠时与二级容器一起收起（见 [setAdvancedExpanded]）。 */
+    private val secondaryLayoutViews: List<View>
+        get() = listOf(dayListRadio, dayListDesc, previewDayList, compactRadio, compactDesc, previewCompact)
 
     /**
      * 保存并只刷新这一个实例。
@@ -222,14 +281,9 @@ class WidgetConfigActivity : AppCompatActivity() {
         for (index in 0 until wideGroup.childCount) {
             wideGroup.getChildAt(index).isEnabled = effective
         }
-        // 说明文案必须写**真正的原因**：AUTO 下宽格表现由尺寸匹配到的预设决定，与「紧凑」无关。
-        wideHint.text = getString(
-            if (selectedLayout() == WidgetStyleConfig.LayoutStyle.AUTO) {
-                R.string.widget_config_wide_ineffective_auto
-            } else {
-                R.string.widget_config_wide_ineffective
-            }
-        )
+        // 说明文案必须写**真正的原因**：页面上「紧凑」是唯一不显示列表的样式（「自动」已从 UI 收起），
+        // 所以这组对「紧凑」以外的样式都有效。
+        wideHint.text = getString(R.string.widget_config_wide_ineffective)
         wideHint.visibility = if (effective) View.GONE else View.VISIBLE
     }
 
@@ -351,8 +405,8 @@ class WidgetConfigActivity : AppCompatActivity() {
         R.id.widget_config_layout_next_up -> WidgetStyleConfig.LayoutStyle.NEXT_UP
         R.id.widget_config_layout_compact -> WidgetStyleConfig.LayoutStyle.COMPACT
         R.id.widget_config_layout_day_list -> WidgetStyleConfig.LayoutStyle.DAY_LIST
-        // 默认（含未选中）都是「自动」：它也是新实例的默认状态。
-        else -> WidgetStyleConfig.LayoutStyle.AUTO
+        // 兜底（含未选中）是「接下来」：一级只剩它，页面与渲染的默认形态必须一致。
+        else -> WidgetStyleConfig.LayoutStyle.NEXT_UP
     }
 
     private fun selectedFinishedPolicy(): WidgetStyleConfig.FinishedPolicy = when (finishedGroup.checkedRadioButtonId) {
@@ -365,18 +419,23 @@ class WidgetConfigActivity : AppCompatActivity() {
         WidgetStyleConfig.LayoutStyle.NEXT_UP -> R.id.widget_config_layout_next_up
         WidgetStyleConfig.LayoutStyle.COMPACT -> R.id.widget_config_layout_compact
         WidgetStyleConfig.LayoutStyle.DAY_LIST -> R.id.widget_config_layout_day_list
-        else -> R.id.widget_config_layout_auto
+        // 历史存储值 `auto`（从未显式选择）在页面上落到「接下来」；真正解析成哪一档由回显前的
+        // WidgetStyleResolver 决定（1×2 会被解析成「紧凑」，那种情况不会走到这里）。
+        else -> R.id.widget_config_layout_next_up
     }
 
     private fun selectedWideLayout(): WidgetStyleConfig.WideLayout = when (wideGroup.checkedRadioButtonId) {
         R.id.widget_config_wide_dense -> WidgetStyleConfig.WideLayout.DENSE
-        R.id.widget_config_wide_two_column -> WidgetStyleConfig.WideLayout.TWO_COLUMN
+        // 「双栏」的选项已从 UI 收起，因此这里只剩两项：信息加密 / 跟随尺寸（兜底）。
+        // 历史 `two_column` 实例在页面上按「跟随尺寸」回显，点确定才会写成 adaptive。
         else -> WidgetStyleConfig.WideLayout.ADAPTIVE
     }
 
     private fun wideRadioId(wide: WidgetStyleConfig.WideLayout): Int = when (wide) {
         WidgetStyleConfig.WideLayout.DENSE -> R.id.widget_config_wide_dense
-        WidgetStyleConfig.WideLayout.TWO_COLUMN -> R.id.widget_config_wide_two_column
+        // 「双栏」已从 UI 收起（枚举与解析保留）：历史值在页面上按「跟随尺寸」回显 —— 页面上没有这一项，
+        // 不该假装选着一个用户看不见的选项。用户点确定后才会把它写成 adaptive。
+        WidgetStyleConfig.WideLayout.TWO_COLUMN -> R.id.widget_config_wide_adaptive
         else -> R.id.widget_config_wide_adaptive
     }
 

@@ -24,11 +24,12 @@ public final class WidgetPinConfirmation {
         if (appWidgetId < 0 || pendingPreset == null) {
             return null;
         }
-        // 写成 `AUTO`（而不是把预设的样式写死）：用户选的是"这一档摆法"，实例之后被拖动改尺寸时
-        // 仍然应该跟着匹配（2026-09-21 口径）。显式选择只来自配置页，因此这里不算替用户决定样式。
+        // 写成**该预设的样式**（2026-09-21 口径变更）。为什么不再是 `AUTO`：`AUTO` 过去靠「按尺寸最近邻
+        // 匹配」兜住样式，那条路径已删除；而用户在面板上点的是「一张有具体摆法的卡」，这就是他的显式选择。
+        // 若还写 `AUTO`，1×2 会渲染成「接下来」，与卡片名字不符。
         // 「已上完策略」沿用默认值 —— 预设没有表达过这一项。
         return new WidgetStyleConfig(
-                WidgetStyleConfig.LayoutStyle.AUTO,
+                pendingPreset.getLayoutStyle(),
                 WidgetStyleConfig.defaults().getFinishedPolicy(),
                 pendingPreset.getWideLayout());
     }

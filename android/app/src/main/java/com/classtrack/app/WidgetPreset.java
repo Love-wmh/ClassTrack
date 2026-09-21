@@ -7,16 +7,16 @@ import java.util.List;
 /**
  * 一档**按尺寸命名**的预设：目标格子 + 布局样式 + 大格子表现 + （用于尺寸匹配的）标定样本。
  *
- * <p>为什么按尺寸命名（2026-09-21 产品口径变更）：预设现在同时承担三件事 ——
- * 拾取器里的一个 provider、pin 面板里的一张卡、以及**尺寸变化后自动匹配的目标**。
- * 三者都要靠"多大格子"来说话，因此标识与文案都以格子为准（`cell_4x3` / `4×3`），
+ * <p>为什么按尺寸命名（2026-09-21 产品口径变更）：预设同时承担两件事 —— 拾取器里的一个 provider、
+ * pin 面板里的一张卡。两者都要靠"多大格子"来说话，因此标识与文案都以格子为准（`cell_4x3` / `4×3`），
  * 不再用 `phone_standard` 这种与设备绑定的名字（同一个 4×3 在手机与平板上都存在）。
  *
  * <p>**标定样本**（{@code samples}）：同一个格子数在不同设备族上的 dp 尺寸不同（实测手机 4×3 =
- * 373×321dp、平板 4×3 = 733×419dp），所以每档预设可以带多个实测样本；
- * {@link #match(float, float)} 用"到最近样本的归一化距离"选档，因此不需要任何 `if (height &lt; N)` 阈值。
+ * 373×321dp、平板 4×3 = 733×419dp），所以每档预设可以带多个实测样本。样本现在**只**服务
+ * {@link #getWidthDp()} / {@link #getHeightDp()}（pin 的尺寸提示）—— 「按尺寸自动匹配样式」那条路径已于
+ * 2026-09-21 删除：样式改为由用户显式选择、或该实例 provider 那档预设的样式决定（见 design D3）。
  *
- * <p>纯函数、不碰 Android，可被 JUnit 直接覆盖（见 {@code WidgetPresetTest} / {@code WidgetPresetMatchTest}）。
+ * <p>纯函数、不碰 Android，可被 JUnit 直接覆盖（见 {@code WidgetPresetTest}）。
  */
 public final class WidgetPreset {
 
@@ -26,6 +26,10 @@ public final class WidgetPreset {
     public static final String ID_CELL_4X2 = "cell_4x2";
     public static final String ID_CELL_4X3 = "cell_4x3";
     public static final String ID_CELL_6X3 = "cell_6x3";
+
+    /** 维护档（2026-09-21 起只有这两档进系统拾取器）：3×2「接下来」、1×2「紧凑」。 */
+    public static final String ID_CELL_3X2 = "cell_3x2";
+    public static final String ID_CELL_1X2 = "cell_1x2";
 
     /** 一个标定样本：某设备族上"这个格子数"实测到的 dp 尺寸。 */
     public static final class Sample {
@@ -45,8 +49,17 @@ public final class WidgetPreset {
     private static final Sample TABLET_4X3 = new Sample(733f, 419f);
     private static final Sample PHONE_6X3 = new Sample(537f, 315f);
     private static final Sample TABLET_6X3 = new Sample(1142f, 419f);
+    /** 手机 3×2 = 276×210dp（2026-09-20 真机实测）；1×2 = 97×210dp（**估算值**，待真机量测校准，见 A6）。 */
+    private static final Sample PHONE_3X2 = new Sample(276f, 210f);
+    private static final Sample PHONE_1X2 = new Sample(97f, 210f);
 
     private static final List<WidgetPreset> ALL = Arrays.asList(
+            // 两档维护档在前（与 WidgetProviderRegistry 的顺序一致）：这两个 provider 会进拾取器，
+            // 其余五档只是保留数据供存量实例与归属校验使用。
+            new WidgetPreset(ID_CELL_3X2, 3, 2, WidgetStyleConfig.LayoutStyle.NEXT_UP,
+                    WidgetStyleConfig.WideLayout.ADAPTIVE, Arrays.asList(PHONE_3X2)),
+            new WidgetPreset(ID_CELL_1X2, 1, 2, WidgetStyleConfig.LayoutStyle.COMPACT,
+                    WidgetStyleConfig.WideLayout.ADAPTIVE, Arrays.asList(PHONE_1X2)),
             new WidgetPreset(ID_CELL_2X2, 2, 2, WidgetStyleConfig.LayoutStyle.COMPACT,
                     WidgetStyleConfig.WideLayout.ADAPTIVE, Arrays.asList(PHONE_2X2)),
             new WidgetPreset(ID_CELL_2X3, 2, 3, WidgetStyleConfig.LayoutStyle.NEXT_UP,
@@ -77,7 +90,7 @@ public final class WidgetPreset {
         this.samples = samples;
     }
 
-    /** @return 全部预设（顺序 = pin 面板里的卡片顺序：从小到大）。 */
+    /** @return 全部预设（顺序：维护档在前，随后是收起档 —— 与 {@code WidgetProviderRegistry} 一致）。 */
     public static List<WidgetPreset> all() {
         return ALL;
     }
@@ -101,55 +114,6 @@ public final class WidgetPreset {
         return null;
     }
 
-    /**
-     * 按**当前尺寸**选最合适的一档（口径变更见 design D3b）。
-     *
-     * <p>规则是**连续最近邻**：对每档预设取"到它所有标定样本里最近的那个"的归一化欧氏距离，选最小的那一档。
-     * 因为样本是实测 dp 值，所以这里不需要任何离散阈值分支。
-     *
-     * <p>并列时的裁决顺序：**格子面积更小的档优先**（内容更少，不会显得空），再按标识字典序（保证确定性）。
-     *
-     * @param widthDp 实例当前宽度（dp）；非正数时按最小档处理。
-     * @param heightDp 实例当前高度（dp）；非正数时按最小档处理。
-     * @return 最合适的一档；永不为 `null`（预设表非空）。
-     */
-    public static WidgetPreset match(float widthDp, float heightDp) {
-        if (!(widthDp > 0f) || !(heightDp > 0f)) {
-            return ALL.get(0);
-        }
-        WidgetPreset best = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (WidgetPreset preset : ALL) {
-            double distance = preset.distanceTo(widthDp, heightDp);
-            if (best == null || distance < bestDistance || (distance == bestDistance && preset.isPreferableTo(best))) {
-                best = preset;
-                bestDistance = distance;
-            }
-        }
-        return best;
-    }
-
-    private double distanceTo(float widthDp, float heightDp) {
-        double best = Double.MAX_VALUE;
-        for (Sample sample : samples) {
-            double dw = (widthDp - sample.widthDp) / sample.widthDp;
-            double dh = (heightDp - sample.heightDp) / sample.heightDp;
-            double distance = Math.sqrt(dw * dw + dh * dh);
-            if (distance < best) {
-                best = distance;
-            }
-        }
-        return best;
-    }
-
-    private boolean isPreferableTo(WidgetPreset other) {
-        int area = cellWidth * cellHeight;
-        int otherArea = other.cellWidth * other.cellHeight;
-        if (area != otherArea) {
-            return area < otherArea;
-        }
-        return id.compareTo(other.id) < 0;
-    }
 
     /** @return 预设标识（白名单内的固定值）。 */
     public String getId() {
@@ -191,7 +155,7 @@ public final class WidgetPreset {
         return samples.get(0).heightDp;
     }
 
-    /** @return 所有标定样本（供测试与匹配规则使用）。 */
+    /** @return 所有标定样本（只用于 pin 的尺寸提示，见 {@link #getWidthDp()}）。 */
     public List<Sample> getSamples() {
         return new ArrayList<>(samples);
     }

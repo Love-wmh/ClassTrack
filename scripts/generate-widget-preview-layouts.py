@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 import pathlib
+import re
 import sys
 
 # 与 WidgetLayoutMetrics 的基础常量保持一致（改了那边必须同步这里）。
@@ -116,6 +117,11 @@ class Provider:
 
 
 PROVIDERS = [
+    # 维护档在前（与 WidgetProviderRegistry 的顺序一致）：这两档是拾取器里真正提供的那两个。
+    # 这两档的拾取器标签现在就是「课表」（见 strings.xml 的注释）；这里的 label 只进生成文件的注释，
+    # 保留「样式 + 尺寸」是为了让维护者一眼看出这份 mock 对应哪一档。
+    Provider("3x2", 276.0, 210.0, "课表（接下来 3×2）", "single_tight"),
+    Provider("1x2", 97.0, 210.0, "课表（紧凑 1×2）", "compact"),
     Provider("2x2", 179.0, 210.0, "课表 · 极简 2×2", "compact"),
     Provider("2x3", 179.0, 315.0, "课表 · 手机 2×3", "single"),
     Provider("4x2", 373.0, 210.0, "课表 · 宽横 4×2", "single_tight"),
@@ -128,7 +134,20 @@ ROWS = [
     ("@string/widget_preview_time_1", "@string/widget_preview_name_1", "@string/widget_preview_room_1"),
     ("@string/widget_preview_time_2", "@string/widget_preview_name_2", "@string/widget_preview_room_2"),
     ("@string/widget_preview_time_3", "@string/widget_preview_name_3", "@string/widget_preview_room_3"),
+    # 主课（第 3 行 14:00 数据结构）之后的两节：「紧凑」样式把它们列在主课下方，
+    # 行数与计数行「今天还有 2 节」对得上。
+    ("@string/widget_preview_time_4", "@string/widget_preview_name_4", "@string/widget_preview_room_4"),
+    ("@string/widget_preview_time_5", "@string/widget_preview_name_5", "@string/widget_preview_room_5"),
 ]
+
+# 「紧凑」样式列在主课之后的课程行（ROWS 下标）。
+COMPACT_FOLLOW_UP_ROWS = (3, 4)
+
+# 窄卡行项的第二行「时间 · 教室」：XML 的 android:text 不能拼接两个资源引用，所以各给一句样例文案。
+COMPACT_ROW_META = {
+    3: "@string/widget_preview_meta_4",
+    4: "@string/widget_preview_meta_5",
+}
 
 
 def num(value: float) -> str:
@@ -161,8 +180,34 @@ def header(provider: Provider, shape_note: str) -> str:
 -->
 """
 
+def single_line_text_views(xml: str) -> str:
+    """给 mock 里每个 TextView 补上 `maxLines=1` + `ellipsize=end`。
 
-def hero_block(provider: Provider, label: str = "@string/widget_preview_hero_label") -> str:
+    运行期的每一行都是 Glance `Text(maxLines = 1)`；mock 少了这两条属性时，窄格里长文案会被**折成好几行**
+    （实测 1×2 在 5 列网格的 82dp 列宽下把状态标签折成 5 行），比真机还难看，也让人误以为真机就长这样。
+    示例文案都是短句，宽格子里加了属性也不会有任何视觉差异。
+    """
+    def inject(match: re.Match[str]) -> str:
+        tag = match.group(0)
+        # 只补**缺失**的属性：mock 里有几处本来就有 ellipsize/maxLines（例如课名允许两行），
+        # 无脑插一遍会写出重复属性，aapt 直接以 AttributeNSNotUnique 拒绝编译。
+        missing = [
+            f'android:{attr}="{value}"'
+            for attr, value in (("ellipsize", "end"), ("maxLines", "1"))
+            if f'android:{attr}=' not in tag
+        ]
+        if not missing:
+            return tag
+        indent_match = re.match(r"<TextView\n(\s*)", tag)
+        indent = indent_match.group(1) if indent_match else "        "
+        injected = "".join(f"{indent}{attr}\n" for attr in missing)
+        return tag.replace("<TextView\n", f"<TextView\n{injected}", 1)
+
+    return re.sub(r"<TextView\n(?:[^>]*?)/>", inject, xml, flags=re.S)
+
+
+def hero_block(provider: Provider, label: str = "@string/widget_preview_hero_label",
+               stacked_detail: bool = False) -> str:
     return f"""    <!-- hero 标签行：状态标签 +「样式」入口（与运行期一致） -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -197,12 +242,36 @@ def hero_block(provider: Provider, label: str = "@string/widget_preview_hero_lab
         android:textSize="{num(provider.title_sp)}sp"
         android:textStyle="bold" />
 
-    <TextView
+{hero_detail_block(provider, stacked_detail)}"""
+
+
+def hero_detail_block(provider: Provider, stacked_detail: bool) -> str:
+    """hero 明细：宽格样式一行写「时间 · 教室」，「紧凑」拆成「时间」+「教室」两行。
+
+    运行期同一件事由 `WidgetBodyLine.isStackedDetail` 决定（见 WidgetLinePolicy 的紧凑分支）：窄格里一行必被裁掉，
+    而裁掉的正好是教室 —— 教室不能省。
+    """
+    if not stacked_detail:
+        return f"""    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/widget_preview_hero_time"
         android:textColor="@color/widget_text_secondary"
         android:textSize="{num(provider.body_sp)}sp" />
+"""
+    return f"""    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_preview_hero_time_range"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="{num(provider.body_sp)}sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_preview_room_3"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="{num(provider.caption_sp)}sp" />
 """
 
 
@@ -242,7 +311,10 @@ def summary_block(provider: Provider, with_counts: bool) -> str:
 {counts}"""
 
 
-def course_row(provider: Provider, index: int, first: bool) -> str:
+def course_row(provider: Provider, index: int, first: bool, compact: bool = False) -> str:
+    """一行课程。`compact=True` 时画成窄卡形态：课名一行、「时间 · 教室」一行（与运行期 RowForm.COMPACT 一致）。"""
+    if compact:
+        return compact_course_row(provider, index, first)
     time_label, name_label, room_label = ROWS[index]
     margin = provider.row_gap_first_dp if first else provider.row_gap_dp
     return f"""    <LinearLayout
@@ -296,8 +368,36 @@ def single_column(provider: Provider, rows: int, with_counts: bool) -> str:
     return body
 
 
+def compact_course_row(provider: Provider, index: int, first: bool) -> str:
+    time_label, name_label, room_label = ROWS[index]
+    margin = provider.row_gap_first_dp if first else provider.row_gap_dp
+    return f"""    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="{num(margin)}dp"
+        android:text="{name_label}"
+        android:textColor="@color/widget_text_primary"
+        android:textSize="{num(provider.body_sp)}sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="{COMPACT_ROW_META[index]}"
+        android:textColor="@color/widget_text_muted"
+        android:textSize="{num(provider.caption_sp)}sp" />
+"""
+
+
 def compact_column(provider: Provider) -> str:
-    return hero_block(provider) + counter_block(provider)
+    """「紧凑」= hero（明细两行）+ 计数行 + **主课之后的课**。
+
+    主课之后的课是 2026-09-21 用户要求补上的：1×2 是竖长的窄卡，只画 hero 与计数会在下方留一整块空白。
+    行数由样例决定（这里两行），与计数行「今天还有 2 节」对得上。
+    """
+    body = hero_block(provider, stacked_detail=True) + counter_block(provider)
+    for index in COMPACT_FOLLOW_UP_ROWS:
+        body += course_row(provider, index, first=(index == COMPACT_FOLLOW_UP_ROWS[0]), compact=True)
+    return body
 
 
 def dual_column(provider: Provider) -> str:
@@ -365,7 +465,7 @@ def dual_column(provider: Provider) -> str:
 
 def render(provider: Provider) -> str:
     if provider.shape == "compact":
-        shape_note = "「极简」= 只画 hero + 「今天还有 N 节」（没有课程列表）"
+        shape_note = "「紧凑」= 只画 hero + 「今天还有 N 节」（没有课程列表）"
         body = compact_column(provider)
     elif provider.shape == "dual":
         shape_note = "「双栏」= 左卡 + 右侧课表（宽度足够时运行期才真的分栏，平板 6×3 满足）"
@@ -398,7 +498,8 @@ def main() -> int:
     failures = []
     for provider in PROVIDERS:
         target = layout_dir / f"widget_preview_{provider.cells}.xml"
-        content = render(provider)
+        # mock 的文本一律单行，与运行期（Glance Text(maxLines = 1)）一致；见 single_line_text_views 的说明。
+        content = single_line_text_views(render(provider))
         # XML 注释里不能出现连续两个连字符（aapt 直接拒绝）；这里显式拦一道 —— 上一版就是
         # 把 `--check` 写进注释后才发现这个限制的。
         for line in content.splitlines():

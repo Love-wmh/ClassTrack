@@ -14,12 +14,13 @@ import org.junit.Test;
  */
 public class WidgetStyleConfigTest {
     @Test
-    public void defaultsAreAutoWithDimmedFinishedClasses() {
+    public void defaultsAreNextUpWithDimmedFinishedClasses() {
         WidgetStyleConfig config = WidgetStyleConfig.defaults();
 
-        // 2026-09-21 起默认为「自动（按尺寸）」：产品要求「改尺寸后要匹配上」，实际样式由
-        // WidgetStyleResolver 按当前格子尺寸解析出来（见 WidgetStyleResolverTest）。
-        assertEquals(WidgetStyleConfig.LayoutStyle.AUTO, config.getLayoutStyle());
+        // 2026-09-21 起默认为「接下来」：这是本轮收缩后的核心档，配置页一级也只留它。
+        // 样式不再按尺寸自动匹配（那条路径已删除），未显式配置的实例按 provider 预设解析
+        // （见 WidgetStyleResolverTest）。
+        assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, config.getLayoutStyle());
         assertEquals(WidgetStyleConfig.FinishedPolicy.SHOW_DIM, config.getFinishedPolicy());
     }
 
@@ -28,6 +29,7 @@ public class WidgetStyleConfigTest {
         assertEquals(WidgetStyleConfig.LayoutStyle.DAY_LIST, WidgetStyleConfig.parse("day_list", "show_dim").getLayoutStyle());
         assertEquals(WidgetStyleConfig.LayoutStyle.NEXT_UP, WidgetStyleConfig.parse("next_up", "hide").getLayoutStyle());
         assertEquals(WidgetStyleConfig.LayoutStyle.COMPACT, WidgetStyleConfig.parse("compact", "collapse").getLayoutStyle());
+        // `auto` 仍可解析（历史实例存过它），只是不再是默认值、也不再出现在配置页 UI 上。
         assertEquals(WidgetStyleConfig.LayoutStyle.AUTO, WidgetStyleConfig.parse("auto", "show_dim").getLayoutStyle());
         assertEquals(WidgetStyleConfig.FinishedPolicy.HIDE, WidgetStyleConfig.parse("next_up", "hide").getFinishedPolicy());
         assertEquals(WidgetStyleConfig.FinishedPolicy.COLLAPSE, WidgetStyleConfig.parse("compact", "collapse").getFinishedPolicy());
@@ -129,5 +131,28 @@ public class WidgetStyleConfigTest {
                 .isFinishedPolicyEffective());
         assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP, WidgetStyleConfig.FinishedPolicy.HIDE)
                 .isFinishedPolicyEffective());
+    }
+
+    /**
+     * 二级区自动展开的判据：只有全部落在默认值时，一级区才够用。
+     *
+     * <p>反过来说：任何一项偏离默认都必须展开 —— 否则用户进页面看到一级是「接下来」，
+     * 会以为自己的设置丢了（二级区默认折叠，见 design D6）。
+     */
+    @Test
+    public void advancedSectionIsNeededWhenAnythingLeavesTheDefaults() {
+        assertFalse(WidgetStyleConfig.defaults().needsAdvancedSection());
+        assertFalse(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP,
+                WidgetStyleConfig.FinishedPolicy.SHOW_DIM, WidgetStyleConfig.WideLayout.ADAPTIVE).needsAdvancedSection());
+
+        assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.DAY_LIST,
+                WidgetStyleConfig.FinishedPolicy.SHOW_DIM, WidgetStyleConfig.WideLayout.ADAPTIVE).needsAdvancedSection());
+        assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP,
+                WidgetStyleConfig.FinishedPolicy.HIDE, WidgetStyleConfig.WideLayout.ADAPTIVE).needsAdvancedSection());
+        assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.NEXT_UP,
+                WidgetStyleConfig.FinishedPolicy.SHOW_DIM, WidgetStyleConfig.WideLayout.DENSE).needsAdvancedSection());
+        // 历史存储值（`auto` / `two_column`）也属于「落在二级区里」：`auto` 无法在一级里表达，必须展开。
+        assertTrue(new WidgetStyleConfig(WidgetStyleConfig.LayoutStyle.AUTO,
+                WidgetStyleConfig.FinishedPolicy.SHOW_DIM, WidgetStyleConfig.WideLayout.TWO_COLUMN).needsAdvancedSection());
     }
 }

@@ -45,9 +45,12 @@ SP_STEP = 0.5
 DP_STEP = 1.0
 
 # 与 res/values/strings.xml 的 widget_preview_* 保持一致；改了要一起改。
-HERO_LABEL = "正在进行 · 第 3-4 节"
+HERO_LABEL = "正在进行"
 HERO_NAME = "数据结构"
 HERO_TIME = "14:00 - 15:35 · C305"
+# 「紧凑」样式把 hero 明细拆成两行：时间范围 + 教室（窄格里一行必被裁掉，而裁掉的正好是教室）。
+HERO_TIME_RANGE = "14:00 - 15:35"
+HERO_ROOM = "C305"
 SUMMARY = "今天 周三 · 共 6 节"
 COUNTS = "已上完 2 节 · 还有 3 节"
 STYLE_ENTRY = "样式"
@@ -56,7 +59,13 @@ ROWS = [
     ("08:00", "高等数学", "A101"),
     ("10:00", "大学物理", "B203"),
     ("14:00", "数据结构", "C305"),
+    # 主课（14:00 数据结构）之后的两节：「紧凑」样式把它们列在主课下方，与计数行「今天还有 2 节」对得上。
+    ("16:00", "线性代数", "D401"),
+    ("18:00", "体育", "操场"),
 ]
+
+# 「紧凑」样式画在主课之后的课程行（ROWS 下标）。
+COMPACT_FOLLOW_UP_ROWS = (3, 4)
 
 SURFACE = (255, 255, 255)
 SURFACE_INNER = (242, 244, 248)
@@ -143,6 +152,9 @@ class Provider:
 
 
 PROVIDERS = [
+    # 维护档在前（与 WidgetProviderRegistry 的顺序一致）：这两档是拾取器里真正提供的那两个。
+    Provider("3x2", 276.0, 210.0, "single_tight"),
+    Provider("1x2", 97.0, 210.0, "compact"),
     Provider("2x2", 179.0, 210.0, "compact"),
     Provider("2x3", 179.0, 315.0, "single"),
     Provider("4x2", 373.0, 210.0, "single_tight"),
@@ -155,7 +167,8 @@ def font(path: str, size_dp: float) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(path, max(8, int(round(size_dp * PIXELS_PER_DP))))
 
 
-def draw_hero(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, width: int) -> int:
+def draw_hero(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, width: int,
+              stacked_detail: bool = False) -> int:
     caption = font(REGULAR, provider.caption_sp)
     title = font(BOLD, provider.title_sp)
     body = font(REGULAR, provider.body_sp)
@@ -167,6 +180,14 @@ def draw_hero(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, wid
 
     draw.text((x, y), HERO_NAME, font=title, fill=TEXT_PRIMARY)
     y += provider.dp(provider.title_sp * 1.35)
+
+    if stacked_detail:
+        # 时间与教室分两行：窄格里「14:00 - 15:35 · C305」会被画布裁掉后半截，教室就消失了。
+        draw.text((x, y), HERO_TIME_RANGE, font=body, fill=TEXT_SECONDARY)
+        y += provider.dp(provider.body_sp * 1.4)
+        draw.text((x, y), HERO_ROOM, font=caption, fill=TEXT_MUTED)
+        y += provider.dp(provider.caption_sp * 1.4)
+        return y
 
     draw.text((x, y), HERO_TIME, font=body, fill=TEXT_SECONDARY)
     y += provider.dp(provider.body_sp * 1.4)
@@ -186,10 +207,26 @@ def draw_summary(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, 
     return y
 
 
-def draw_rows(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, width: int, count: int) -> int:
+def draw_compact_rows(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, width: int, count: int,
+                      start: int = 0) -> int:
+    """窄卡行项：课名一行、「时间 · 教室」一行（运行期紧凑样式的 RowForm.COMPACT）。"""
     body = font(REGULAR, provider.body_sp)
     caption = font(REGULAR, provider.caption_sp)
-    for index in range(min(count, len(ROWS))):
+    for index in range(start, min(start + count, len(ROWS))):
+        time_label, name, room = ROWS[index]
+        y += provider.dp(provider.row_gap_dp)
+        draw.text((x, y), name, font=body, fill=TEXT_PRIMARY)
+        y += provider.dp(provider.body_sp * 1.35)
+        draw.text((x, y), f"{time_label} · {room}", font=caption, fill=TEXT_MUTED)
+        y += provider.dp(provider.caption_sp * 1.4)
+    return y
+
+
+def draw_rows(draw: ImageDraw.ImageDraw, provider: Provider, x: int, y: int, width: int, count: int,
+              start: int = 0) -> int:
+    body = font(REGULAR, provider.body_sp)
+    caption = font(REGULAR, provider.caption_sp)
+    for index in range(start, min(start + count, len(ROWS))):
         time_label, name, room = ROWS[index]
         y += provider.dp(provider.row_gap_first_dp if index == 0 else provider.row_gap_dp)
         draw.text((x, y), time_label, font=body, fill=TEXT_SECONDARY)
@@ -227,11 +264,17 @@ def render(provider: Provider) -> Image.Image:
         return image
 
     y = provider.dp(provider.vpad)
-    y = draw_hero(draw, provider, x, y, content_width)
     if provider.shape == "compact":
+        # 主课明细两行（与运行期的 stackedDetail 一致），下面接计数行与主课之后的课。
+        y = draw_hero(draw, provider, x, y, content_width, stacked_detail=True)
         draw.text((x, y + provider.dp(provider.hero_gap_dp)), COUNTER,
                   font=font(REGULAR, provider.caption_sp), fill=TEXT_MUTED)
+        y += provider.dp(provider.hero_gap_dp + provider.caption_sp * 1.5)
+        draw_compact_rows(draw, provider, x, y, content_width, count=len(COMPACT_FOLLOW_UP_ROWS),
+                           start=COMPACT_FOLLOW_UP_ROWS[0])
         return image
+
+    y = draw_hero(draw, provider, x, y, content_width)
 
     y = draw_summary(draw, provider, x, y, content_width, counts=False)
     draw_rows(draw, provider, x, y, content_width, count=2 if provider.shape == "single_tight" else 2)
