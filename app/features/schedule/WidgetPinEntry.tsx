@@ -1,12 +1,21 @@
-import { AlertTriangle, CalendarPlus, Check, Loader2 } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, Check, ExternalLink, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '~/components/ui/sheet'
 import { useWidgetPin } from './hooks/useWidgetPin'
-import type { WidgetPresetId } from '~/lib/native-widget-snapshot'
-import { WIDGET_PIN_MANUAL_STEPS, WIDGET_PIN_PRESETS, WIDGET_PIN_REQUESTING_HINT } from './widgetPinPresets'
+import type { WidgetPinCapability, WidgetPresetId } from '~/lib/native-widget-snapshot'
+import {
+  manualSteps,
+  WIDGET_PIN_OBSERVED_HINT,
+  WIDGET_PIN_PRESETS,
+  WIDGET_PIN_REQUESTING_HINT,
+  WIDGET_PIN_VIVO_GALLERY_ACTION,
+  WIDGET_PIN_VIVO_GALLERY_HINT,
+  WIDGET_PIN_XIAOMI_PERMISSION_ACTION,
+  WIDGET_PIN_XIAOMI_PERMISSION_HINT,
+} from './widgetPinPresets'
 
 /**
  * 课表页顶栏的「添加到桌面」入口。
@@ -18,8 +27,50 @@ import { WIDGET_PIN_MANUAL_STEPS, WIDGET_PIN_PRESETS, WIDGET_PIN_REQUESTING_HINT
  * 面板里的每个预设都写清「目标格子 + 长什么样 + 什么时候选它」，并**如实说明尺寸由系统决定**：
  * 我们只能请求系统去放置，最终摆放尺寸取决于 launcher。
  */
+type ManualFallbackProps = {
+  capability: WidgetPinCapability
+  onShortcutPermission: () => Promise<void>
+  onWidgetGallery: () => Promise<void>
+}
+
+/**
+ * 「手动添加」区块：按厂商取的步骤 + 该厂商专属的入口。
+ *
+ * 抽成组件而不是写两遍：面板底部与失败态弹窗都要它，各抄一份必然漂移（这段文案本身已经改过一次）。
+ *
+ * **它不承诺任何事**：步骤按厂商取（四家入口名与层级都不一样），两个按钮也都只是导航 —— 跳不动就静默，
+ * 面板不会因此弹错。
+ */
+function ManualFallback({ capability, onShortcutPermission, onWidgetGallery }: ManualFallbackProps) {
+  return (
+    <div className="rounded-md border border-dashed border-border px-3 py-2">
+      <p className="text-xs font-medium text-foreground">手动添加</p>
+      <p className="mt-1 text-xs text-muted-foreground">{manualSteps(capability.family)}</p>
+      {capability.shortcutHint ? (
+        <div className="mt-2">
+          <p className="text-xs text-muted-foreground">{WIDGET_PIN_XIAOMI_PERMISSION_HINT}</p>
+          <Button variant="outline" size="sm" className="mt-1.5" onClick={() => void onShortcutPermission()}>
+            <ExternalLink className="size-3.5" />
+            {WIDGET_PIN_XIAOMI_PERMISSION_ACTION}
+          </Button>
+        </div>
+      ) : null}
+      {capability.galleryButton ? (
+        <div className="mt-2">
+          <p className="text-xs text-muted-foreground">{WIDGET_PIN_VIVO_GALLERY_HINT}</p>
+          <Button variant="outline" size="sm" className="mt-1.5" onClick={() => void onWidgetGallery()}>
+            <ExternalLink className="size-3.5" />
+            {WIDGET_PIN_VIVO_GALLERY_ACTION}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function WidgetPinEntry() {
-  const { supported, pending, outcome, message, added, modal, dismissModal, pin } = useWidgetPin()
+  const { supported, pending, outcome, message, added, modal, dismissModal, capability, openShortcutPermission, openWidgetGallery, pin } =
+    useWidgetPin()
   // 「再试一次」要知道用户上次点的是哪个预设：hook 只保留结果，不保留入参。
   const [lastPreset, setLastPreset] = useState<WidgetPresetId | null>(null)
 
@@ -97,9 +148,8 @@ export default function WidgetPinEntry() {
           手动步骤**常驻**到底部，不只在失败时出现：会静默吞掉 pin 请求的桌面上（实测 ColorOS），
           它才是唯一可靠的路径，藏起来等于让用户卡死在一个不生效的按钮上。
         */}
-        <div className="mt-3 rounded-md border border-dashed border-border px-3 py-2">
-          <p className="text-xs font-medium text-foreground">手动添加</p>
-          <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_MANUAL_STEPS}</p>
+        <div className="mt-3">
+          <ManualFallback capability={capability} onShortcutPermission={openShortcutPermission} onWidgetGallery={openWidgetGallery} />
         </div>
       </SheetContent>
 
@@ -125,7 +175,13 @@ export default function WidgetPinEntry() {
                 <Check className="size-5 text-primary" />
                 已添加到桌面
               </DialogTitle>
-              <DialogDescription>样式已按你选的摆法设置好，之后还能随时改。</DialogDescription>
+              <DialogDescription>
+                {/*
+                  两条「加上了」的措辞必须可区分：回调命中是系统的权威结论（不解释）；
+                  复核命中只知道「桌面上多了一张卡片」，必须带限定句，绝不写成「系统已确认」。
+                */}
+                {outcome === 'added_observed' ? WIDGET_PIN_OBSERVED_HINT : '样式已按你选的摆法设置好，之后还能随时改。'}
+              </DialogDescription>
             </DialogHeader>
           ) : null}
 
@@ -138,10 +194,7 @@ export default function WidgetPinEntry() {
                 </DialogTitle>
                 <DialogDescription className="text-foreground">{message}</DialogDescription>
               </DialogHeader>
-              <div className="rounded-md border border-dashed border-border px-3 py-2">
-                <p className="text-xs font-medium text-foreground">手动添加</p>
-                <p className="mt-1 text-xs text-muted-foreground">{WIDGET_PIN_MANUAL_STEPS}</p>
-              </div>
+              <ManualFallback capability={capability} onShortcutPermission={openShortcutPermission} onWidgetGallery={openWidgetGallery} />
               <DialogFooter className="gap-2 sm:justify-end">
                 <Button variant="outline" onClick={dismissModal}>
                   知道了

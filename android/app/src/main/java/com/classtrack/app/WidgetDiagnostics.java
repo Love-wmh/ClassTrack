@@ -59,6 +59,52 @@ public final class WidgetDiagnostics {
     }
 
     /**
+     * 记录一次 pin 时的厂商分诊结果（只输出白名单内的族名与布尔值）。
+     *
+     * @param family 厂商族名。
+     * @param modern 是否「最新系统」。
+     * @param detailPageSupported 小米探测接口的结论（非小米恒 false）。
+     */
+    public static void pinVendor(String family, boolean modern, boolean detailPageSupported) {
+        Log.i(TAG, "phase=pin_vendor family=" + safeVendor(family) + " modern=" + modern
+                + " detail_page=" + detailPageSupported);
+    }
+
+    /**
+     * 记录一次「无回调复核」的结论。
+     *
+     * <p>只输出个数：**不输出实例 id、不输出任何内容**（沿用「日志不含课程载荷」的约束）。
+     *
+     * @param freshCount 差集算出来的新实例个数；`0` 表示没观察到新增。
+     */
+    public static void pinObserved(int freshCount) {
+        Log.i(TAG, "phase=pin_observed count=" + Math.max(0, freshCount));
+    }
+
+    /**
+     * 记录一次厂商导航（权限页 / 应用详情页 / 组件库）的结果。
+     *
+     * <p>失败不是错误，只是「这条路走不通」，因此用 info 级别；阶段值走白名单。
+     *
+     * @param step 导航分支枚举名。
+     * @param launched 是否真的启动了目标页。
+     */
+    public static void pinNavigation(String step, boolean launched) {
+        Log.i(TAG, "phase=pin_navigation step=" + safeNavigationStep(step) + " launched=" + launched);
+    }
+
+    /**
+     * 记录一次小米系统能力探测的结果，供真机取证（开放项 V1/V3）区分「不支持小米Widget」与「支持但不支持详情页」。
+     *
+     * @param widgetSupported `isMiuiWidgetSupported` 的结论。
+     * @param detailPageSupported `isMiuiWidgetDetailPageSupported` 的结论。
+     */
+    public static void widgetCenterProbe(boolean widgetSupported, boolean detailPageSupported) {
+        Log.i(TAG, "phase=widget_center_probe widget=" + widgetSupported
+                + " detail_page=" + detailPageSupported);
+    }
+
+    /**
      * 记录一次「维护面收敛」（禁用收起档 provider）。
      *
      *     <p>只输出两个计数，没有任何用户数据：`retired` = 本次遍历到的收起档数量（期望等于 5），
@@ -366,6 +412,45 @@ public final class WidgetDiagnostics {
         }
     }
 
+
+    /**
+     * 与 {@link #safeCategory} 同理：厂商族名只允许白名单内的固定值进入日志。
+     *
+     * <p>大小写不敏感（枚举名是大写、Web 侧是小写，两边都可能传过来），但**输出永远是白名单里的小写值**，
+     * 因此日志里不会出现任意字符串。
+     *
+     * @param value 候选族名。
+     * @return 白名单内的小写族名；否则 `unknown`。
+     */
+    private static String safeVendor(String value) {
+        if (value == null) {
+            return "unknown";
+        }
+        if (value.equalsIgnoreCase("xiaomi")) return "xiaomi";
+        if (value.equalsIgnoreCase("oppo")) return "oppo";
+        if (value.equalsIgnoreCase("vivo")) return "vivo";
+        if (value.equalsIgnoreCase("honor")) return "honor";
+        if (value.equalsIgnoreCase("other")) return "other";
+        return "unknown";
+    }
+
+    /**
+     * 与 {@link #safeCategory} 同理：导航分支只允许白名单内的固定枚举进入日志。
+     *
+     * @param value 候选分支名。
+     * @return 白名单内的值；否则 `unknown`。
+     */
+    private static String safeNavigationStep(String value) {
+        switch (value == null ? "" : value) {
+            case "MIUI_PERMISSION":
+            case "APP_DETAILS":
+            case "WIDGET_GALLERY":
+            case "NONE":
+                return value;
+            default:
+                return "unknown";
+        }
+    }
     /**
      * 只允许白名单内的固定枚举值进入日志。
      *

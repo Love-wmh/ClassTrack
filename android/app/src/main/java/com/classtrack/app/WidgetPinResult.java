@@ -52,4 +52,18 @@ public final class WidgetPinResult {
         }
         return id;
     }
+
+    /**
+     * **不消费**地查一次「确认回调是否已经到过」。
+     *
+     * <p>给「无回调复核」用（见 {@link WidgetPinObservation}）：复核只在**没有**确认回调时才该报「观察到
+     * 卡片变多了」。这里必须只是查、不能取走 —— {@link #consumeConfirmed(long)} 会把结果交给 Web 面板，
+     * 抢在面板之前取走就等于把「已添加」的权威信号弄丢了。
+     *
+     * @param nowEpochMs 查询时刻。
+     * @return 是否有一个仍然有效的确认；不改变槽位状态。
+     */
+    public static synchronized boolean hasConfirmed(long nowEpochMs) {
+        return confirmedAppWidgetId >= 0 && nowEpochMs - confirmedAtMs <= TIMEOUT_MS;
+    }
 }

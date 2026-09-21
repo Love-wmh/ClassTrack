@@ -100,6 +100,63 @@ export type WidgetPinAttempt = {
   shouldFailFast: boolean
 }
 
+/**
+ * ROM 厂商族。
+ *
+ * **必须与原生 `WidgetVendorFamily.java` 的枚举一一对应**（大小写不同：原生枚举是大写，这里是线名小写）。
+ * 这条跨层契约由 `widgetPinPresets.test.ts` 读那个 Java 文件源码断言 —— 漏加一族会立刻红。
+ *
+ * **它只决定文案与显示哪些入口**，绝不决定「能不能一键添加」：能力结论只来自行为探测（探针 + 确认回调 +
+ * 无回调复核）。真机实测过同家不同版本行为漂移（社区口径说 ColorOS 会弹确认框，我们的真机是「起了却从不置前」）。
+ */
+export type WidgetVendorFamily = 'xiaomi' | 'oppo' | 'vivo' | 'honor' | 'other'
+
+/**
+ * 厂商分诊结果（原生 `getPinCapability`）。
+ *
+ * `shortcutHint` / `galleryButton` 都只回答「该不该显示这个入口」，**不是**「这条路一定有效」：
+ * 小米的详情页对未上架的原生 widget 有没有内容、vivo 组件库里未上架的组件会不会展示，都是未知的。
+ */
+export type WidgetPinCapability = {
+  /** 厂商族；决定用哪套手动步骤文案。 */
+  family: WidgetVendorFamily
+  /** 是否「最新系统」（Android 14+ 且厂商已识别）；为假时一律走通用文案。 */
+  modern: boolean
+  /** 是否显示小米「创建桌面快捷方式」权限提示（仅小米 + modern）。 */
+  shortcutHint: boolean
+  /** 是否显示 vivo「去组件库添加」按钮（仅 vivo + modern）。 */
+  galleryButton: boolean
+}
+
+/**
+ * 「无回调复核」的结论。
+ *
+ * 等待窗口结束时，若确认回调始终没到，原生再比对一次实例集合：多出来了就说明卡片真的在桌面上。
+ * 但它**只说「多了一张卡片」，不说「是谁放的」** —— 用户可能同时自己拖了一张，因此文案必须带限定句。
+ */
+export type WidgetPinObservation = {
+  /** 是否观察到新增实例。 */
+  observed: boolean
+  /** 新增实例个数（原生只回个数，不回 id）。 */
+  count: number
+}
+
+/**
+ * 一次导航最终落在了哪条分支。
+ *
+ * 与原生 `WidgetPinNavigation.Step` 的 `wireName()` 逐字对应；`none` 表示「什么都没发生」，
+ * 调用方据此不弹错、不影响任何功能路径。
+ */
+export type PinNavigationStep = 'miui_permission' | 'app_details' | 'widget_gallery' | 'none'
+
+/** 导航结果。 */
+export type PinNavigationResult = {
+  /** 是否真的启动了目标页。 */
+  launched: boolean
+  /** 落到了哪条分支。 */
+  step: PinNavigationStep
+}
+
 /** 跳转系统设置页的结果。 */
 export type WidgetExactAlarmRequestResult = {
   /** 是否真的拉起了系统设置页。 */
@@ -123,6 +180,14 @@ export interface WidgetSnapshotPlugin {
   consumePinResult(): Promise<WidgetPinConfirmation>
   /** 读取本次尝试的观测事实，用于判定「系统有没有弹出确认界面」（约 2 秒即可判定）。 */
   getPinAttempt(): Promise<WidgetPinAttempt>
+  /** 问一次厂商分诊结果（无副作用、可重复调用）；**它不回答「能不能 pin」**。 */
+  getPinCapability(): Promise<WidgetPinCapability>
+  /** 读取「无回调复核」的结论（面板只在等待窗口末尾问一次）。 */
+  consumePinObservation(): Promise<WidgetPinObservation>
+  /** 跳小米「创建桌面快捷方式」权限页（失败回退应用详情页；都不行则什么都不做）。 */
+  openPinShortcutPermissionSettings(): Promise<PinNavigationResult>
+  /** 跳 vivo 原子组件库本应用页面（跳不动则什么都不做）。 */
+  openWidgetGallery(): Promise<PinNavigationResult>
   /** 订阅原生事件；原生侧在 `handleOnResume()` 中发出 `resumed`。 */
   addListener(eventName: 'resumed', listenerFunc: () => void): Promise<PluginListenerHandle>
 }
@@ -163,6 +228,26 @@ class WidgetSnapshotWeb extends WebPlugin implements WidgetSnapshotPlugin {
   async getPinAttempt(): Promise<WidgetPinAttempt> {
     // 浏览器里没有「添加到桌面」，因此如实返回「没有进行中的尝试」。
     return { requested: false, requestedAtMs: 0, shouldFailFast: false }
+  }
+
+  async getPinCapability(): Promise<WidgetPinCapability> {
+    // 浏览器里没有 ROM 厂商的概念，如实返回「未识别 + 非最新系统 + 不显示任何入口」。
+    // 注意这**不是**「假成功」：面板本身在浏览器里根本不会渲染（见 isNativeWidgetSnapshotAvailable）。
+    return { family: 'other', modern: false, shortcutHint: false, galleryButton: false }
+  }
+
+  async consumePinObservation(): Promise<WidgetPinObservation> {
+    // 没发起过请求，就不可能有「观察到新增实例」；如实返回未观察。
+    return { observed: false, count: 0 }
+  }
+
+  async openPinShortcutPermissionSettings(): Promise<PinNavigationResult> {
+    // 与 requestExactAlarmPermission 同风格：动作类接口如实返回「什么都没做」，而不是抛错打扰调用方。
+    return { launched: false, step: 'none' }
+  }
+
+  async openWidgetGallery(): Promise<PinNavigationResult> {
+    return { launched: false, step: 'none' }
   }
 }
 

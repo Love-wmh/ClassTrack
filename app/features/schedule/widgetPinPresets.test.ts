@@ -4,11 +4,14 @@ import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  WIDGET_PIN_MANUAL_STEPS,
+  manualSteps,
+  MANUAL_HINT_BY_FAMILY,
   WIDGET_PIN_PRESETS,
+  WIDGET_PIN_SPACE_HINT,
   pinOutcomeMessage,
   resolvePinFinalOutcome,
   resolvePinModalState,
+  resolvePinOutcomeFromObservation,
   resolvePinProbeOutcome,
   resolvePinPollOutcome,
   resolvePinStartOutcome,
@@ -73,10 +76,12 @@ describe('小工具预设目录', () => {
     }
   })
 
-  it('常驻的手动步骤写清了完整路径，且不承诺尺寸由我们决定', () => {
+  it('手动步骤仍指名每一档尺寸，且不承诺尺寸由我们决定', () => {
     // 我们不承诺「一定按目标格子放好」：最终尺寸由 launcher 决定，文案必须留出这一步。
-    expect(WIDGET_PIN_MANUAL_STEPS).toContain('长按桌面空白处')
-    expect(WIDGET_PIN_MANUAL_STEPS).toContain('调整大小')
+    for (const preset of WIDGET_PIN_PRESETS) {
+      expect(manualSteps('other'), preset.id).toContain(preset.cell)
+    }
+    expect(manualSteps('other')).toContain('调整大小')
   })
 })
 
@@ -258,7 +263,108 @@ describe('添加到桌面的模态框状态机', () => {
 
   it('手动步骤按尺寸指名，且与预设表的格子一致', () => {
     for (const preset of WIDGET_PIN_PRESETS) {
-      expect(WIDGET_PIN_MANUAL_STEPS, preset.id).toContain(preset.cell)
+      expect(manualSteps('other'), preset.id).toContain(preset.cell)
     }
+  })
+})
+
+/**
+ * 厂商族的**跨层契约**：原生枚举 ↔ Web 联合类型 ↔ 文案表。
+ *
+ * 为什么读源码而不是再抄一遍字面量：三处必须同时改（原生加一族、Web 加一族、文案表加一条），
+ * 抄一遍只能证明「我抄对了」，读文件才能证明「两边真的一样」。
+ *
+ * 注：旧的那句通用常量 `WIDGET_PIN_MANUAL_STEPS` 已被删除，因此**任何**遗留引用都会直接编译失败
+ *（`pnpm typecheck` 就是那条守卫），不需要再靠字符串搜索去查。
+ */
+const VENDOR_FAMILY_JAVA = 'android/app/src/main/java/com/classtrack/app/WidgetVendorFamily.java'
+const NATIVE_SNAPSHOT_TS = 'app/lib/native-widget-snapshot.ts'
+
+/**
+ * 从原生枚举源码里取线名（枚举常量小写）。
+ *
+ * 切片刻意停在 `FALLBACK` 常量之前：它是 `static final` 字段而不是枚举常量，混进来会多出一项。
+ *
+ * @returns 形如 `['xiaomi', 'oppo', 'vivo', 'honor', 'other']`。
+ */
+function readNativeVendorWireNames(): string[] {
+  const source = readFileSync(join(REPO_ROOT, VENDOR_FAMILY_JAVA), 'utf8')
+  const body = source.slice(source.indexOf('public enum WidgetVendorFamily'), source.indexOf('FALLBACK = OTHER'))
+
+  return [...body.matchAll(/^ {4}([A-Z][A-Z0-9_]*)[,;]/gm)].map((match) => match[1].toLowerCase())
+}
+
+/**
+ * 从 Web 源码里取 `WidgetVendorFamily` 联合类型的成员。
+ *
+ * @returns 形如 `['xiaomi', 'oppo', 'vivo', 'honor', 'other']`。
+ */
+function readWebVendorFamilies(): string[] {
+  const source = readFileSync(join(REPO_ROOT, NATIVE_SNAPSHOT_TS), 'utf8')
+  const line = source.split('\n').find((candidate) => candidate.startsWith('export type WidgetVendorFamily ='))
+  if (!line) throw new Error('没找到 Web 侧的 WidgetVendorFamily 联合类型 —— 它被删掉或改名了？')
+
+  return [...line.matchAll(/'([a-z]+)'/g)].map((match) => match[1])
+}
+
+describe('厂商族的跨层一致性', () => {
+  it('原生枚举与 Web 联合类型逐字一致（漏加一族就红）', () => {
+    expect(readWebVendorFamilies()).toEqual(readNativeVendorWireNames())
+    // 防呆：解析不出来时会退化成空数组，那样两条空数组相等会让断言「假通过」。
+    expect(readNativeVendorWireNames().length).toBeGreaterThanOrEqual(5)
+  })
+
+  it('每个厂商族都恰好有一条非空的手动引导文案', () => {
+    expect(Object.keys(MANUAL_HINT_BY_FAMILY).sort()).toEqual(readNativeVendorWireNames().sort())
+    for (const [family, hint] of Object.entries(MANUAL_HINT_BY_FAMILY)) {
+      expect(hint.length, family).toBeGreaterThan(8)
+    }
+  })
+
+  it('四家文案各自含其关键节点词（入口名与层级都不一样）', () => {
+    expect(MANUAL_HINT_BY_FAMILY.xiaomi).toContain('安卓小部件')
+    expect(MANUAL_HINT_BY_FAMILY.oppo).toContain('卡片')
+    expect(MANUAL_HINT_BY_FAMILY.oppo).toContain('搜索')
+    expect(MANUAL_HINT_BY_FAMILY.vivo).toContain('应用挂件')
+    expect(MANUAL_HINT_BY_FAMILY.honor).toContain('服务卡片')
+    expect(MANUAL_HINT_BY_FAMILY.honor).toContain('窗口小工具')
+  })
+
+  it('四家都提醒「先滑到有空位的页面」，通用句不带（它只是兜底）', () => {
+    for (const family of ['xiaomi', 'oppo', 'vivo', 'honor'] as const) {
+      expect(manualSteps(family), family).toContain(WIDGET_PIN_SPACE_HINT)
+    }
+    expect(manualSteps('other')).not.toContain(WIDGET_PIN_SPACE_HINT)
+  })
+
+  it('没见过的族名在表里是 undefined（manualSteps 那条 ?? 兜底就是为它写的）', () => {
+    const byName: Record<string, string | undefined> = MANUAL_HINT_BY_FAMILY
+
+    expect(byName['a-brand-we-do-not-know']).toBeUndefined()
+    expect(manualSteps('other')).toContain('小工具')
+  })
+})
+
+describe('无回调复核的文案与状态', () => {
+  it('复核命中 → added_observed；没命中 → unconfirmed', () => {
+    expect(resolvePinOutcomeFromObservation({ observed: true, count: 1 })).toBe('added_observed')
+    expect(resolvePinOutcomeFromObservation({ observed: false, count: 0 })).toBe('unconfirmed')
+  })
+
+  it('复核命中的提示语带限定句，且绝不写成「系统已确认」', () => {
+    const observed = pinOutcomeMessage('added_observed') ?? ''
+
+    expect(observed).toContain('如果不是你刚添加的')
+    expect(observed).not.toContain('系统已确认')
+  })
+
+  it('回调命中是权威结论，不给额外解释（模态自己会收起）', () => {
+    expect(pinOutcomeMessage('added')).toBeNull()
+    expect(pinOutcomeMessage('added_observed')).not.toBeNull()
+  })
+
+  it('复核命中同样显示成功态模态，并可自动收起', () => {
+    expect(resolvePinModalState('added_observed', false)).toBe('added')
+    expect(resolvePinModalState('added_observed', true)).toBe('hidden')
   })
 })
