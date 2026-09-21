@@ -133,10 +133,11 @@ public final class WidgetDiagnostics {
      * @param fontScalePercent 实际字号系数（百分比，100 = 基准）。
      * @param gapTenthDp 行距（0.1dp 为单位，避免日志里出现小数）。
      * @param fillPercent 内容占可用高度的百分比。
+     * @param lineCount 参与估算的文本行数（内容量的直接量度：同样的填充率、行数不同说明喂进去的内容不同）。
      */
-    public static void layoutFill(int fontScalePercent, int gapTenthDp, int fillPercent) {
+    public static void layoutFill(int fontScalePercent, int gapTenthDp, int fillPercent, int lineCount) {
         Log.i(TAG, "phase=layout_fill font=" + Math.max(0, fontScalePercent) + " gap=" + Math.max(0, gapTenthDp) / 10f
-                + " fill=" + Math.max(0, fillPercent));
+                + " fill=" + Math.max(0, fillPercent) + " lines=" + Math.max(0, lineCount));
     }
 
     /**

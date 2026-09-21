@@ -224,7 +224,8 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
     WidgetDiagnostics.layoutFill(
         (fill.fontScale * PERCENT).roundToInt(),
         (fill.gapDp * 10).roundToInt(),
-        (fill.fillRatio * PERCENT).roundToInt()
+        (fill.fillRatio * PERCENT).roundToInt(),
+        fill.lineCount
     )
 
     Column(
@@ -481,10 +482,16 @@ private fun bodyTextLines(context: Context, state: WidgetDisplayState, hero: Wid
                 out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, listWidthDp)
             }
             WidgetBodyLine.Kind.COURSE -> {
+                // 单栏的课程行是**一行**（课名 + 右侧教室），只有双栏才是双行行项（课名一行、节次·教室一行）。
+                // 这里必须跟着渲染走：多算一行会让估算偏大，字号被无谓收小（真机上表现为「填充率虚高」）。
                 val item = line.item
                 out += WidgetFillPlan.TextLine(BODY_BASE_SP, if (dualColumn) 2 else 1,
-                    item.occurrence.name.length + TIME_LABEL_LENGTH, listWidthDp)
-                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, metaLength(context, item, line.isShowSections), listWidthDp)
+                    item.occurrence.name.length + TIME_LABEL_LENGTH
+                        + if (dualColumn) 0 else metaLength(context, item, line.isShowSections), listWidthDp)
+                if (dualColumn) {
+                    out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1,
+                        metaLength(context, item, line.isShowSections), listWidthDp)
+                }
             }
             WidgetBodyLine.Kind.FOOTER_LAST -> {
                 val last = state.todayItems.lastOrNull()?.occurrence

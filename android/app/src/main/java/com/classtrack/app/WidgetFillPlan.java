@@ -50,8 +50,11 @@ public final class WidgetFillPlan {
     private final float gapDp;
     private final float firstGapDp;
     private final float fillRatio;
+    private final int lineCount;
 
-    private WidgetFillPlan(float fontScale, float metricsScale, float gapDp, float firstGapDp, float fillRatio) {
+    private WidgetFillPlan(float fontScale, float metricsScale, float gapDp, float firstGapDp, float fillRatio,
+            int lineCount) {
+        this.lineCount = lineCount;
         this.fontScale = fontScale;
         this.localBoost = metricsScale <= 0f ? 1f : Math.min(1f, fontScale / metricsScale);
         this.gapDp = gapDp;
@@ -122,7 +125,7 @@ public final class WidgetFillPlan {
         float firstGapBase = metrics.getRowGapFirstDp();
         int lineCount = lines == null ? 0 : lines.size();
         if (lineCount == 0 || availableDp <= 0f) {
-            return new WidgetFillPlan(metrics.getScale(), metrics.getScale(), gapBase, firstGapBase, 0f);
+            return new WidgetFillPlan(metrics.getScale(), metrics.getScale(), gapBase, firstGapBase, 0f, lineCount);
         }
 
         // 上界：尺寸驱动的字号；允许拟合时再收一格 —— 不允许把**允许多行**的文字挤到被截断。
@@ -154,7 +157,7 @@ public final class WidgetFillPlan {
         float gap = gapBase + share;
         float firstGap = firstGapBase + share / 2f;
         float filled = content + share * (lineCount + 1);
-        return new WidgetFillPlan(fontScale, metrics.getScale(), gap, firstGap, filled / availableDp);
+        return new WidgetFillPlan(fontScale, metrics.getScale(), gap, firstGap, filled / availableDp, lineCount);
     }
 
     /**
@@ -207,6 +210,11 @@ public final class WidgetFillPlan {
     /** @return 首行之前与末行之后的留白（dp）。 */
     public float getFirstGapDp() {
         return firstGapDp;
+    }
+
+    /** @return 参与估算的文本行数（诊断用：同样的填充率、行数不同说明喂进去的内容不同）。 */
+    public int getLineCount() {
+        return lineCount;
     }
 
     /** @return 内容（含分配后的余量）占可用高度的比例；仅用于诊断与验收量测。 */
