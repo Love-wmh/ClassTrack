@@ -404,3 +404,39 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Next Steps
 
 - 归档 09-21-widget-pin-confirm（A1-A6 全部完成）；如需在真机真放下小工具，只能走面板底部的手动步骤
+
+
+## Session 13: 小工具：五档 provider + 尺寸自动匹配 + 拾取器预览生成（模拟器验证）
+<!-- trellis-session: v=2 fp=17f52cbdf2ee1264 -->
+
+**Date**: 2026-09-21
+**Task**: 小工具：五档 provider + 尺寸自动匹配 + 拾取器预览生成（模拟器验证）
+**Branch**: `master`
+
+### Summary
+
+按产品口径把预设改为按尺寸命名并注册五个 provider（4×3 沿用旧类名保护存量实例），新增 AUTO 样式 + 尺寸最近邻自动匹配（手动优先），pin 链路与配置页改多 provider；拾取器预览改为脚本生成
+
+### Main Changes
+
+- 新增 WidgetProviderRegistry/WidgetProviders/WidgetStyleResolver + 四个 receiver + 五份 info XML/预览；WidgetPreset 按尺寸重写并加 match()；配置页加「自动（按尺寸）」；诊断日志带实例 id；check-android-assets 增加五 provider 断言
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f957a56` | feat(widget): 按尺寸注册五个 provider + 尺寸变化自动匹配 + 拾取器预览生成 |
+| `947427e` | feat(widget): 预设按尺寸重命名，并铺好多 provider 的注册表与骨架（P3 进行中） |
+| `ce87e7c` | feat(widget): 「添加到桌面」点击即弹醒目标态框，并用快探针把失败反馈压到约 2 秒 |
+
+### Testing
+
+- [OK] Android 186 例、Web 91 例、lint 0 error、typecheck、cap:build:android；模拟器实测拾取器五条目/各自预览、pin 落点、配置页归属校验与默认选项
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 待补：模态失败分支（探针命中）与拖动改尺寸的真机现场；两处都已写进 verification.md 的待办
