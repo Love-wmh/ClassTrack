@@ -9,6 +9,7 @@ import MarkdownEditorDialog from '~/components/dialog/MarkdownEditorDialog'
 import PwaUpdatePrompt from '~/components/pwa/PwaUpdatePrompt'
 import { isNativeApp } from '~/lib/native-platform'
 import WidgetSnapshotSync from '~/components/native-widget/WidgetSnapshotSync'
+import WidgetGuideDialog from '~/components/native-widget/WidgetGuideDialog'
 import './app.css'
 import React from 'react'
 
@@ -41,6 +42,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {!nativeShell && <MarkdownEditorDialog />}
         {!nativeShell && !isNativeApp() && <PwaUpdatePrompt />}
         {!nativeShell && <WidgetSnapshotSync />}
+        {/* 导入成功后的一次性加桌引导：与 WidgetSnapshotSync 同属小工具联动，挂同一处（组件自己判平台）。 */}
+        {!nativeShell && <WidgetGuideDialog />}
         {!nativeShell && <ScrollRestoration />}
         <Scripts />
       </body>

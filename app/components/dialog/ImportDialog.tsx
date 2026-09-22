@@ -19,7 +19,7 @@ export default function ImportDialog() {
           selectedImportMethod={importFlow.selectedImportMethod}
           onSchoolChange={importFlow.handleSchoolChange}
           onImportMethodChange={importFlow.handleImportMethodChange}
-          nativeImportAvailable={importFlow.nativeImportAvailable}
+          importMethodPolicy={importFlow.importMethodPolicy}
         />
       )
     }

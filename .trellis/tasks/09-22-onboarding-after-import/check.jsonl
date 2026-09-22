@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁清单、代码审查点与提交信息规则"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件规范与既有 shadcn 形态（避免无关重构）"}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "非 Android 路径必须保持的既有契约（回归口径）"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "小工具契约不变项（preset id、文案口径）"}
+{"file": ".trellis/tasks/09-22-onboarding-after-import/research.md", "reason": "现场落点与已知坑，用于核对实现是否漏改/改错位置"}

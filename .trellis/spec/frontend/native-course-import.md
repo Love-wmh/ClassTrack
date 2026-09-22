@@ -4,7 +4,7 @@
 
 ### 1. Scope / Trigger
 
-Use this contract when changing the Android Capacitor bridge, the in-app import flow, the dual-WebView shell, or adding another school adapter that captures a logged-in academic-system response. The first adapter is Tianjin University of Technology (`tianjin-university-of-technology`). Browser/PWA code must continue using the existing bookmarklet, JSON-upload, and backup paths.
+Use this contract when changing the Android Capacitor bridge, the in-app import flow, the dual-WebView shell, the import-method list, or adding another school adapter that captures a logged-in academic-system response. The first adapter is Tianjin University of Technology (`tianjin-university-of-technology`). Browser/PWA code must continue using the existing bookmarklet, JSON-upload, and backup paths; **Android deliberately does not** — its method list is narrowed in §3, and that narrowing plus its known limitation are part of this contract.
 
 The native flow uses one `CourseImportActivity`, a local React/shadcn shell WebView, a restricted academic WebView, and a native session controller. Java owns WebView/container/lifecycle/security boundaries; ClassTrack-owned visual UI remains React-rendered.
 
@@ -93,11 +93,14 @@ type CourseImportShellState = {
 - Native pushes shell state by evaluating `window.__classTrackNativeState`. The shell registers that handler inside a React effect, which can run after `onPageFinished`. The call must therefore be guarded on the handler being a function; the authoritative push happens when the shell bridge signals `ready()`. Calling it unconditionally throws and loses the first state push.
 - In a native Capacitor build the shell must not register a Service Worker: Service Worker requests bypass `WebViewClient.shouldInterceptRequest`, so they cannot be served from packaged assets and produce precache 404s. Packaged assets are already offline, so gating the update prompt on the native platform removes the second cache layer without losing offline capability. Web/PWA builds keep the Service Worker and update prompt.
 
+- **The Android import-method list is narrowed on purpose** (added 2026-09-22): on Android the offered methods are exactly `backup` plus `native-webview` (the latter only when the selected school has a registered adapter). The parser path (bookmarklet → export JSON → upload) is **not offered at all** on Android. Platform detection uses `Capacitor.getPlatform() === 'android'` (`isAndroidApp()` in `app/lib/native-platform.ts`), **never** `isNativeCourseImportAvailable()` — that one additionally requires the `CourseImport` plugin to be registered and would misjudge the case that matters (a school with no adapter at all). The whole decision is one pure function, `resolveImportMethodPolicy({ android, nativeImportAvailable, hasNativeAdapter })` in `app/lib/import-methods.ts`, whose result is rendered by `app/components/import-flow/ImportMethodList.tsx`; components do no platform branching of their own. The stored selection is converged at render with `normalizeImportMethod(policy, current)` (a legacy stored value of `parser` on Android must not survive), and changing schools re-converges it and returns the wizard to step 1. **Known limitation (accepted 2026-09-22)**: a fresh Tianjin Polytechnic University user on Android has no first-import path at all (no adapter, and no backup to restore yet). The in-panel notice points at `导入已有数据` and must never promise that support is coming; supporting that school means adding a native adapter, not changing the front end.
+
 ### 4. Validation & Error Matrix
 
 | Condition | Required behavior |
 |---|---|
-| Web/PWA or missing native plugin | Hide `native-webview`; keep parser, bookmarklet, JSON, and backup methods available. |
+| Web/PWA or missing native plugin | Hide `native-webview`; keep parser, bookmarklet, JSON, and backup methods available. Android is the exception — see the narrowed list contract below. |
+| Android, school without a registered adapter (Tianjin Polytechnic University) | List shows `backup` **only**, plus the two-line notice 「安卓暂不支持天津工业大学的应用内导入。\n请改用「导入已有数据」恢复课程表。」 The parser method (bookmarklet / JSON upload) must not appear on Android at all. |
 | Unknown adapter, non-exact entry URL, invalid term/date | Reject with `INVALID_ADAPTER` or `INVALID_URL`; do not start a usable Activity session. |
 | HTTP, unknown host/path, non-default port, userinfo, or non-web scheme | Block main-frame navigation, log a redacted reason, and show recoverable `INVALID_URL`. |
 | Allowed login/app page | Return `false` from `shouldOverrideUrlLoading`; keep the same academic WebView session and show loading/ready state. |

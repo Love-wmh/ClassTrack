@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "安卓原生导入契约与平台判定口径（本轮收窄方式列表要沿用它的边界）"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件目录归属、props 命名、Tailwind/cn 与可访问性现状"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五项门禁、禁用写法（effect 内同步 setState 等）、测试与提交信息约定"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Zustand 切片与 persist partialize 规则（新增 UI 状态不得落盘）"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "hook 内 effect/边沿处理的既有写法约束"}
+{"file": ".trellis/spec/frontend/android-home-widget.md", "reason": "小工具契约：preset id、pin 面板文案口径与尺寸不承诺原则"}
+{"file": ".trellis/tasks/09-22-onboarding-after-import/research.md", "reason": "改动落点（文件:行）、既有跨层契约与测试基建现状"}
+{"file": ".trellis/tasks/09-22-onboarding-after-import/design.md", "reason": "策略判定表、引导模块契约与联动数据流"}
