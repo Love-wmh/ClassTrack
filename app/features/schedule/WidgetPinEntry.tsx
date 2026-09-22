@@ -9,6 +9,7 @@ import type { WidgetPinCapability, WidgetPresetId } from '~/lib/native-widget-sn
 import {
   manualSteps,
   WIDGET_PIN_OBSERVED_HINT,
+  WIDGET_PIN_SIZE_TUNING_HINT,
   WIDGET_PIN_PRESETS,
   WIDGET_PIN_REQUESTING_HINT,
   WIDGET_PIN_VIVO_GALLERY_ACTION,
@@ -16,6 +17,7 @@ import {
   WIDGET_PIN_XIAOMI_PERMISSION_ACTION,
   WIDGET_PIN_XIAOMI_PERMISSION_HINT,
 } from './widgetPinPresets'
+import { useClassStore } from '~/store'
 
 /**
  * 课表页顶栏的「添加到桌面」入口。
@@ -73,11 +75,14 @@ export default function WidgetPinEntry() {
     useWidgetPin()
   // 「再试一次」要知道用户上次点的是哪个预设：hook 只保留结果，不保留入参。
   const [lastPreset, setLastPreset] = useState<WidgetPresetId | null>(null)
+  // 面板开合由 store 控制：导入后的引导要能「直达并自动打开」它，而面板本体只保留这一份实现。
+  const sheetOpen = useClassStore((state) => state.widgetPinSheetOpen)
+  const setSheetOpen = useClassStore((state) => state.setWidgetPinSheetOpen)
 
   if (!supported) return null
 
   return (
-    <Sheet>
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -96,6 +101,14 @@ export default function WidgetPinEntry() {
             选一种摆法，按它推荐的大小放到桌面上。放好之后样式还能随时改；格子大小以桌面实际放下为准， 可以自己拖动调整。
           </SheetDescription>
         </SheetHeader>
+
+        {/*
+          尺寸可调这条提示与导入后的引导**共用同一份常量**（`WIDGET_PIN_SIZE_TUNING_HINT`）：
+          两处各写一句必然漂移，而这里正是用户真正会去拖尺寸的地方。
+        */}
+        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-xs leading-5 text-muted-foreground">
+          {WIDGET_PIN_SIZE_TUNING_HINT}
+        </p>
 
         <div className="mt-4 grid gap-3">
           {WIDGET_PIN_PRESETS.map((preset) => {

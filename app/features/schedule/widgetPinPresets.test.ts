@@ -8,6 +8,7 @@ import {
   MANUAL_HINT_BY_FAMILY,
   WIDGET_PIN_PRESETS,
   WIDGET_PIN_SPACE_HINT,
+  WIDGET_PIN_SIZE_TUNING_HINT,
   pinOutcomeMessage,
   resolvePinFinalOutcome,
   resolvePinModalState,
@@ -16,6 +17,7 @@ import {
   resolvePinPollOutcome,
   resolvePinStartOutcome,
 } from './widgetPinPresets'
+import { widgetGuideSteps } from '~/lib/widget-guide'
 
 /**
  * 预设目录的**跨层契约**：这张表里的标识就是原生 `WidgetPreset.java` 的白名单。
@@ -33,6 +35,8 @@ const NATIVE_WHITELIST = ['cell_3x2', 'cell_1x2', 'cell_2x2', 'cell_2x3', 'cell_
  * 抄一遍只能证明"我抄对了"，读文件才能证明"两边真的一样"。
  */
 const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url))
+/** 加桌面板的实现文件：断言它引用共享常量，而不是自己再写一句尺寸提示。 */
+const WIDGET_PIN_ENTRY_TS = 'app/features/schedule/WidgetPinEntry.tsx'
 const WIDGET_CELLS = ['3x2', '1x2', '4x3', '2x2', '2x3', '4x2', '6x3'] as const
 
 /**
@@ -366,5 +370,17 @@ describe('无回调复核的文案与状态', () => {
   it('复核命中同样显示成功态模态，并可自动收起', () => {
     expect(resolvePinModalState('added_observed', false)).toBe('added')
     expect(resolvePinModalState('added_observed', true)).toBe('hidden')
+  })
+})
+
+describe('尺寸可调提示的单一来源', () => {
+  it('常量本身非空且说的是「尺寸」（面板与引导都靠它）', () => {
+    expect(WIDGET_PIN_SIZE_TUNING_HINT.length).toBeGreaterThan(8)
+    expect(WIDGET_PIN_SIZE_TUNING_HINT).toContain('尺寸')
+  })
+
+  it('面板与引导引用的是同一份文案（不是各抄一句）', () => {
+    expect(widgetGuideSteps()).toContain(WIDGET_PIN_SIZE_TUNING_HINT)
+    expect(readFileSync(join(REPO_ROOT, WIDGET_PIN_ENTRY_TS), 'utf8')).toContain('WIDGET_PIN_SIZE_TUNING_HINT')
   })
 })
