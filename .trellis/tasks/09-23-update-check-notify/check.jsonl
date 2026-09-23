@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "门禁清单（typecheck / lint / test / format）与代码审查点，用于核对是否真的全绿"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对新增持久化状态是否越界（不得写入备份 JSON、不得改 schema 版本）"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件形态与既有 shadcn 用法，避免无关重构"}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "非安卓路径必须保持的既有契约：浏览器/PWA 不出现安卓专属 UI（回归口径）"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "远端 JSON 解析是否做了真实收窄、有无裸 as 或未校验字段"}
+{"file": ".trellis/tasks/09-23-update-check-notify/prd.md", "reason": "验收清单（单测项 + 真机项）与技术决策 T1–T9，用于逐条核对实现是否漏项"}

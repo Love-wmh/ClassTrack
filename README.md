@@ -11,6 +11,7 @@ ClassTrack 是一个面向学生的课程管理 Web 应用，用于从高校教�
 - **数据导入导出**：支持导出 ClassTrack 备份 JSON，也支持重新导入备份数据。
 - **教务系统导入**：Android App 支持在应用内打开天津理工大学金智教务系统，登录并捕获课表响应后直接导入；普通浏览器/PWA 保留书签脚本 + JSON 降级流程。
 - **本地持久化**：应用数据保存在浏览器本地 `localStorage` 中，无需后端服务。
+- **应用更新提示**（仅 Android）：启动或回到前台时按可配置间隔查询 GitHub Release，发现更新就弹窗并（可选）发系统通知；更新通道可在「仅正式版 / 仅测试版 / 全部」之间切换，默认值由安装包类型决定。
 
 ## 已支持学校
 
@@ -200,6 +201,34 @@ pnpm cap:sync:android && ./android/gradlew -p android :app:assembleRelease
 **首次切到签名包会有一次性的卸载**：此前用 debug 签名的测试包无法被覆盖安装，需要先在 App 里
 「数据管理 → 导出数据」保存备份，卸载旧包、装上第一个签名包后再导入备份。此后所有测试版与正式版共用同一把密钥，
 **升级安装不再冲突、数据保留**。
+
+### 应用更新提示（仅 Android）
+
+安装过的 APK 会自己去 GitHub Release 找新版本，不需要用户手动回仓库看。实现在 `app/lib/app-update/`（纯逻辑）
+与 `app/components/app-update/`（UI），个人中心的「应用更新」卡片提供三个开关：总开关、通知栏开关、更新通道。
+
+| 行为 | 口径 |
+| --- | --- |
+| 检查时机 | 冷启动 + 回到前台，按「检查间隔」节流（默认 1 天，可改为每次启动 / 3 天 / 7 天） |
+| 数据源 | 一次匿名请求 `GET /repos/Love-wmh/ClassTrack/releases?per_page=20`（限流 60 次/小时，1 天 1 次远低于上限） |
+| 版本判定 | 标题 `ClassTrack Android <版本>`，取不到就用 tag 反推（`v1.2.0` / `android-beta-7`），再按数字三元组比较 |
+| 通道默认值 | **只在首次读到版本名时按安装包类型播种一次**：测试版包 → 全部，正式版包 → 仅正式版。之后**永久保持**，升级成另一种包也不会被重置 |
+| 关闭总开关 | 不再联网检查、不再提示，「立即检查」也一并禁用 |
+| 通知 | Android 13+ 需要通知权限；被拒时开关自动回退为关，卡片里给出入口 |
+| 通知设置入口 | 「前往系统设置」走本应用自己的原生插件（`AppUpdatePlugin`），优先直达「应用更新」渠道页；Android 16 上系统会把这类意图统一落到应用信息页，通知行就在那里 |
+| 不做的事 | 不在应用内下载或静默安装 APK，「去下载」交给系统浏览器打开 release 页面 |
+
+验收时现网最新版本往往**等于**手头要装的版本（真机天然触发不了「有新版本」），所以判定逻辑全部由 `pnpm test` 里的纯函数用例覆盖，
+真机全链路则用调试注入：先在设备上写好假数据，再用带开关的构建装包。
+
+```bash
+# 1) 让构建把 localStorage 里的假 release 数据当作 GitHub 响应（正式包不设这个变量，故不生效）
+VITE_UPDATE_DEBUG=1 pnpm cap:sync:android
+./android/gradlew -p android :app:assembleDebug   # 或按 README「发布与签名」出签名包
+
+# 2) 造一条比当前安装版本更新的假 release（在设备上用 WebView 调试 / adb 注入 localStorage）
+#    key = class-track-update-debug，value = GitHub Releases API 的数组形态
+```
 
 ### 启动生产服务
 

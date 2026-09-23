@@ -26,6 +26,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         PinAttemptState.clear();
         registerPlugin(CourseImportPlugin.class);
+        // 更新检测：通知权限被拒后要能跳到本应用的通知设置页（Web 层没有这个能力）。
+        registerPlugin(AppUpdatePlugin.class);
         // 桌面小工具的快照通道：Web 侧推送课表快照，原生侧落盘并刷新小工具。
         registerPlugin(WidgetSnapshotPlugin.class);
         // 维护面收敛：把收起档（2×2 / 2×3 / 4×2 / 4×3 / 6×3）的 receiver 禁用掉，让系统拾取器里只剩

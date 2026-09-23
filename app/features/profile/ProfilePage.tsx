@@ -11,6 +11,7 @@ import { useClassStore } from '~/store'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 import MobileNavigationSettings from './MobileNavigationSettings'
 import WidgetPrecisionSettings from './WidgetPrecisionSettings'
+import AppUpdateSettings from './AppUpdateSettings'
 
 export default function ProfilePage() {
   const {
@@ -108,6 +109,7 @@ export default function ProfilePage() {
             </Card>
             <MobileNavigationSettings />
             <WidgetPrecisionSettings />
+            <AppUpdateSettings />
           </div>
         </div>
       </div>
