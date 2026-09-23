@@ -133,7 +133,10 @@ pnpm cap:install:android
   触发路径见 `on.push.paths`：`app/**`、`public/**`、`android/**`、`scripts/**`、`.github/**`，
   以及决定产物内容或打包方式的根配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`capacitor.config.ts`、
   `vite.config.ts`、`react-router.config.ts`、`tsconfig.json`、`index.html`）。纯文档（`docs/**`、`.trellis/**`、`README`）改动不发版。
-  跑完编译、原生单元测试、APK 内 Web 资源与 `build/client` 的字节一致性校验后，把 APK 挂到预发布版本上，只保留最近 10 个。
+  跑完编译、原生单元测试、APK 内 Web 资源与 `build/client` 的字节一致性校验后，把 APK 挂到预发布版本上。
+  **历史测试版一律保留、不再清理**（2026-09-23 起）：测试者只需要 `ClassTrack-beta-latest.apk` 这一个名字，
+  应用内也会自己提示新版本，所以当初「避免测试者在一堆旧包里挑」的理由不再成立。代价是资产会一直累积 ——
+  每条约 21 MB（APK + `-latest` 副本），换来的是随时能装回任意一个旧测试版。
 - **正式版**（非 prerelease，标记 Latest）：**只能手动触发** —— Actions → Android Release → Run workflow →
   `release_kind` 选 `stable` 并填写版本号（如 `1.2.0`）。tag **由工作流自己创建**（`v1.2.3`），不需要手工打 tag；
   推送 tag 不会触发任何发布。

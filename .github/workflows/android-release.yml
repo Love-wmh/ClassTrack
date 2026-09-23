@@ -6,12 +6,12 @@ name: Android Release
 #     - 自动：merge 进 master 且改动可能影响 APK 时（路径过滤见 on.push.paths）
 #     - 手动：Actions → Android Release → Run workflow（release_kind 保持 beta，可附一句说明）
 #     - 版本号：1.0.<序号>-beta，标签 android-beta-<序号>（序号 = 已有测试版标签的最大值 + 1），
-#       只保留最近 10 个
+#       历史测试版**一律保留**（2026-09-23 起不再清理，见 README「下载测试版」段）
 #
 #   正式版（非 prerelease，标记 Latest）：
 #     - **只能手动触发**：Actions → Android Release → Run workflow → release_kind 选 stable、
 #       并填写版本号（如 1.2.0）。tag push 不会触发发布 —— 发布步骤自己创建 tag v<版本号>。
-#     - 版本号：来自 dispatch 输入；tag 就是 v<版本号>；不参与测试版的数量清理
+#     - 版本号：来自 dispatch 输入；tag 就是 v<版本号>
 #     - 发布前必须满足：该提交在 master 上、版本号形如 X.Y.Z、tag v<版本号> 尚不存在
 #
 # 两条轨道都必须发**签名**包：仓库 Secrets 里没有签名凭据时工作流直接失败，不再回退 debug 包
@@ -301,18 +301,3 @@ jobs:
               "${ASSET}" \
               ClassTrack-beta-latest.apk
           fi
-
-      # 测试版会随每次合并累积；只保留最近 10 个，避免测试者在一堆旧包里挑。正式版不清理。
-      - name: 清理过期测试版
-        if: env.IS_STABLE != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release list --limit 100 --json tagName \
-            --jq '[.[] | select(.tagName | startswith("android-beta-"))] | .[10:] | .[].tagName' |
-            while read -r tag; do
-              [ -n "$tag" ] || continue
-              echo "删除过期测试版 $tag"
-              gh release delete "$tag" --yes --cleanup-tag
-            done
