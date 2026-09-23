@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
-- **Last Active**: 2026-09-21
+- **Total Sessions**: 15
+- **Last Active**: 2026-09-23
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~476 | Active |
+| `journal-1.md` | ~523 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 15 | 2026-09-23 | 更新检测（Release 探测 + 通知 + 通道）与发版触发收窄 | `326cdc9`, `d9d3fd3`, `8114bd9` | `master` |
 | 14 | 2026-09-21 | 小工具：模拟器验掉拖动改尺寸与模态失败分支（并修出两个真缺陷） | `3b35a8e` | `master` |
 | 13 | 2026-09-21 | 小工具：五档 provider + 尺寸自动匹配 + 拾取器预览生成（模拟器验证） | `f957a56`, `947427e`, `ce87e7c` | `master` |
 | 12 | 2026-09-21 | 小工具 pin 真机复验：不再撒谎的「添加到桌面」 | `585d91c` | `master` |

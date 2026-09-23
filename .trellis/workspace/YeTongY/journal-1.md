@@ -474,3 +474,50 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 ### Next Steps
 
 - 真机复验：探针修复后的文案在 ColorOS 现场确认、ColorOS 下拾取器尺寸标签；随后归档任务
+
+
+## Session 15: 更新检测（Release 探测 + 通知 + 通道）与发版触发收窄
+<!-- trellis-session: v=2 fp=219b1b997c09cae7 -->
+
+**Date**: 2026-09-23
+**Task**: 更新检测（Release 探测 + 通知 + 通道）与发版触发收窄
+**Branch**: `master`
+
+### Summary
+
+安卓端更新检测落地并真机验收（含一个只有真机能暴露的原生 bug），随后收窄了发版触发路径；PR #14 已合并，四个历史任务一并归档。
+
+### Main Changes
+
+- 更新检测：冷启动/回前台查 GitHub Release（单次请求 per_page=20），发现更新弹前台模态框 +（可选）系统通知；判定逻辑（版本解析/比较、通道筛选、节流、URL 白名单、响应收窄）全是纯函数，50 个 vitest 用例覆盖。
+- 设置卡片「应用更新」：总开关、通知开关、三选一通道（仅正式版/仅测试版/全部）、间隔（每次启动/1天/3天/7天）、立即检查；设置存独立 store（class-track-update），不进备份 JSON 与 schema 迁移。
+- 通道默认值只在首次读到版本名时按安装包类型播种一次、之后永久保持 —— 测试版包升级为正式版包后仍是「全部」（真机验证过覆盖安装）。
+- 新增 @capacitor/app 与 @capacitor/local-notifications；新增本应用插件 AppUpdatePlugin（跳通知设置页，两个官方插件都没这个 API），目标链判决与渠道 id 校验放在纯类 NotificationSettingsTargets 里由 6 个 JVM 用例钉住。
+- 真机验收揪出并修掉一个真 bug：LocalNotifications.schedule 的 isExactNotification 默认 true，系统未授予「闹钟与提醒」时插件会先弹设置页并等结果，导致调用永不 resolve、通知永不投递（日志特征：methodName: schedule 之后什么都没有 + 紧接着出现 Settings$AlarmsAndRemindersAppActivity）；显式传 false 后通知正常投递。
+- CI 两项调整：取消测试版 release 的过期清理（历史测试版一律保留）；发版触发路径收窄为「只算能改变 APK 内容的改动」（去掉 scripts/**、.github/** 与失效的 index.html，改链路要验证就手动 dispatch），并把资产守卫的纯函数单测补进 ci.yml（此前哪都不跑）。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `326cdc9` | feat(android): 更新检测：Release 探测、通知与更新通道设置 |
+| `d9d3fd3` | ci(android): 取消测试版 release 的过期清理 |
+| `8114bd9` | ci(android): 收窄发版触发路径，只算能改变 APK 内容的改动 |
+
+### Testing
+
+- [OK] pnpm typecheck / lint（0 problems）/ format:check / test（23 文件 198 用例）/ build 全绿；原生 :app:testDebugUnitTest 34 类 253 用例全过；assembleDebug 通过。
+- [OK] 真实 GitHub API 联调：10 条现网 release 全部解析成功、pageUrl 全在白名单前缀内；已装 1.0.10-beta 时三个通道都判「不提示」。
+- [OK] API 37 模拟器逐条过 PRD 真机清单：模态框 + 通知栏条目（channel=updates）、跳过此版本/稍后/立即检查、总开关关闭后 lastCheckAt 保持 null（证明确实没进联网路径）、权限弹窗与拒绝后开关回退、通道持久性、浏览器端不渲染卡片。
+- [OK] CI verify 在 PR #14 上给出 Tests 198 passed，且 pnpm install --frozen-lockfile 成功（手工还原过一行的锁定文件有效）。
+- [OK] 收窄触发路径那次推送只触发 CI、没有 Android Release（对比上一次两个都触发）。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- stable 通道的真实推送路径还没在真机出现过（现网没有正式版 release）；等后面出了新测试版，可以用旧包实测一次「启动即提示 + 通知栏」。
+- 「去系统设置」跳转在 Android 16 上会被系统统一落到应用信息页，三级回退链在 API 26–35 才分别生效 —— 不是 bug，别照 Android 16 的表现去改。
+- 改发布链路后不再自动出包验证，需要验证时手动 dispatch。
