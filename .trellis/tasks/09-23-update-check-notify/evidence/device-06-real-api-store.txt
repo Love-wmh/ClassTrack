@@ -1,0 +1,1 @@
+{"installVersion":"1.0.0","debugFlagInBuild":"off（这次没传 VITE_UPDATE_DEBUG）","store":{"channel":"all","autoCheck":true,"notify":true,"interval":"1d","lastCheckAt":1790168831899,"skippedVersion":null}}

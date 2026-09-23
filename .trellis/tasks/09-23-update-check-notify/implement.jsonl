@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五项门禁、禁用写法与提交信息约定（本轮新增原生插件与 CI 变量，必须先对齐门禁口径）"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件目录归属、props 命名与可访问性现状（模态框与设置卡片都要沿用）"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Zustand 切片与 persist partialize 规则（新增更新设置必须走独立 store，不能进 class-track-storage）"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "hook 内 effect / 边沿处理的既有写法约束（检查调度与 appState 监听都落在 hook 里）"}
+{"file": ".trellis/spec/frontend/native-course-import.md", "reason": "Capacitor 原生桥的既有契约：平台判定口径、插件可用性兜底与 payload 校验，新插件照此形状接入"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "远端 JSON 属于不可信输入，需要按仓库约定做边界收窄而不是裸 as"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层（Web 层 ↔ 原生插件 ↔ CI 构建变量）改动必须逐层问的问题清单"}
+{"file": ".trellis/tasks/09-23-update-check-notify/prd.md", "reason": "本轮唯一规划产物：需求、技术决策 T1–T9、版本解析/比较规则与验收清单"}

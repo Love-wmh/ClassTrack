@@ -1,0 +1,21 @@
+发现新版本 1.0.10-beta
+
+1.0.0 → 1.0.10-beta
+测试版
+
+ClassTrack Android 1.0.10-beta
+
+- commit: `0d683e1`
+- 包类型：签名 release 包，可直接覆盖安装上一个版本（数据保留）。
+- 下载 `ClassTrack-beta-latest.apk` 永远指向本页这个包。
+
+## 本次改动
+
+- Merge pull request #13 from Love-wmh/feat/onboarding-after-import (0d683e1)
+- docs(task): 落盘导入后引导任务的规划、验收证据与运行期阻塞 (367300d)
+- feat(widget): 导入成功后一次性引导加桌，并提示尺寸可调 (e4fde20)
+- feat(import): 安卓端收窄导入方式并给天工如实指路 (4bd72e1)
+跳过此版本
+稍后
+去下载
+Close
