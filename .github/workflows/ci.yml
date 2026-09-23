@@ -28,6 +28,10 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: pnpm build
+      # 资产守卫的单元测试。它只测守卫自己的纯函数（不碰真产物），因此可以在这里跑；
+      # `pnpm android:check-assets` 需要真 APK，只能在发布链路里跑。
+      # 这条以前漏了：vitest 的 include 只收 app/**/*.test.ts，于是它哪都不跑。
+      - run: pnpm test:android-assets
 
   # 提交信息规范：主题必须用中文写（规则见 commitlint.config.cjs 的内联插件）。
   # 本地由 husky 的 commit-msg hook 拦一次，这里再拦一次，`--no-verify` 因此绕不过去。

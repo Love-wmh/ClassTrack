@@ -27,8 +27,13 @@ name: Android Release
 #   epoch 秒跨轨道、跨重命名都单调递增，也不需要任何外部状态（32 位 versionCode 直到 2038 年都放得下）。
 # - 测试版标签序号取自 `gh release list` 里 android-beta-<n> 的最大值，因此与 run_number 无关。
 #
-# 路径过滤的判据：凡是能改变 APK 内容，或改变它如何被构建/校验的路径都算；纯文档
-# （docs/**、.trellis/**、README、AGENTS.md）改动不发版。
+# 路径过滤的判据：**只算能改变 APK 内容的路径**。进不了 APK 的改动一律不发版：
+# - `scripts/**`：只有 check-android-assets.js 会被发布步骤调用，改它只改「校验」不改「产物」；
+# - `.github/**`：改发布链路本身也不改产物；需要验证链路时手动 dispatch（workflow_dispatch）。
+# - 纯文档：`docs/**`、`.trellis/**`、README、AGENTS.md。
+#
+# 这里的口径在 2026-09-23 收窄过一次：此前 `.github/**` 在列表里，于是「只改了工作流」的提交也会
+# 给测试者发一个与上一版功能完全相同的测试包（android-beta-12 就是这么产生又删掉的）。
 
 on:
   workflow_dispatch:
@@ -54,14 +59,12 @@ on:
   push:
     branches: [master]
     paths:
-      # 产物来源
+      # 产物来源：只有这三条会改变 APK 里真正装了什么
       - 'app/**'
       - 'public/**'
       - 'android/**'
-      - 'scripts/**'
-      # 构建与发布链路本身
-      - '.github/**'
-      # 决定产物内容或产物如何被打包/校验的根配置
+      # 决定产物内容、或决定产物如何被打包的根配置
+      # （tsconfig.json 管路径别名，vite.config.ts 依赖它；锁文件与 workspace 决定依赖树）
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -69,7 +72,6 @@ on:
       - 'vite.config.ts'
       - 'react-router.config.ts'
       - 'tsconfig.json'
-      - 'index.html'
 
 # 同一分支/标签上只保留最新任务：后一次先到先发，避免旧 commit 的包覆盖新包。
 concurrency:

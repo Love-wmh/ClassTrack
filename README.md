@@ -130,9 +130,11 @@ pnpm cap:install:android
 发布流程在 `.github/workflows/android-release.yml`，两条轨道：
 
 - **测试版**（prerelease）：merge 进 `master` 且改动可能影响 APK 时自动跑（也可在 Actions 页手动触发，`release_kind` 保持 `beta`）。
-  触发路径见 `on.push.paths`：`app/**`、`public/**`、`android/**`、`scripts/**`、`.github/**`，
+  触发路径见 `on.push.paths`，判据是**只算能改变 APK 内容的路径**：`app/**`、`public/**`、`android/**`，
   以及决定产物内容或打包方式的根配置（`package.json`、`pnpm-lock.yaml`、`pnpm-workspace.yaml`、`capacitor.config.ts`、
-  `vite.config.ts`、`react-router.config.ts`、`tsconfig.json`、`index.html`）。纯文档（`docs/**`、`.trellis/**`、`README`）改动不发版。
+  `vite.config.ts`、`react-router.config.ts`、`tsconfig.json`）。
+  **进不了 APK 的改动一律不发版**：`scripts/**`（只有资产守卫会被发布步骤调用，改它只改校验）、`.github/**`（发布链路本身）、
+  纯文档（`docs/**`、`.trellis/**`、README）。要验证发布链路的改动时手动触发一次即可（`release_kind` 保持 `beta`）。
   跑完编译、原生单元测试、APK 内 Web 资源与 `build/client` 的字节一致性校验后，把 APK 挂到预发布版本上。
   **历史测试版一律保留、不再清理**（2026-09-23 起）：测试者只需要 `ClassTrack-beta-latest.apk` 这一个名字，
   应用内也会自己提示新版本，所以当初「避免测试者在一堆旧包里挑」的理由不再成立。代价是资产会一直累积 ——

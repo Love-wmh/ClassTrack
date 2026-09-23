@@ -8,7 +8,7 @@
 
 工具链是 ESLint 10 flat config（typescript-eslint recommended、react、react-hooks、react-refresh、prettier recommended）和 Prettier。格式配置为 `semi: false`、`singleQuote: true`、`printWidth: 140`、`tabWidth: 2`、`trailingComma: es5`。
 
-可信门禁共五项，全部实测通过：`pnpm typecheck`（`react-router typegen && tsc`）、`pnpm build`（`react-router build`）、`pnpm lint`（`eslint . --report-unused-disable-directives --max-warnings 0`）、`pnpm format:check`、`pnpm test`（vitest）。`.github/workflows/ci.yml` 在 PR 与 master push 上运行同一组命令。
+可信门禁共五项，全部实测通过：`pnpm typecheck`（`react-router typegen && tsc`）、`pnpm build`（`react-router build`）、`pnpm lint`（`eslint . --report-unused-disable-directives --max-warnings 0`）、`pnpm format:check`、`pnpm test`（vitest）。`.github/workflows/ci.yml` 在 PR 与 master push 上运行同一组命令，外加一道 `pnpm test:android-assets`（资产守卫的纯函数单测；vitest 的 `include` 只收 `app/**/*.test.ts`，所以它必须单独跑）。
 
 `pnpm lint` 当前为 **0 problems**。`eslint.config.js` 的 `ignores` 与 `.prettierignore` 都排除了 `.pi/`、`.agents/`、`.claude/`、`.codebuddy/`、`.codex/`、`.trellis/`（这些目录**已被 git 跟踪**，所以 `.gitignore` 管不到，必须写进各自工具的 ignore 文件；否则会扫出 `.pi/extensions/trellis/index.ts` 的千余条生成物告警）。
 
