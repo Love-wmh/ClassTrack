@@ -12,12 +12,16 @@ import { DETAIL_FULL_THRESHOLD, DETAIL_STANDARD_THRESHOLD, ZOOM_MAX, ZOOM_MIN, Z
  * @param courseId 课程的稳定标识，通常来自解析后的课程号或教学班信息。
  * @returns `courseColors` 中的一个颜色配置。
  */
-export function getCourseColor(courseId: string) {
+function courseHash(courseId: string) {
   let hash = 0
   for (let index = 0; index < courseId.length; index++) {
     hash = courseId.charCodeAt(index) + ((hash << 5) - hash)
   }
-  return courseColors[Math.abs(hash) % courseColors.length]
+  return Math.abs(hash)
+}
+
+export function getCourseColor(courseId: string) {
+  return courseColors[courseHash(courseId) % courseColors.length]
 }
 
 /**
