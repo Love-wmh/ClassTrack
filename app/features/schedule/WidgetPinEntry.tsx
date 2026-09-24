@@ -208,7 +208,7 @@ export default function WidgetPinEntry() {
                 <DialogDescription className="text-foreground">{message}</DialogDescription>
               </DialogHeader>
               <ManualFallback capability={capability} onShortcutPermission={openShortcutPermission} onWidgetGallery={openWidgetGallery} />
-              <DialogFooter className="gap-2 sm:justify-end">
+              <DialogFooter className="gap-2 md:justify-end">
                 <Button variant="outline" onClick={dismissModal}>
                   知道了
                 </Button>

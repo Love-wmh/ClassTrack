@@ -9,8 +9,10 @@ export default function ScheduleDisplaySettings() {
   const attendanceEnabled = useAttendanceStore((state) => state.enabled)
   const showAttendanceStatus = useScheduleDisplayStore((state) => state.showAttendanceStatus)
   const showOutOfWeekCourses = useScheduleDisplayStore((state) => state.showOutOfWeekCourses)
+  const collapseEmptyWeekdayColumns = useScheduleDisplayStore((state) => state.collapseEmptyWeekdayColumns)
   const setShowAttendanceStatus = useScheduleDisplayStore((state) => state.setShowAttendanceStatus)
   const setShowOutOfWeekCourses = useScheduleDisplayStore((state) => state.setShowOutOfWeekCourses)
+  const setCollapseEmptyWeekdayColumns = useScheduleDisplayStore((state) => state.setCollapseEmptyWeekdayColumns)
 
   return (
     <Card id="card-schedule-display">
@@ -20,7 +22,7 @@ export default function ScheduleDisplaySettings() {
       </CardHeader>
       <CardContent className="space-y-5">
         {attendanceEnabled && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="space-y-0.5">
               <label className="text-sm font-medium" htmlFor="schedule-display-attendance">
                 在课表上显示出勤状态
@@ -36,7 +38,7 @@ export default function ScheduleDisplaySettings() {
             />
           </div>
         )}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="space-y-0.5">
             <label className="text-sm font-medium" htmlFor="schedule-display-out-of-week">
               淡化显示非本周课程
@@ -49,6 +51,23 @@ export default function ScheduleDisplaySettings() {
             checked={showOutOfWeekCourses}
             onCheckedChange={setShowOutOfWeekCourses}
             aria-label="淡化显示非本周课程"
+          />
+        </div>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-0.5">
+            <label className="text-sm font-medium" htmlFor="schedule-display-collapse-empty-days">
+              收起整周无课的日期列
+            </label>
+            <p className="text-xs text-muted-foreground">
+              把整周都没有课程的日期列收窄，宽度让给有课的日期。开启后翻周时列宽会随当周课程变化。
+            </p>
+          </div>
+          <Switch
+            id="schedule-display-collapse-empty-days"
+            className="self-start"
+            checked={collapseEmptyWeekdayColumns}
+            onCheckedChange={setCollapseEmptyWeekdayColumns}
+            aria-label="收起整周无课的日期列"
           />
         </div>
       </CardContent>

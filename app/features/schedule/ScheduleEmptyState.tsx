@@ -40,8 +40,8 @@ export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmpty
   }[state]
 
   return (
-    <div className="flex h-full items-center justify-center bg-background px-3 py-4 sm:px-6 sm:py-8">
-      <Empty className="max-w-xl border border-border bg-card px-4 py-8 shadow-xs sm:px-8 sm:py-10">
+    <div className="flex h-full items-center justify-center bg-background px-3 py-4 md:px-6 md:py-8">
+      <Empty className="max-w-xl border border-border bg-card px-4 py-8 shadow-xs md:px-8 md:py-10">
         <EmptyHeader>
           <EmptyMedia variant="icon" className="size-12 rounded-md bg-primary/10 text-primary [&_svg:not([class*='size-'])]:size-5">
             {emptyState.icon}
@@ -51,7 +51,7 @@ export default function ScheduleEmptyState({ school, hasClasses }: ScheduleEmpty
         </EmptyHeader>
         <EmptyContent>
           {emptyState.action && emptyState.onAction && (
-            <Button className="min-h-11 sm:min-h-9" onClick={emptyState.onAction}>
+            <Button className="min-h-11 md:min-h-9" onClick={emptyState.onAction}>
               <GraduationCap className="size-4" />
               {emptyState.action}
             </Button>
