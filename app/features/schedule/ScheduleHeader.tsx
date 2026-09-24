@@ -54,10 +54,10 @@ export default function ScheduleHeader({
 
   return (
     <>
-      <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 flex flex-col gap-2 md:mb-4 md:flex-row md:items-center md:justify-between">
         <div
           className={cn(
-            'grid items-center gap-1.5 sm:flex sm:gap-2',
+            'grid items-center gap-1.5 md:flex md:gap-2',
             attendanceEnabled ? 'grid-cols-[2.25rem_2.25rem_1fr_1fr_2.25rem]' : 'grid-cols-[2.25rem_2.25rem_2.25rem]'
           )}
         >
@@ -86,17 +86,17 @@ export default function ScheduleHeader({
               <Button
                 variant="ghost"
                 onClick={() => setConfirmAction('attended')}
-                className="h-9 min-w-0 bg-emerald-50 px-2 text-sm font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900 sm:px-3"
+                className="h-9 min-w-0 bg-emerald-50 px-2 text-sm font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900 md:px-3"
               >
-                <CheckCircle2 className="size-4 sm:mr-1.5" />
+                <CheckCircle2 className="size-4 md:mr-1.5" />
                 全部已上
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => setConfirmAction('unattended')}
-                className="h-9 min-w-0 bg-rose-50 px-2 text-sm font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 sm:px-3"
+                className="h-9 min-w-0 bg-rose-50 px-2 text-sm font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 md:px-3"
               >
-                <CircleAlert className="size-4 sm:mr-1.5" />
+                <CircleAlert className="size-4 md:mr-1.5" />
                 全部未上
               </Button>
             </>
@@ -106,7 +106,7 @@ export default function ScheduleHeader({
           <WidgetPinEntry />
         </div>
 
-        <div className="grid grid-cols-2 items-center gap-2 sm:flex">
+        <div className="grid grid-cols-2 items-center gap-2 md:flex">
           <span className="flex h-9 items-center justify-center rounded-md bg-card px-3 text-foreground shadow-xs">
             第 {currentWeek} 周
           </span>

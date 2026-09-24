@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "逐项核对：网格列模板未变、1x 无横向滚动、data-* 锚点全部保留、信息显隐优先级未变、缩放仍只改列宽"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对五项门禁是否全绿，以及新增测试是否落在 app/**/*.test.ts 的 include 范围内"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对新 store 字段的默认值 / partialize / merge 三处是否齐改，且未混入业务 store"}
+{"file": ".trellis/tasks/09-24-schedule-responsive-sizing/prd.md", "reason": "验收标准 AC-A/B/C/D/E 逐条对照，确认无放宽断言、无跳过项"}
+{"file": ".trellis/tasks/09-24-schedule-responsive-sizing/design.md", "reason": "核对实现是否按设计落地：容器结构、尺度公式单一真源、兜底为相对比例、宽度校验、D 组列模板与最小列宽保护"}
+{"file": ".trellis/tasks/09-24-schedule-responsive-sizing/research/real-device-analysis.md", "reason": "用真机实测基线复核对齐：同尺寸同字号（消除 1.27× 落差）、容器几何未改变"}
+{"file": ".trellis/tasks/09-24-schedule-responsive-sizing/implement.md", "reason": "核对阶段门禁 G1-G5 是否逐个通过，尤其是 G2（container-type: size 未改变网格几何）与 G4（关闭态逐字符一致）"}

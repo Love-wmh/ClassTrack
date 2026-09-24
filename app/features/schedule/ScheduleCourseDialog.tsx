@@ -43,7 +43,7 @@ export default function ScheduleCourseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-lg p-4 sm:max-w-md sm:p-6">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-lg p-4 md:max-w-md md:p-6">
         <DialogHeader className="pr-8 text-left">
           <DialogTitle className="text-xl leading-7">{course.name}</DialogTitle>
           <DialogDescription>
@@ -104,11 +104,11 @@ export default function ScheduleCourseDialog({
           />
         </div>
 
-        <DialogFooter className="grid grid-cols-2 gap-2 sm:flex">
-          <Button type="button" variant="outline" className="min-h-11 sm:min-h-9" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="grid grid-cols-2 gap-2 md:flex">
+          <Button type="button" variant="outline" className="min-h-11 md:min-h-9" onClick={() => onOpenChange(false)}>
             取消
           </Button>
-          <Button type="button" className="min-h-11 sm:min-h-9" onClick={handleSave}>
+          <Button type="button" className="min-h-11 md:min-h-9" onClick={handleSave}>
             保存
           </Button>
         </DialogFooter>

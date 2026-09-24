@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "课表布局与移动端尺度契约：网格列模板、1x 无横向滚动、信息显隐优先级、data-* 挂钩红线；改课程格尺度前必读，改完必须同步更新（含已知限制）"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "新增 scheduleDisplayStore 字段必须跟随独立 persist store 模式，且默认值 / partialize / merge 三处齐改，否则旧数据丢值"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "五项可信门禁（typecheck/build/lint/format:check/test）与 vitest include 只收 app/**/*.test.ts 的约束，决定新增测试的文件命名与放置位置"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "课程格组件与个人中心设置卡片的结构、props、导出约定"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "复用纪律：Android 小工具侧已有 WidgetFillPlan 字号求解，避免同一产品出现两套字号逻辑"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层思考：CSS 容器查询单位（声明层）与 JS 实测丢行（执行层）的职责边界必须显式划分"}
+{"file": ".trellis/tasks/09-24-schedule-responsive-sizing/design.md", "reason": "本次技术设计：容器结构、--cc-* 尺度公式单一真源、JS 职责边界、D 组列模板"}
+{"file": ".trellis/tasks/09-24-schedule-responsive-sizing/research/real-device-analysis.md", "reason": "真机截图逐像素实测证据：网格几何标定、同屏 1.27× 字号落差、文字块宽度不受限的确认"}

@@ -90,3 +90,54 @@ describe('课程格的出勤外观', () => {
     }
   })
 })
+
+describe('课程格的尺度与视觉锚点', () => {
+  it('教室元素带 data-course-room 锚点（验收脚本要靠它断言不溢出 / 不被丢弃）', () => {
+    expect(render()).toContain('data-course-room')
+  })
+
+  it('字号与行高走 --cc-* 容器变量，不再有与格子尺寸无关的 px 字号', () => {
+    const html = render()
+
+    expect(html).toContain('var(--cc-name-raw)')
+    expect(html).toContain('var(--cc-name-lh)')
+    expect(html).toContain('var(--cc-room-raw)')
+    expect(html).toContain('var(--cc-room-lh)')
+    // 兜底缩放必须在使用处相乘（写在网格声明里会被固化掉），钳位也必须在使用处
+    expect(html).toContain('var(--cc-scale,1)')
+    expect(html).toMatch(/font-size:clamp\(8px,/)
+    // 改动前这里是 text-[10px] / text-[9px] + md:text-sm / md:text-xs 两套硬编码值
+    expect(html).not.toMatch(/text-\[\d+px\]/)
+    expect(html).not.toContain('md:text-sm')
+    expect(html).not.toContain('md:text-xs')
+  })
+
+  it('内边距 / 圆角 / 描边 / 角标同样由容器尺度推导', () => {
+    const html = render()
+
+    expect(html).toContain('[padding:var(--cc-pad-y)_var(--cc-pad-x)]')
+    expect(html).toContain('[border-radius:var(--cc-radius)]')
+    expect(html).toContain('var(--cc-ring)')
+    expect(html).toContain('[width:var(--cc-badge)]')
+    // 改动前固定 ring-2 / rounded-md md:rounded-lg / size-3 md:size-4
+    expect(html).not.toContain('ring-2')
+    expect(html).not.toContain('md:rounded-lg')
+    expect(html).not.toContain('md:size-4')
+  })
+
+  it('单双周徽标的可见性交给 CSS 断点，不再由视口布尔值决定', () => {
+    const html = render()
+
+    expect(html).toContain('data-course-parity')
+    expect(html).toContain('md:hidden')
+    expect(html).toContain('单周')
+  })
+
+  it('出勤角标存在时带容器尺度的尺寸类', () => {
+    const html = render({ mark: attendedMark, attendanceEnabled: true })
+    const badgeMatches = html.match(/\[width:var\(--cc-badge\)\]/g) ?? []
+
+    expect(badgeMatches.length).toBe(1)
+    expect(html.match(/\[height:var\(--cc-badge\)\]/g)?.length).toBe(1)
+  })
+})
