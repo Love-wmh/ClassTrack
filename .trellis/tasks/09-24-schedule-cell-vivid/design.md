@@ -73,22 +73,29 @@ export function getVisibleCourses(classes: Class[], currentWeek: number, showOut
 - 手机端字号收紧以保「显示全」：课名 10px、教室/教师 9px（现为 11/10px）；桌面端课名 `md:text-sm`、其余 `md:text-xs`。
 - 「非本周」标记：复用 `data-course-parity` 位置，文案 `非本周`（非本周课时优先于单双周标签显示）。
 
-### 信息自适应（容器查询，落实 PRD R5）
+### 信息自适应（实测降级，落实 PRD R5）——**已按实测重写，原容器查询方案作废**
 
-显隐优先级（从高到低）：课名 > `@教室` > 教师 > 单双周/「非本周」标签 > 备注。**只整行隐藏，绝不裁半截**。
+显隐优先级（从高到低）：课名 > `@教室`（硬要求，永不丢弃）> 单双周/「非本周」标签 > 教师 > 备注。**只整行隐藏，绝不裁半截**。
 
-- 课程格子容器（ScheduleTable 里 grid 定位的那个 div）加 `[container-type:size]`：它的高度来自 gridRow 跨节，是确定值，size containment 不会塌陷。
-- 教师行：`hidden`，手机端 `[@container(min-height:7.5rem)]:block`、桌面端 `md:[@container(min-height:6.5rem)]:block`；缩放 full 档（2x）时无条件 `block`（保留旧契约里 2x 必见教师的语义，作为容器查询之外的强制开关）。**实现偏差**：手机端阈值从 6.5rem 上调到 7.5rem——实测 412px 宽手机 2 节格子约 7.1rem，20 字最长课名（7 行）+ `@教室`（2 行）刚好占满，6.5rem 会让教师行挤掉教室最后一行（裁半截）；桌面端列宽、字号更大，6.5rem 足够故保留原阈值。
-- 备注行：`hidden`，`[@container(min-height:9rem)]:block`；桌面端 full 档同理强制显示。
-- 单双周/「非本周」标签：默认显示，`[@container(max-height:4rem)]:hidden`（极矮格子先牺牲它保住课名+教室）。
-- Tailwind v4 任意容器查询变体若不支持 `min-height` 条件，回退方案：在 `app/app.css` 写三条原生 `@container` 规则（`.course-cell-teacher` / `.course-cell-note` / `.course-cell-parity`），实现时先写 Tailwind 语法并用 agent-browser 实测，不生效再回退。
-- 缩放 tier 逻辑（`useScheduleZoom` / `data-zoom-tier`）保留，但**不再驱动内容显隐**——只留 full 档对教师/备注的强制显示；`showClassroom/showTeacher/showNote` 三个派生布尔随新规则重定义（教室恒 true）。
+原设计用 CSS 容器查询（`[@container(min-height:…)]:`）按格子高度切阈值。**实测证明不可行**：Tailwind v4 不为高度条件任意变体生成 `@container` 规则（生成的 CSS 里 `@container` 命中数为 0，`[container-type:size]` 白挂），后果是桌面端干净加载（tier=compact、无缩放控件）时教师与备注**永不出现**；且同一高度下 20 字课名占 7 行、3 字课名占 1 行，阈值本身也区分不出来。
+
+实际实现（`ScheduleCourseCell.tsx`）：`useLayoutEffect` 里实测内容高度并按优先级逐级丢弃。
+
+1. 先把可选三行（单双周/「非本周」标签、教师、备注）置为 `display: block`；
+2. `content.scrollHeight > content.clientHeight + 1` 时，按 **备注 → 教师 → 单双周标签** 顺序整行隐藏，丢一行重判一次，直到放得下；
+3. 丢完仍放不下（只有一节的矮格 + 超长课名）进入兜底：课名与 `@教室` 的字号连同行高一起收小（最多两档，手机 10→8px、桌面 14→12px）。
+
+实现约定：直接写 `style.display` / `style.fontSize`（不 setState，避免测量与渲染互相触发）；每轮 apply 先清内联覆盖（否则 `md:hidden` 被压住，单双周标签会在桌面端冒出来）；`ResizeObserver` 观察**外层格子按钮**以在缩放/旋屏/窗口变化后重测；单双周标签只在手机端参与丢弃序列。
+
+配套改动：`showTeacher` / `showNote` 两个「full 档强制显示」props 撤销（降级是唯一权威，不再有强制档），`ScheduleTable` 的 `[container-type:size]` 一并移除；行高下限 `2.75rem → 4rem`（格子适度加长，见下）。
+
+**验证结果**（412×915 / 360×480 / 768×1024 / 1280×800 四档，seed 18 门课）：全部格子 `clip ≤ 1px`；1x 手机二连节格子（126px）18 格全部显示教师；注入「单节 62px 高 × 40px 宽 + 12 字课名」的极端格，裁切从 6px 降到 1px（字号收到 8px/行高 8.4px，教室 7px）。
 
 ### 出勤态（showAttendanceStatus=true 时）
 
 - 已上：右下角 `CheckCircle2` 白图标（`text-white/90`，带轻微 `drop-shadow` 保证在亮黄底上可见）。
 - 未上：卡片整体 `opacity-60 saturate-50`（淡化但仍能看出本色，与灰色非本周卡区分），右下角 `CircleAlert` 白图标。
-- `showAttendanceStatus=false`：不渲染图标、不加淡化，也不读取 mark 状态做样式分支。
+- 两层开关（并入 master 的「出勤统计」后）：痕迹要同时满足能力层 `attendanceEnabled`（`useAttendanceStore().enabled`，默认关）与显示层 `showAttendanceStatus`（默认开），且只作用于本周课；个人中心的「课表显示」卡在能力层关闭时**只隐藏出勤那一行**，「淡化显示非本周课程」始终可用。
 - title 文案保持「已上/未上」语义（出勤开启时）。
 
 ### 非本周态（isOutOfWeek=true）
