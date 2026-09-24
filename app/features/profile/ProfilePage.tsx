@@ -12,6 +12,7 @@ import { useAttendanceStore } from '~/store/attendanceStore'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
 import AttendanceSettings from './AttendanceSettings'
 import MobileNavigationSettings from './MobileNavigationSettings'
+import ScheduleDisplaySettings from './ScheduleDisplaySettings'
 import WidgetPrecisionSettings from './WidgetPrecisionSettings'
 import AppUpdateSettings from './AppUpdateSettings'
 
@@ -114,6 +115,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
             <AttendanceSettings />
+            <ScheduleDisplaySettings />
             <MobileNavigationSettings />
             <WidgetPrecisionSettings />
             <AppUpdateSettings />

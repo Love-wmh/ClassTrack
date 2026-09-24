@@ -9,10 +9,10 @@ import { dayNames, sections, weekDays } from './constants'
 import ScheduleCourseCell from './ScheduleCourseCell'
 import { useScheduleZoom } from './hooks/useScheduleZoom'
 import { getDayDate } from './utils'
-import type { SectionTime } from './utils'
+import type { SectionTime, VisibleCourse } from './utils'
 
 type ScheduleTableProps = {
-  weekClasses: Class[]
+  visibleCourses: VisibleCourse[]
   classMarks: Record<string, ClassMark>
   /** 「出勤统计」是否开启；关闭时课程格不画出勤痕迹（备注照常显示）。 */
   attendanceEnabled: boolean
@@ -23,7 +23,7 @@ type ScheduleTableProps = {
 }
 
 export default function ScheduleTable({
-  weekClasses,
+  visibleCourses,
   classMarks,
   attendanceEnabled,
   currentWeek,
@@ -33,14 +33,14 @@ export default function ScheduleTable({
 }: ScheduleTableProps) {
   const isMobile = useIsMobile()
   const { zoom, detailLevel, scrollRef, gridRef, containerProps, zoomIn, zoomOut, canZoomIn, canZoomOut } = useScheduleZoom()
-  const showClassroom = isMobile ? detailLevel !== 'compact' : true
-  const showTeacher = isMobile && detailLevel === 'full'
-  const showNote = isMobile ? detailLevel === 'full' : true
+  // 内容显隐主要由课程格子的高度容器查询驱动；缩放 full 档（2x）强制显示教师与备注。
+  const showTeacher = detailLevel === 'full'
+  const showNote = detailLevel === 'full'
 
   const monthDate = getDayDate(firstWeekStartDate, currentWeek, 1)
   const getClassMark = (classId: string, week: number) => classMarks[getMarkKey(classId, week)]
   const occupiedCells = new Set(
-    weekClasses.flatMap((course) => {
+    visibleCourses.flatMap(({ course }) => {
       const cells: string[] = []
       for (let section = course.startSection; section <= course.endSection; section += 1) {
         cells.push(`${course.dayOfWeek}-${section}`)
@@ -121,14 +121,10 @@ export default function ScheduleTable({
             })
           )}
 
-          {weekClasses.map((course) => (
+          {visibleCourses.map(({ course, isOutOfWeek }) => (
             <div
               key={course.id}
-              className={cn(
-                'min-h-0 overflow-hidden border-border',
-                course.dayOfWeek !== 7 && 'border-r',
-                course.endSection !== 12 && 'border-b'
-              )}
+              className="min-h-0 overflow-hidden p-px [container-type:size]"
               style={{
                 gridColumn: course.dayOfWeek + 1,
                 gridRow: `${course.startSection + 1} / ${course.endSection + 2}`,
@@ -138,7 +134,7 @@ export default function ScheduleTable({
                 course={course}
                 mark={getClassMark(course.id, currentWeek)}
                 attendanceEnabled={attendanceEnabled}
-                showClassroom={showClassroom}
+                isOutOfWeek={isOutOfWeek}
                 showTeacher={showTeacher}
                 showNote={showNote}
                 onClick={() => onCourseClick(course)}

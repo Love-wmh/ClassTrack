@@ -5,14 +5,14 @@ export const weekDays = [1, 2, 3, 4, 5, 6, 7]
 export const sections = Array.from({ length: 12 }, (_, index) => index + 1)
 
 export const courseColors = [
-  'bg-emerald-100/70 text-slate-800',
-  'bg-blue-100/70 text-slate-800',
-  'bg-amber-100/70 text-slate-800',
-  'bg-rose-100/70 text-slate-800',
-  'bg-lime-100/70 text-slate-800',
-  'bg-orange-100/70 text-slate-800',
-  'bg-violet-100/70 text-slate-800',
-  'bg-cyan-100/70 text-slate-800',
+  'bg-gradient-to-b from-emerald-400 to-emerald-500 text-white',
+  'bg-gradient-to-b from-sky-400 to-blue-500 text-white',
+  'bg-gradient-to-b from-rose-400 to-pink-500 text-white',
+  'bg-gradient-to-b from-orange-300 to-orange-400 text-white',
+  'bg-gradient-to-b from-violet-400 to-purple-500 text-white',
+  'bg-gradient-to-b from-amber-300 to-amber-400 text-white',
+  'bg-gradient-to-b from-teal-400 to-cyan-500 text-white',
+  'bg-gradient-to-b from-lime-400 to-green-500 text-white',
 ]
 
 /** 移动端课表可用的缩放档位；双指捏合与 −/+ 按钮最终都吸附到这三个值。 */
