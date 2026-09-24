@@ -4,7 +4,7 @@ import { useIsMobile } from '~/hooks/use-mobile'
 import type { Class, ClassMark } from '~/lib/types'
 import { cn } from '~/lib/utils'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
-import { getCourseColor, getWeekParityLabel } from './utils'
+import { getCourseColor, getCourseOutOfWeekColor, getWeekParityLabel } from './utils'
 
 type ScheduleCourseCellProps = {
   course: Class
@@ -28,11 +28,13 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
   const note = mark?.note || ''
   const parityLabel = isOutOfWeek ? '非本周' : getWeekParityLabel(course.weeks)
   const courseColor = getCourseColor(course.courseId)
+  const courseOutOfWeekColor = getCourseOutOfWeekColor(course.courseId)
   // 出勤痕迹要同时满足「出勤统计已开启」与「用户在课表显示里没关掉它」，且只针对本周课：
   // 非本周课一般没有当周标记，灰色态优先，不再叠加未上淡化。
   const showAttendance = attendanceEnabled && showAttendanceStatus && !isOutOfWeek
 
   const contentRef = useRef<HTMLSpanElement>(null)
+  const blockRef = useRef<HTMLSpanElement>(null)
   const nameRef = useRef<HTMLSpanElement>(null)
   const roomRef = useRef<HTMLSpanElement>(null)
   const parityRef = useRef<HTMLSpanElement>(null)
@@ -59,6 +61,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
     const apply = () => {
       const name = nameRef.current
       const room = roomRef.current
+      const block = blockRef.current
       // 每轮都从基准状态重新测量：先清掉上一轮的内联覆盖，让 class 上的断点规则与字号重新生效。
       for (const el of [parityRef.current, teacherRef.current, noteRef.current]) {
         if (el) el.style.display = ''
@@ -71,6 +74,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
         room.style.fontSize = ''
         room.style.lineHeight = ''
       }
+      if (block) block.style.width = ''
 
       const fits = () => content.scrollHeight <= content.clientHeight + 1
       const parity = isMobile ? parityRef.current : null
@@ -88,30 +92,64 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
       }
 
       // 极端兜底：课名与教室不能丢，只能收字号与行高（最多两档，避免小到不可读）。
-      if (fits() || (!name && !room)) return
-      const baseName = isMobile ? 10 : 14
-      const baseRoom = isMobile ? 9 : 12
-      for (let step = 1; step <= 2; step += 1) {
-        if (name) {
-          name.style.fontSize = `${baseName - step}px`
-          name.style.lineHeight = '1.05'
+      if (!fits() && (name || room)) {
+        const baseName = isMobile ? 10 : 14
+        const baseRoom = isMobile ? 9 : 12
+        for (let step = 1; step <= 2; step += 1) {
+          if (name) {
+            name.style.fontSize = `${baseName - step}px`
+            name.style.lineHeight = '1.05'
+          }
+          if (room) {
+            room.style.fontSize = `${baseRoom - step}px`
+            room.style.lineHeight = '1.05'
+          }
+          if (fits()) break
         }
-        if (room) {
-          room.style.fontSize = `${baseRoom - step}px`
-          room.style.lineHeight = '1.05'
-        }
-        if (fits()) return
       }
+
+      // 文字块在卡片里居中、块内文字仍左对齐：把内层块收窄到「实际用到的最大行宽」，
+      // 再由外层 `items-center` 居中。逐行 `text-center` 会把每行都居中，长课名反而更难读。
+      if (!block) return
+      let used = 0
+      for (const el of [parity, name, room, teacher, note]) {
+        if (!el || el.style.display === 'none' || getComputedStyle(el).display === 'none') continue
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        for (const rect of range.getClientRects()) {
+          if (rect.height > 1) used = Math.max(used, rect.width)
+        }
+      }
+      if (used <= 0) return
+      block.style.width = `${Math.ceil(used)}px`
+      // 收窄后若换行变多、放不下，就退回整宽——宁可偏左，也绝不裁字。
+      if (!fits()) block.style.width = ''
+    }
+
+    let cancelled = false
+    const measure = () => {
+      if (!cancelled) apply()
     }
 
     apply()
 
+    // 首帧测完还不够可靠：挂载那一刻网格行高常常还没被 1fr 分配定稿（量到的是内容自然高，
+    // 于是误判「放得下」），中文字体也可能晚到改变换行；两者都不会触发按钮尺寸变化，
+    // 只靠 ResizeObserver 会一直用错误的结论，表现为长课名格子溢出被裁。
+    // 所以补两拍：下一帧、以及字体就绪后各重测一次。
+    const raf = requestAnimationFrame(measure)
+    void document.fonts?.ready.then(measure)
+
     // 格子尺寸由网格与缩放决定（内容改动不会改变外层按钮尺寸），因此观察外层按钮即可在
     // 缩放、旋屏、窗口尺寸变化后重新测量。
     const target = content.parentElement ?? content
-    const observer = new ResizeObserver(apply)
+    const observer = new ResizeObserver(measure)
     observer.observe(target)
-    return () => observer.disconnect()
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+    }
   })
 
   return (
@@ -120,39 +158,44 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
       data-course-cell
       {...(isOutOfWeek ? { 'data-course-out-of-week': '' } : {})}
       className={cn(
-        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-xs ring-1 ring-inset ring-black/5 transition-opacity focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:rounded-lg md:px-2 md:py-1.5',
-        isOutOfWeek ? 'bg-slate-300 opacity-75' : courseColor,
+        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-md px-1.5 py-1 text-left ring-2 ring-white/55 ring-inset transition-opacity focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:rounded-lg md:px-2 md:py-2',
+        isOutOfWeek ? courseOutOfWeekColor : courseColor,
         showAttendance && !isAttended && 'opacity-60 saturate-50'
       )}
       onClick={onClick}
       title={`${course.name}${showAttendance ? `，${isAttended ? '已上' : '未上'}` : ''}${isOutOfWeek ? '，非本周' : ''}，点击查看详情`}
     >
-      <span ref={contentRef} className="flex min-h-0 flex-1 flex-col">
-        <span ref={nameRef} data-course-name className="block text-[10px] font-semibold leading-[1.2] text-white md:text-sm md:leading-5">
-          {course.name}
-        </span>
-        {parityLabel && (
-          <span ref={parityRef} data-course-parity className="hidden text-[9px] leading-3 text-white/70 md:hidden">
-            {parityLabel}
+      <span ref={contentRef} className="flex min-h-0 flex-1 flex-col items-center [justify-content:safe_center]">
+        <span ref={blockRef} className="block text-left">
+          <span
+            ref={nameRef}
+            data-course-name
+            className="block break-words text-[10px] font-semibold leading-[1.2] text-white md:text-sm md:leading-5"
+          >
+            {course.name}
           </span>
-        )}
-        {course.classroom && (
-          <span ref={roomRef} className="mt-0.5 block break-all text-[9px] leading-3 text-white/85 md:text-xs md:leading-5">
-            {course.classroom}
-          </span>
-        )}
-        {course.teacher && (
-          <span ref={teacherRef} className="hidden break-all text-[9px] leading-3 text-white/80 md:text-xs md:leading-5">
-            {course.teacher}
-          </span>
-        )}
-        <span
-          ref={noteRef}
-          className="mt-auto hidden break-all text-[9px] leading-3 text-white/70 md:truncate md:text-xs md:leading-[18px]"
-        >
-          {note || (
-            <span className="hidden text-white/60 transition-opacity md:inline md:opacity-0 md:group-hover:opacity-100">点击查看详情</span>
+          {parityLabel && (
+            <span ref={parityRef} data-course-parity className="hidden text-[9px] leading-3 text-white/70 md:hidden">
+              {parityLabel}
+            </span>
           )}
+          {course.classroom && (
+            <span ref={roomRef} className="mt-0.5 block break-words text-[9px] leading-3 text-white/85 md:text-xs md:leading-5">
+              {course.classroom}
+            </span>
+          )}
+          {course.teacher && (
+            <span ref={teacherRef} className="hidden break-all text-[9px] leading-3 text-white/80 md:text-xs md:leading-5">
+              {course.teacher}
+            </span>
+          )}
+          <span ref={noteRef} className="hidden break-all text-[9px] leading-3 text-white/70 md:truncate md:text-xs md:leading-[18px]">
+            {note || (
+              <span className="hidden text-white/60 transition-opacity md:inline md:opacity-0 md:group-hover:opacity-100">
+                点击查看详情
+              </span>
+            )}
+          </span>
         </span>
       </span>
       {showAttendance && (
