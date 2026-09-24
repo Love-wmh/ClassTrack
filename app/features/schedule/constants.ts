@@ -4,15 +4,23 @@ export const weekDays = [1, 2, 3, 4, 5, 6, 7]
 
 export const sections = Array.from({ length: 12 }, (_, index) => index + 1)
 
+/**
+ * 课表课程格子的 8 组配色。
+ *
+ * 第四版（2026-09-24 真机三轮反馈后定稿）：平色、白字、无渐变、无阴影。
+ * 每格一个「淡而不寡」的中间调（HSB 饱和度 ≤0.5、亮度 0.6–0.7，白字对比 ≥1.9），
+ * 颜色退为背景、不喧宾夺主；8 个色相间隔 ≥30°（玫瑰350°/蜜橙20°/鹅黄49°/橄榄90°/
+ * 翡翠160°/天空200°/堇紫250°/品红300°），杜绝「深绿浅绿分不清」。
+ */
 export const courseColors = [
-  'bg-gradient-to-b from-emerald-400 to-emerald-500 text-white',
-  'bg-gradient-to-b from-sky-400 to-blue-500 text-white',
-  'bg-gradient-to-b from-rose-400 to-pink-500 text-white',
-  'bg-gradient-to-b from-orange-300 to-orange-400 text-white',
-  'bg-gradient-to-b from-violet-400 to-purple-500 text-white',
-  'bg-gradient-to-b from-amber-300 to-amber-400 text-white',
-  'bg-gradient-to-b from-teal-400 to-cyan-500 text-white',
-  'bg-gradient-to-b from-lime-400 to-green-500 text-white',
+  'bg-[#da8b98] text-white',
+  'bg-[#dc9774] text-white',
+  'bg-[#c9b458] text-white',
+  'bg-[#94bf69] text-white',
+  'bg-[#62bc9e] text-white',
+  'bg-[#6cafd0] text-white',
+  'bg-[#9a8ed7] text-white',
+  'bg-[#c87ec8] text-white',
 ]
 
 /** 移动端课表可用的缩放档位；双指捏合与 −/+ 按钮最终都吸附到这三个值。 */

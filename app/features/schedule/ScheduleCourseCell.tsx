@@ -42,7 +42,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
   /**
    * 按格子实际可用高度决定可选行显示到哪一级。
    *
-   * 课名与 `@教室` 是硬要求：任何尺寸、任何缩放档位下都必须完整可见。其余三行是弹性内容，
+   * 课名与教室是硬要求：任何尺寸、任何缩放档位下都必须完整可见。其余三行是弹性内容，
    * 纯 CSS 的高度阈值区分不出「同样高度、课名长短差很多」的格子（20 字课名要占 7 行，
    * 3 字课名只占 1 行，两者格高相同），所以这里实测一次内容高度，再按
    * **单双周/非本周标签 → 教师 → 备注** 的顺序从低到高整行丢弃，直到放得下为止 ——
@@ -87,7 +87,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
         el.style.display = ''
       }
 
-      // 极端兜底：课名与 @教室 不能丢，只能收字号与行高（最多两档，避免小到不可读）。
+      // 极端兜底：课名与教室不能丢，只能收字号与行高（最多两档，避免小到不可读）。
       if (fits() || (!name && !room)) return
       const baseName = isMobile ? 10 : 14
       const baseRoom = isMobile ? 9 : 12
@@ -120,8 +120,8 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
       data-course-cell
       {...(isOutOfWeek ? { 'data-course-out-of-week': '' } : {})}
       className={cn(
-        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-xs ring-1 ring-inset ring-white/25 transition-opacity focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:rounded-lg md:px-2 md:py-1.5',
-        isOutOfWeek ? 'bg-gradient-to-b from-slate-300 to-slate-400 opacity-75' : courseColor,
+        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden rounded-md px-1.5 py-0.5 text-left shadow-xs ring-1 ring-inset ring-black/5 transition-opacity focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:rounded-lg md:px-2 md:py-1.5',
+        isOutOfWeek ? 'bg-slate-300 opacity-75' : courseColor,
         showAttendance && !isAttended && 'opacity-60 saturate-50'
       )}
       onClick={onClick}
@@ -138,7 +138,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
         )}
         {course.classroom && (
           <span ref={roomRef} className="mt-0.5 block break-all text-[9px] leading-3 text-white/85 md:text-xs md:leading-5">
-            @{course.classroom}
+            {course.classroom}
           </span>
         )}
         {course.teacher && (
@@ -156,7 +156,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
         </span>
       </span>
       {showAttendance && (
-        <span className="absolute bottom-1 right-1 text-white/90 drop-shadow-sm">
+        <span className="absolute bottom-1 right-1 text-white/90">
           {isAttended ? <CheckCircle2 className="size-3 md:size-4" /> : <CircleAlert className="size-3 md:size-4" />}
         </span>
       )}

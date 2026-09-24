@@ -121,7 +121,11 @@ export default function ScheduleTable({
           {visibleCourses.map(({ course, isOutOfWeek }) => (
             <div
               key={course.id}
-              className="min-h-0 overflow-hidden p-px"
+              className={cn(
+                'min-h-0 overflow-hidden border-border p-px',
+                course.dayOfWeek !== 7 && 'border-r',
+                course.endSection !== 12 && 'border-b'
+              )}
               style={{
                 gridColumn: course.dayOfWeek + 1,
                 gridRow: `${course.startSection + 1} / ${course.endSection + 2}`,
