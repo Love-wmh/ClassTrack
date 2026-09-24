@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "验收 data-* 挂钩保留与移动端缩放/布局回归"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "质量门：lint/typecheck/test 标准"}
+{"file": ".trellis/tasks/09-24-schedule-cell-vivid/prd.md", "reason": "验收标准 AC1-AC7 对照"}
+{"file": ".trellis/tasks/09-24-schedule-cell-vivid/design.md", "reason": "验收冲突消解与样式契约是否按设计落地"}

@@ -102,6 +102,66 @@ export function getCurrentWeek(firstWeekStartDate: string | null, maxWeek: numbe
   }
 }
 
+/** 课表渲染用的视图模型：在原课程上叠加“是否非本周”的淡化标记。 */
+export type VisibleCourse = {
+  course: Class
+  isOutOfWeek: boolean
+}
+
+/**
+ * 计算某个教学周课表上要渲染的课程列表。
+ *
+ * `showOutOfWeek` 关闭时行为与旧版完全一致：只返回本周有课的课程。
+ * 开启时追加非本周课程（`isOutOfWeek=true`，保持输入顺序排在本周课之后），
+ * 并在函数内完成冲突消解：
+ * 1. 本周课优先，非本周课任一占用格（`day-section`）与本周课重叠即丢弃；
+ * 2. 非本周课之间互相重叠时保留先出现者；被丢弃课程的占用格同样视为已占用，
+ *    保证结果只取决于输入 `classes` 的顺序（稳定顺序）。
+ *
+ * @param classes 整个学期的课程列表。
+ * @param currentWeek 当前展示的教学周。
+ * @param showOutOfWeek 是否淡化显示非本周课程。
+ * @returns 可直接渲染的视图模型列表。
+ */
+export function getVisibleCourses(classes: Class[], currentWeek: number, showOutOfWeek: boolean): VisibleCourse[] {
+  const inWeek: VisibleCourse[] = []
+  const outOfWeek: VisibleCourse[] = []
+
+  classes.forEach((course) => {
+    if (course.weeks.includes(currentWeek)) {
+      inWeek.push({ course, isOutOfWeek: false })
+    } else {
+      outOfWeek.push({ course, isOutOfWeek: true })
+    }
+  })
+
+  if (!showOutOfWeek) return inWeek
+
+  const occupiedCells = new Set<string>()
+  const occupy = (course: Class) => {
+    for (let section = course.startSection; section <= course.endSection; section += 1) {
+      occupiedCells.add(`${course.dayOfWeek}-${section}`)
+    }
+  }
+  const overlaps = (course: Class) => {
+    for (let section = course.startSection; section <= course.endSection; section += 1) {
+      if (occupiedCells.has(`${course.dayOfWeek}-${section}`)) return true
+    }
+    return false
+  }
+
+  inWeek.forEach(({ course }) => occupy(course))
+
+  const visible: VisibleCourse[] = [...inWeek]
+  outOfWeek.forEach((entry) => {
+    const keep = !overlaps(entry.course)
+    occupy(entry.course)
+    if (keep) visible.push(entry)
+  })
+
+  return visible
+}
+
 /**
  * 单个节次可推导出的边界时间。
  *

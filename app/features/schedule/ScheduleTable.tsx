@@ -9,10 +9,10 @@ import { dayNames, sections, weekDays } from './constants'
 import ScheduleCourseCell from './ScheduleCourseCell'
 import { useScheduleZoom } from './hooks/useScheduleZoom'
 import { getDayDate } from './utils'
-import type { SectionTime } from './utils'
+import type { SectionTime, VisibleCourse } from './utils'
 
 type ScheduleTableProps = {
-  weekClasses: Class[]
+  visibleCourses: VisibleCourse[]
   classMarks: Record<string, ClassMark>
   /** 「出勤统计」是否开启；关闭时课程格不画出勤痕迹（备注照常显示）。 */
   attendanceEnabled: boolean
@@ -23,7 +23,7 @@ type ScheduleTableProps = {
 }
 
 export default function ScheduleTable({
-  weekClasses,
+  visibleCourses,
   classMarks,
   attendanceEnabled,
   currentWeek,
@@ -33,14 +33,11 @@ export default function ScheduleTable({
 }: ScheduleTableProps) {
   const isMobile = useIsMobile()
   const { zoom, detailLevel, scrollRef, gridRef, containerProps, zoomIn, zoomOut, canZoomIn, canZoomOut } = useScheduleZoom()
-  const showClassroom = isMobile ? detailLevel !== 'compact' : true
-  const showTeacher = isMobile && detailLevel === 'full'
-  const showNote = isMobile ? detailLevel === 'full' : true
 
   const monthDate = getDayDate(firstWeekStartDate, currentWeek, 1)
   const getClassMark = (classId: string, week: number) => classMarks[getMarkKey(classId, week)]
   const occupiedCells = new Set(
-    weekClasses.flatMap((course) => {
+    visibleCourses.flatMap(({ course }) => {
       const cells: string[] = []
       for (let section = course.startSection; section <= course.endSection; section += 1) {
         cells.push(`${course.dayOfWeek}-${section}`)
@@ -62,7 +59,7 @@ export default function ScheduleTable({
           data-schedule-grid
           data-zoom-level={zoom}
           data-zoom-tier={detailLevel}
-          className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(2.75rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
+          className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(4rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
           style={{ '--schedule-zoom': String(zoom) } as CSSProperties}
         >
           <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted text-[10px] font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] md:text-sm">
@@ -121,14 +118,10 @@ export default function ScheduleTable({
             })
           )}
 
-          {weekClasses.map((course) => (
+          {visibleCourses.map(({ course, isOutOfWeek }) => (
             <div
               key={course.id}
-              className={cn(
-                'min-h-0 overflow-hidden border-border',
-                course.dayOfWeek !== 7 && 'border-r',
-                course.endSection !== 12 && 'border-b'
-              )}
+              className="min-h-0 overflow-hidden p-px"
               style={{
                 gridColumn: course.dayOfWeek + 1,
                 gridRow: `${course.startSection + 1} / ${course.endSection + 2}`,
@@ -138,9 +131,7 @@ export default function ScheduleTable({
                 course={course}
                 mark={getClassMark(course.id, currentWeek)}
                 attendanceEnabled={attendanceEnabled}
-                showClassroom={showClassroom}
-                showTeacher={showTeacher}
-                showNote={showNote}
+                isOutOfWeek={isOutOfWeek}
                 onClick={() => onCourseClick(course)}
               />
             </div>

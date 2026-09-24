@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import ImportDialog from '~/components/dialog/ImportDialog'
 import { useClassStore } from '~/store'
 import { useAttendanceStore } from '~/store/attendanceStore'
+import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import ScheduleCourseDialog from './ScheduleCourseDialog'
-import { deriveSectionTimes, getCurrentRealWeek, getMaxWeek } from './utils'
+import { deriveSectionTimes, getCurrentRealWeek, getMaxWeek, getVisibleCourses } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
 import { useWeekKeyboardNavigation } from './hooks/useWeekKeyboardNavigation'
 
@@ -36,7 +37,11 @@ export default function SchedulePage() {
     }
   }, [isInitialized, school, classes.length, setShowImportDialog])
 
-  const weekClasses = useMemo(() => classes.filter((classItem) => classItem.weeks.includes(currentWeek)), [classes, currentWeek])
+  const showOutOfWeekCourses = useScheduleDisplayStore((state) => state.showOutOfWeekCourses)
+  const visibleCourses = useMemo(
+    () => getVisibleCourses(classes, currentWeek, showOutOfWeekCourses),
+    [classes, currentWeek, showOutOfWeekCourses]
+  )
 
   // 节次时间用整个学期的课程推导（不是仅本周），这样只在其他周出现的节次也能拿到时间。
   const sectionTimes = useMemo(() => deriveSectionTimes(classes), [classes])
@@ -49,7 +54,7 @@ export default function SchedulePage() {
   const attendanceEnabled = useAttendanceStore((state) => state.enabled)
   const { markAllAsAttended, markAllAsUnattended } = useWeekAttendance()
 
-  const selectedCourse = weekClasses.find((classItem) => classItem.id === selectedCourseId) || null
+  const selectedCourse = visibleCourses.find((entry) => entry.course.id === selectedCourseId)?.course || null
   const selectedMark = selectedCourse ? classMarks[`${selectedCourse.id}-${currentWeek}`] : undefined
 
   if (!isInitialized || !school || classes.length === 0) {
@@ -71,7 +76,7 @@ export default function SchedulePage() {
           onMarkAllAsUnattended={markAllAsUnattended}
         />
         <ScheduleTable
-          weekClasses={weekClasses}
+          visibleCourses={visibleCourses}
           classMarks={classMarks}
           attendanceEnabled={attendanceEnabled}
           currentWeek={currentWeek}

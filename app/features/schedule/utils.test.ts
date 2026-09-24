@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Class } from '~/lib/types'
-import { clampZoom, deriveSectionTimes, getDetailLevel, getWeekParityLabel, snapZoomTier } from './utils'
+import { clampZoom, deriveSectionTimes, getDetailLevel, getVisibleCourses, getWeekParityLabel, snapZoomTier } from './utils'
 
 function makeClass(overrides: Partial<Class> = {}): Class {
   return {
@@ -22,6 +22,44 @@ function makeClass(overrides: Partial<Class> = {}): Class {
     ...overrides,
   }
 }
+
+describe('getVisibleCourses', () => {
+  it('开关关闭时只返回本周课程，行为与旧过滤一致', () => {
+    const inWeek = makeClass({ id: 'a', weeks: [2, 3] })
+    const outWeek = makeClass({ id: 'b', weeks: [4, 5], dayOfWeek: 2 })
+
+    expect(getVisibleCourses([inWeek, outWeek], 2, false)).toEqual([{ course: inWeek, isOutOfWeek: false }])
+  })
+
+  it('开关开启时本周课在前、非本周课在后并带标记', () => {
+    const outWeek = makeClass({ id: 'b', weeks: [4], dayOfWeek: 2 })
+    const inWeek = makeClass({ id: 'a', weeks: [2] })
+
+    expect(getVisibleCourses([outWeek, inWeek], 2, true)).toEqual([
+      { course: inWeek, isOutOfWeek: false },
+      { course: outWeek, isOutOfWeek: true },
+    ])
+  })
+
+  it('非本周课与本周课占用格重叠时丢弃非本周课', () => {
+    const inWeek = makeClass({ id: 'a', weeks: [2], startSection: 1, endSection: 2 })
+    const overlapping = makeClass({ id: 'b', weeks: [3], startSection: 2, endSection: 3 })
+    const free = makeClass({ id: 'c', weeks: [3], startSection: 5, endSection: 6 })
+
+    expect(getVisibleCourses([inWeek, overlapping, free], 2, true)).toEqual([
+      { course: inWeek, isOutOfWeek: false },
+      { course: free, isOutOfWeek: true },
+    ])
+  })
+
+  it('非本周课互相重叠时保留先出现者，被丢弃者的占用格仍视为已占用', () => {
+    const first = makeClass({ id: 'a', weeks: [3], startSection: 1, endSection: 3 })
+    const second = makeClass({ id: 'b', weeks: [3], startSection: 2, endSection: 4 })
+    const third = makeClass({ id: 'c', weeks: [3], startSection: 4, endSection: 5 })
+
+    expect(getVisibleCourses([first, second, third], 2, true)).toEqual([{ course: first, isOutOfWeek: true }])
+  })
+})
 
 describe('deriveSectionTimes', () => {
   it('跨节课程只在首节给出开始时间、末节给出结束时间', () => {

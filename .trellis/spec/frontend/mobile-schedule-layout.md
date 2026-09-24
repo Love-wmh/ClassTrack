@@ -18,11 +18,15 @@
 | --- | --- | --- |
 | 网格最小宽度 | `min-w-[calc(100%*var(--schedule-zoom,1))]`（1x 时恰好等于容器宽度） | 保持 `md:min-w-[760px]` |
 | 网格列 | `grid-cols-[2rem_repeat(7,minmax(0,1fr))]` | `md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]` |
-| 行高 | `grid-rows-[2.25rem_repeat(12,minmax(2.75rem,1fr))]`（视口过矮时竖向滚动） | 同左 |
+| 行高 | `grid-rows-[2.25rem_repeat(12,minmax(4rem,1fr))]`：每节至少 4rem，**整周靠竖向滚动看全**（2026-09-24 起为容纳课名/教室/教师而适度加长；412×915 真机尺度下每节 64px、二连节格子 126px） | 同左 |
 | 页面内边距 | `px-2`（保证 360px 视口仍有 44px 列宽） | `sm:px-5` |
-| 课名行数 | 不截断，块内自然换行、超出块高被裁剪 | `md:line-clamp-2` |
-| 教室 | 仅 ≥1.5x | 一直显示 |
-| 教师 / 备注 | 仅 2x | 教师不显示、备注保持现状 |
+| 课名行数 | 不截断（任何端都无 line-clamp），块内自然换行 | 同左 |
+| 教室 | 恒显（`@教室` 前缀，为空不渲染），不截断 | 同左 |
+| 教师 | 由格子**实测内容高度**决定：放得下就整行显示（1x 手机的二连节格子通常放得下），放不下整行隐藏 | 同左 |
+| 备注 | 同「教师」，且优先级最低：空间不够时第一个被丢弃 | 同左 |
+| 格子视觉 | 彩色实底渐变 + 白字圆角卡片（`courseColors` 8 组）；非本周课灰色淡化卡 + 「非本周」标记（默认不显示，可在个人中心开启） | 同左 |
+| 出勤痕迹 | 右下白色图标（已上打勾 / 未上警示）+ 未上 `opacity-60 saturate-50`。**两层开关都要满足**：个人中心「出勤统计」已开启（能力层）**且**「课表显示 → 在课表上显示出勤状态」没被关掉（显示层）；非本周课不叠加出勤痕迹（灰色态优先） | 同左 |
+| 信息显隐优先级 | 课名 > `@教室`（这两行是硬要求，**永不丢弃**）> 单双周/「非本周」标签 > 教师 > 备注；丢弃顺序反向，且只整行隐藏、不裁半截 | 同左 |
 | 节次列时间 | 显示（节号 + 最多两行时间） | 不显示（只有节号） |
 | 节次列表头 | 月份（如 `9月`） | `节` |
 | 缩放 | 1x / 1.5x / 2x，双指捏合 + −/+ 按钮 + 双击 | 不启用 |
@@ -43,9 +47,26 @@ export const ZOOM_TIERS = [1, 1.5, 2] as const
 export function getDetailLevel(zoom: number): 'compact' | 'standard' | 'full'
 ```
 
-- **缩放只改列宽，不改字号**。列变宽 → 同样文字换行更少 → 长课名占的行数下降 → 腾出的行高容纳教室/教师。任何等比缩放（CSS `zoom`、`transform: scale`）换行位置不变，等于纯放大镜，**不要**改成那种实现。
-- 档位是离散的，松手后必须吸附到 `ZOOM_TIERS` 之一（`snapZoomTier`），信息分级才有确定触发点：<1.35 → `compact`，<1.9 → `standard`，其余 `full`。
+- **缩放只改列宽，不改字号**。列变宽 → 同样文字换行更少 → 长课名占的行数下降 → 腾出的行高容纳教师/备注。任何等比缩放（CSS `zoom`、`transform: scale`）换行位置不变，等于纯放大镜，**不要**改成那种实现。
+- 档位（`compact` / `standard` / `full`）仍是离散吸附：`snapZoomTier` 在 <1.35 → `compact`、<1.9 → `standard`、其余 `full`。但**档位不再驱动内容显隐**（2026-09-24 起）：显示到哪一级由下面的「空间自适应」实测决定，档位只作为 `data-zoom-tier` 这类观测锚点保留。
 - 缩放值不持久化，进页面固定 1x：避免用户上次放大后误以为课表只有三天。
+
+## 空间自适应（内容显隐怎么决定）
+
+**不要**用高度阈值（`[@container(min-height:…)]:` 之类）决定教师/备注显隐：Tailwind v4 不支持高度条件任意变体，生成的 CSS 里根本没有 `@container` 规则，等于这些行永远不显示；而且同一个高度下，20 字课名要占 7 行、3 字课名只占 1 行，阈值本身也区分不出来。
+
+`ScheduleCourseCell.tsx` 的实际做法是在 `useLayoutEffect` 里**实测一次**内容高度，按优先级逐级丢弃：
+
+1. 先把可选的三行（单双周/「非本周」标签、教师、备注）都置为 `display: block`；
+2. 若 `content.scrollHeight > content.clientHeight`，按 **备注 → 教师 → 单双周标签** 的顺序把整行设为隐藏，每丢一行重新判断，直到放得下；
+3. 丢完仍放不下（典型场景：只有一节的矮格子遇上超长课名）则进入兜底：把课名与 `@教室` 的字号连同行高一起收小（最多两档，手机 10→8px、桌面 14→12px），保证这两行完整。
+
+实现约定：
+
+- 直接写 `style.display` / `style.fontSize`，**不要** setState —— 测量与渲染不会互相触发，也不会每格多渲染一次。
+- 每轮 apply 先清掉上一轮的内联覆盖，否则 `md:hidden` 一类断点规则会被残留的内联样式压住（单双周标签就是靠 `md:hidden` 在桌面端隐藏的，只在手机端参与丢弃序列）。
+- 依赖 `ResizeObserver` 观察**外层格子按钮**（尺寸由网格与缩放决定，内容变化不会改动它）来在缩放 / 旋屏 / 窗口变化后重测；观察内容元素本身会因为自身尺寸变化互相触发。
+- 实测口径：`content.scrollHeight <= content.clientHeight + 1`（1px 亚像素容差）。
 
 ---
 
@@ -104,6 +125,7 @@ export function deriveSectionTimes(classes: Class[]): Record<number, SectionTime
 | `data-course-cell` | 课程块按钮 | 点击回归、读字号是否随缩放变化 |
 | `data-course-name` | 课名元素 | `textContent` 完整且 `webkit-line-clamp: none` |
 | `data-course-parity` | 单双周徽标 | 1x 可见、桌面端不渲染 |
+| `data-course-out-of-week` | 非本周课程块 | 判定「淡化显示非本周课程」是否生效、灰色态是否渲染 |
 | `data-schedule-zoom-control` | 缩放浮层 | 手机端在、桌面端不在 DOM |
 
 ---
@@ -117,8 +139,11 @@ pnpm dev &                                       # 后台进程不能跨 bash �
 agent-browser open http://localhost:5173/
 agent-browser set viewport 412 915 2
 # 写入种子数据后必须重新 open（zustand persist 只在模块初始化时读取）
-agent-browser eval --stdin < .trellis/tasks/09-20-mobile-schedule-week-grid/research/seed-schedule-fixture.js
-agent-browser open http://localhost:5173/
+# 种子数据走 storage 通道并紧跟 reload：直接 eval 写 localStorage 会被已启动的 app 回写覆盖
+SEED=.trellis/tasks/archive/2026-09/09-20-mobile-schedule-week-grid/research/seed-schedule-fixture.js
+node -e 'const fs=require("fs");const s={};new Function("localStorage",fs.readFileSync(process.argv[1],"utf8"))({setItem:(k,v)=>s[k]=String(v),getItem:()=>null});fs.writeFileSync("/tmp/claude/seed.json",s["class-track-storage"])' $SEED
+agent-browser storage local set class-track-storage "$(cat /tmp/claude/seed.json)"
+agent-browser reload
 # dev server 首次访问按需编译，必须轮询等 [data-course-cell] 出现再断言
 agent-browser eval "String(document.querySelectorAll('[data-course-cell]').length)"
 ```
@@ -135,3 +160,7 @@ agent-browser eval "String(document.querySelectorAll('[data-course-cell]').lengt
 - 在 `zoom` 状态下每帧 `setState`，或在手势里用 React state 驱动 `--schedule-zoom`：WebView 掉帧。
 - 把节次时间渲染进课程块：用户明确要求时间只在最左列。
 - 用 `textContent.includes('课程名')` 定位课程块做断言：课程名会被改写，应改用 `data-course-*` 属性。
+- 用高度阈值（容器查询类）决定教师/备注显隐：Tailwind v4 不生成 `@container` 规则，表现为「教师与备注永不出现」（桌面端干净加载时最明显）。
+- 把课名或 `@教室` 放进可丢弃序列换空间：这两行是硬要求，只能丢别的行、或走兜底缩字号。
+- 用 `agent-browser eval` 直接写 localStorage 灌种子数据：正在运行的应用会把它的内存状态回写覆盖，必须先 `storage local set` 再 `reload`。
+- `agent-browser open` 的 `--init-script` 只在**启动浏览器那一次**生效：`set viewport` / 先 `open` 不带 flag 都会提前启动浏览器，之后再加 flag 一律被忽略。

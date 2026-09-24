@@ -601,3 +601,25 @@ hero 在今天没课时改显示空课态三行（含快照补今日日期字段
 ### Status
 
 [OK] **Completed**
+
+
+## Session 18: 课表格子彩色实底改版 + 教师/备注实测降级
+<!-- trellis-session: v=2 fp=1ff66b47b77cfb00 -->
+
+**Date**: 2026-09-24
+**Task**: 课表格子彩色实底改版 + 教师/备注实测降级
+**Branch**: `feat/schedule-cell-pastel`
+
+### Summary
+
+格子改 wakeup 式彩色实底白字圆角卡片；个人中心新增「课表显示」（出勤状态、淡化非本周课）并新增 scheduleDisplayStore；getVisibleCourses 纯函数含冲突消解；教师/备注从失效的容器查询改为按内容实测降级 + 字号兜底；节次行高 2.75rem→4rem；rebase 合并 master 的出勤统计两层开关。验证：lint/typecheck/261 测试全绿；412×915/360×480/768×1024/1280×800 四档浏览器实测全部格子 clip≤1px。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `00aba63` | fix(schedule): 教师与备注改为按内容实测降级，并适度加长格子 |
+
+### Status
+
+[OK] **Completed**

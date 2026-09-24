@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "课表布局契约：网格/缩放/信息分级/data-* 挂钩红线，改格子样式必须遵守"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "新增 scheduleDisplayStore 需跟随独立 persist store 模式"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "新增设置卡片与格子组件需跟随组件结构与导出约定"}
+{"file": ".trellis/tasks/09-24-schedule-cell-vivid/design.md", "reason": "本次改版的技术设计：视图模型、冲突消解、样式契约"}
