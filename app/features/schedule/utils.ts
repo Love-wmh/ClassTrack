@@ -1,6 +1,14 @@
 import { addDays } from 'date-fns'
 import type { Class } from '~/lib/types'
-import { DETAIL_FULL_THRESHOLD, DETAIL_STANDARD_THRESHOLD, ZOOM_MAX, ZOOM_MIN, ZOOM_TIERS, courseColors } from './constants'
+import {
+  DETAIL_FULL_THRESHOLD,
+  DETAIL_STANDARD_THRESHOLD,
+  ZOOM_MAX,
+  ZOOM_MIN,
+  ZOOM_TIERS,
+  courseColors,
+  courseOutOfWeekColors,
+} from './constants'
 
 /**
  * 根据课程 ID 为课程分配一个稳定的课表颜色。
@@ -22,6 +30,11 @@ function courseHash(courseId: string) {
 
 export function getCourseColor(courseId: string) {
   return courseColors[courseHash(courseId) % courseColors.length]
+}
+
+/** 非本周淡化色：与 `getCourseColor` 走同一哈希档位，返回同序的淡化色。 */
+export function getCourseOutOfWeekColor(courseId: string) {
+  return courseOutOfWeekColors[courseHash(courseId) % courseOutOfWeekColors.length]
 }
 
 /**

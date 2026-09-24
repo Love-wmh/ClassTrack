@@ -59,7 +59,7 @@ export default function ScheduleTable({
           data-schedule-grid
           data-zoom-level={zoom}
           data-zoom-tier={detailLevel}
-          className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(4rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
+          className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(3.875rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
           style={{ '--schedule-zoom': String(zoom) } as CSSProperties}
         >
           <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted text-[10px] font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] md:text-sm">

@@ -648,3 +648,32 @@ hero 在今天没课时改显示空课态三行（含快照补今日日期字段
 ### Status
 
 [OK] **Completed**
+
+
+## Session 20: 课表卡色照参考图逐像素复刻 + 白描边/边距/居中打磨
+
+**Date**: 2026-09-24
+**Task**: 无（真机反馈驱动的连续微调，沿用「直接改，不建任务」）
+**Branch**: `feat/schedule-palette-vivid`
+
+### Summary
+
+第六轮最终收敛为「照参考图逐像素复刻」：对参考图做饱和度分割 + 连通域，取每张卡中位色、并用上下半区取样确认参考图卡片本就是**平色无渐变**，8 组色直接照搬（薄荷 #87e5d4 / 青蓝 #7bb7ef / 紫蓝 #84aef7 / 藕荷紫 #bcaaf5 / 玫瑰 #ee7c9b / 浅粉 #e7a0b3 / 珊瑚 #e98d78 / 金橙 #eab776）；浏览器实测渲染值 8/8 与采样一致。
+
+非本周卡不再用固定灰：用参考图唯一 OOW 样本（金橙 #eab776 → #d4c3ae）反推淡化公式（色相不变、HSL 亮度 +0.067、饱和 ×0.42，回代精确复现），对 8 组色逐一生成 courseOutOfWeekColors。
+
+打磨项：① 描边 2px **半透明白**（ring-white/55 ring-inset）——纯白在白底上只剩「卡片被缩小」的观感；② 上下内边距 2px→4px；③ 文字块**实测收窄到最长行宽**后由外层 items-center 居中、块内仍左对齐（实测 46.6px 卡 → 块 30px、左右各 8.3px 完全对称）；④ 课名/教室改 break-words（教室断在 `28-`/`A203`，修掉 break-all 切断数字、以及 `（Python）` 溢出被裁两个真 bug）。
+
+阶梯健壮性：首帧测量不可靠（网格 1fr 未定稿 / 中文字体晚到都不触发 ResizeObserver），补 rAF + document.fonts.ready 各重测一次，修掉长课名格溢出被裁。行高 4rem → 3.875rem（412×915 每节 62px），并保证超长课名格 shrunk=0。
+
+验证：lint/typecheck/261 测试全绿；浏览器 clipped 0、shrunk 0、教师 16/18、备注 16/18；spec 已同步采样配色、非本周推导色、文字块居中规则与 5 条新踩坑。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4d97f9b` | fix(schedule): 卡色照参考图采样复刻，白描边半透明并让文字块居中 |
+
+### Status
+
+[OK] **Completed**
