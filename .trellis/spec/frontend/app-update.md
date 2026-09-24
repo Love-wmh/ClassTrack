@@ -55,6 +55,12 @@ android-release.yml（生成 tag 与版本名） → APK 里的 versionName（@c
 - **通知**：只在**自动检查**发现更新时发（用户点「立即检查」时正看着界面，不需要第二条提醒）。
   权限在首次要发通知时申请；被拒**不改**开关（用户没做任何操作，静默翻开关会让人莫名其妙），
   卡片里给「系统通知权限未开启」的提示。只有用户主动打开开关却被拒时才把开关退回关闭。
+- **「发现新版本时发通知」默认关**（2026-09-23 用户口径）：首装 / 存储里没有该字段的设备不发通知、
+  **也不申请通知权限**，新版本仍在应用内弹模态框；「自动检查更新」保持默认**开**。默认值与「localStorage
+  是外部输入、坏值怎么逐字段收窄」都搬进了纯模块 `app/lib/app-update/settings.ts`
+  （`DEFAULT_UPDATE_SETTINGS` / `normalizeUpdateSettings`）并由 `settings.test.ts` 钉住，`updateStore` 只负责
+  把它交给 persist 的 `merge`。改默认值只影响存储里**没有**该字段的设备 —— 已经存过 `notify: true` 的
+  用户不受影响，这是有意的。
 - **`schedule()` 必须显式传 `isExactNotification: false`**：我们发的是「立刻投递」的通知，插件走
   `NotificationManager.notify`，不经过 AlarmManager。默认值 `true` 会让插件的 `doSchedule` 在系统未授予
   「闹钟与提醒」特殊访问时先 `startActivityForResult` 弹系统设置页**并等结果**，于是这次调用永不 resolve、

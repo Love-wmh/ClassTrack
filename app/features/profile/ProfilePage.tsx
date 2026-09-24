@@ -8,7 +8,9 @@ import CreateSemesterDialog from '~/components/dialog/CreateSemesterDialog'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { useClassStore } from '~/store'
+import { useAttendanceStore } from '~/store/attendanceStore'
 import { useDataExportImport } from '~/features/data-management/hooks/useDataExportImport'
+import AttendanceSettings from './AttendanceSettings'
 import MobileNavigationSettings from './MobileNavigationSettings'
 import WidgetPrecisionSettings from './WidgetPrecisionSettings'
 import AppUpdateSettings from './AppUpdateSettings'
@@ -31,7 +33,9 @@ export default function ProfilePage() {
   const { exportData } = useDataExportImport()
 
   const totalClasses = classes.length
-  const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
+  const attendanceEnabled = useAttendanceStore((state) => state.enabled)
+  // 关闭出勤时连这条计数都不算：这一行本来就不渲染，不做无意义的出勤统计。
+  const totalAttended = attendanceEnabled ? Object.values(classMarks).filter((mark) => mark.isAttended).length : 0
   const totalWithNote = Object.values(classMarks).filter((mark) => mark.note).length
   const currentSemester = semesters.find((semester) => semester.id === currentSemesterId)
 
@@ -49,12 +53,14 @@ export default function ProfilePage() {
                   <div className="text-sm font-medium">学校</div>
                   <DataDisplayButton>{school?.name || '未设置'}</DataDisplayButton>
                 </div>
-                <div className="flex items-center justify-between py-2">
-                  <div className="text-sm font-medium">已标记课程</div>
-                  <DataDisplayButton>
-                    {totalAttended} / {totalClasses}
-                  </DataDisplayButton>
-                </div>
+                {attendanceEnabled && (
+                  <div className="flex items-center justify-between py-2">
+                    <div className="text-sm font-medium">已标记课程</div>
+                    <DataDisplayButton>
+                      {totalAttended} / {totalClasses}
+                    </DataDisplayButton>
+                  </div>
+                )}
                 <div className="flex items-center justify-between py-2">
                   <div className="text-sm font-medium">有备注课程</div>
                   <DataDisplayButton>{totalWithNote}</DataDisplayButton>
@@ -107,6 +113,7 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+            <AttendanceSettings />
             <MobileNavigationSettings />
             <WidgetPrecisionSettings />
             <AppUpdateSettings />

@@ -9,6 +9,12 @@ type ScheduleCourseDialogProps = {
   course: Class | null
   currentWeek: number
   mark: ClassMark | undefined
+  /**
+   * 「出勤统计」是否开启；关闭时不渲染出勤切换按钮。
+   *
+   * 备注输入与保存**不受影响**：备注和出勤共用同一条 `ClassMark`，但功能上互不依赖。
+   */
+  attendanceEnabled: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onToggleAttendance: (classId: string, week: number) => void
@@ -19,6 +25,7 @@ export default function ScheduleCourseDialog({
   course,
   currentWeek,
   mark,
+  attendanceEnabled,
   open,
   onOpenChange,
   onToggleAttendance,
@@ -68,19 +75,21 @@ export default function ScheduleCourseDialog({
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className={
-            isAttended
-              ? 'min-h-12 justify-start border-emerald-300 bg-emerald-50 text-emerald-800'
-              : 'min-h-12 justify-start border-rose-300 bg-rose-50 text-rose-800'
-          }
-          onClick={() => onToggleAttendance(course.id, currentWeek)}
-        >
-          {isAttended ? <CheckCircle2 /> : <CircleAlert />}
-          {isAttended ? '已上课，点击切换为未上' : '未上课，点击切换为已上'}
-        </Button>
+        {attendanceEnabled && (
+          <Button
+            type="button"
+            variant="outline"
+            className={
+              isAttended
+                ? 'min-h-12 justify-start border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'min-h-12 justify-start border-rose-300 bg-rose-50 text-rose-800'
+            }
+            onClick={() => onToggleAttendance(course.id, currentWeek)}
+          >
+            {isAttended ? <CheckCircle2 /> : <CircleAlert />}
+            {isAttended ? '已上课，点击切换为未上' : '未上课，点击切换为已上'}
+          </Button>
+        )}
 
         <div className="space-y-2">
           <label htmlFor="schedule-course-note" className="text-sm font-medium">

@@ -30,7 +30,16 @@
     <!-- 「接下来」的标签 -->
     <string name="widget_hero_in_progress">正在进行</string>
     <string name="widget_hero_upcoming">接下来 · 第 %1$s 节</string>
-    <string name="widget_hero_upcoming_other_day">接下来 · %1$s</string>
+
+    <!--
+      今天没有可上的课时 hero 位置的次要行（时间 · 教室 那一行的位置）：一句轻松的话。
+      长句给「接下来」（3×2），短句给「紧凑」（1×2，内容宽只有 54~69dp，长句必然被裁）。
+      分档按**样式**而不是按格子尺寸 —— 尺寸阈值被小组件契约禁止。
+    -->
+    <string name="widget_hero_free_hint">享受你的美好时光吧</string>
+    <string name="widget_hero_free_hint_short">放松一下吧</string>
+    <string name="widget_hero_done_hint">今天的课上完啦，好好休息</string>
+    <string name="widget_hero_done_hint_short">课上完啦</string>
 
     <!-- 时间与教室 -->
     <string name="widget_time_range">%1$s - %2$s</string>
@@ -89,9 +98,9 @@
     <string name="widget_config_layout_day_list">全天课表</string>
     <string name="widget_config_layout_day_list_desc">列出今天一整天的课，正在上的那节高亮；今天没课时改列明天的课，格子放不下时可以上下滑动看完整天。</string>
     <string name="widget_config_layout_next_up">接下来</string>
-    <string name="widget_config_layout_next_up_desc">顶部大卡片突出正在进行或接下来的一节课，下方接课表；今天没课时改接明天的课。</string>
+    <string name="widget_config_layout_next_up_desc">顶部大卡片突出正在进行或接下来的一节课，下方接课表；今天没课时上面显示今天的日期与「今天无课」，课表改接明天的课。</string>
     <string name="widget_config_layout_compact">紧凑</string>
-    <string name="widget_config_layout_compact_desc">只显示正在进行或接下来的一节课，另加一行今天的节数。</string>
+    <string name="widget_config_layout_compact_desc">只显示正在进行或接下来的一节课，另加一行今天的节数；今天没课时显示今天的日期与一句没课提示。</string>
     <string name="widget_config_finished_section">今天已上完的课</string>
     <string name="widget_config_finished_show_dim">灰显保留</string>
     <string name="widget_config_finished_hide">不显示</string>

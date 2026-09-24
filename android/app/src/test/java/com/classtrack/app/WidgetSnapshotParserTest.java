@@ -24,6 +24,7 @@ public class WidgetSnapshotParserTest {
             + "\"validUntilEpochMs\":1700259200000,"
             + "\"generatedAt\":\"2026-09-07T09:00:00+08:00\","
             + "\"timezone\":\"Asia/Shanghai\","
+            + "\"todayDayKey\":\"2026-09-07\",\"todayWeekdayLabel\":\"周一\","
             + "\"dayEndEpochMs\":[1700003600000,1700090000000],"
             + "\"entries\":["
             + "{\"id\":\"MATH#2026-09-07\",\"name\":\"高等数学\",\"classroom\":\"A101\",\"sections\":\"3-4\","
@@ -46,10 +47,28 @@ public class WidgetSnapshotParserTest {
         assertEquals(2, snapshot.getDayEndEpochMs().size());
         assertEquals(Long.valueOf(1700090000000L), snapshot.getDayEndEpochMs().get(1));
         assertEquals("Asia/Shanghai", snapshot.getTimezone());
+        assertEquals("2026-09-07", snapshot.getTodayDayKey());
+        assertEquals("周一", snapshot.getTodayWeekdayLabel());
         assertEquals(2, snapshot.getEntries().size());
         assertEquals("高等数学", snapshot.getEntries().get(0).getName());
         assertEquals("A101", snapshot.getEntries().get(0).getClassroom());
         assertEquals(0, snapshot.getEntries().get(0).getDayOffset());
+    }
+
+    /**
+     * 「今天」的日期与星期是**可选**字段：上一版应用写入的快照没有它们，
+     * 缺了只是 hero 的日期行不画日期，绝不能让整份快照不可用。
+     */
+    @Test
+    public void treatsMissingTodayFieldsAsEmpty() {
+        String legacy = replace(VALID_PAYLOAD, "\"todayDayKey\":\"2026-09-07\",\"todayWeekdayLabel\":\"周一\",", "");
+        WidgetSnapshot snapshot = WidgetSnapshotParser.parse(legacy);
+
+        assertNotNull(snapshot);
+        assertEquals(WidgetSnapshot.Status.OK, snapshot.getStatus());
+        assertEquals(2, snapshot.getEntries().size());
+        assertEquals("", snapshot.getTodayDayKey());
+        assertEquals("", snapshot.getTodayWeekdayLabel());
     }
 
     @Test

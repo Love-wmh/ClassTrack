@@ -10,6 +10,7 @@ import PwaUpdatePrompt from '~/components/pwa/PwaUpdatePrompt'
 import { isNativeApp } from '~/lib/native-platform'
 import WidgetSnapshotSync from '~/components/native-widget/WidgetSnapshotSync'
 import WidgetGuideDialog from '~/components/native-widget/WidgetGuideDialog'
+import ProfileGuideDialog from '~/components/native-widget/ProfileGuideDialog'
 import UpdateCheckRunner from '~/components/app-update/UpdateCheckRunner'
 import './app.css'
 import React from 'react'
@@ -45,6 +46,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {!nativeShell && <WidgetSnapshotSync />}
         {/* 导入成功后的一次性加桌引导：与 WidgetSnapshotSync 同属小工具联动，挂同一处（组件自己判平台）。 */}
         {!nativeShell && <WidgetGuideDialog />}
+        {/* 加桌引导关闭后的第二段引导（去个人中心）：显示时机由 store 与加桌面板开合共同决定。 */}
+        {!nativeShell && <ProfileGuideDialog />}
         {/*
           更新检测：同一份实例既驱动「冷启动 / 回前台」的自动检查，又渲染「发现新版本」模态框，
           所以只能挂一处。非 Android 时它内部直接不渲染 —— PWA 的更新提示仍由 PwaUpdatePrompt 负责。

@@ -1,6 +1,6 @@
 import type { AppData, Class, ClassMark, CourseField, CourseMetadataMap, School, Semester } from '~/lib/types'
 
-export const CLASS_TRACK_SCHEMA_VERSION = 3
+export const CLASS_TRACK_SCHEMA_VERSION = 4
 
 type LegacyAppData = Partial<Omit<AppData, 'semesters' | 'currentSemesterId' | 'courseMetadata' | 'schemaVersion'>> & {
   semesters?: unknown
@@ -197,8 +197,32 @@ function normalizeClasses(value: unknown): Class[] {
   return Array.isArray(value) ? (value as Class[]) : []
 }
 
+/**
+ * 归一化出勤标记表（persist 迁移与备份导入共用同一条通道）。
+ *
+ * 旧版本（schema ≤ 3）的标记没有 `attendanceMarked` 字段：这里一律补成 `true`（= 做过出勤判断），
+ * 于是「写备注 = 缺勤」这类老账的统计口径**一个数都不变**。老数据里「只写了备注」与
+ * 「标了未上又写备注」完全同形、无法反推，这是刻意的取舍（见任务 09-24 design D9）。
+ *
+ * 非对象条目一律丢弃：原实现直接 `as` 直通，UI 读到的是 `undefined`，丢弃不损失有效信息。
+ * key 原样保留（不按 `getMarkKey` 重算），避免改写已有存储键。
+ */
 function normalizeClassMarks(value: unknown): Record<string, ClassMark> {
-  return isRecord(value) ? (value as Record<string, ClassMark>) : {}
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<Record<string, ClassMark>>((result, [key, rawMark]) => {
+    if (!isRecord(rawMark)) return result
+
+    result[key] = {
+      classId: normalizeString(rawMark.classId),
+      week: normalizeWeek(rawMark.week),
+      isAttended: Boolean(rawMark.isAttended),
+      note: typeof rawMark.note === 'string' ? rawMark.note : '',
+      attendanceMarked: rawMark.attendanceMarked !== false,
+    }
+
+    return result
+  }, {})
 }
 
 function normalizeCourseMetadata(value: unknown): CourseMetadataMap {

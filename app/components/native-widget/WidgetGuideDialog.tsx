@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { isNativeWidgetSnapshotAvailable } from '~/lib/native-widget-snapshot'
+import { hasSeenProfileGuide, markProfileGuideSeen, shouldShowProfileGuide } from '~/lib/profile-guide'
 import {
   WIDGET_GUIDE_DESCRIPTION,
   WIDGET_GUIDE_PRIMARY_ACTION,
@@ -69,10 +70,29 @@ export default function WidgetGuideDialog() {
   const showWidgetGuide = useClassStore((state) => state.showWidgetGuide)
   const setShowWidgetGuide = useClassStore((state) => state.setShowWidgetGuide)
   const setWidgetPinSheetOpen = useClassStore((state) => state.setWidgetPinSheetOpen)
+  const setShowProfileGuide = useClassStore((state) => state.setShowProfileGuide)
 
   if (!isNativeWidgetSnapshotAvailable()) return null
 
-  const close = () => setShowWidgetGuide(false)
+  /**
+   * 关闭第一段引导，并顺手安排第二段（去个人中心看看）。
+   *
+   * <p>两个按钮都走这里：用户口径是「第一段一关就接第二段」，与有没有真的加上卡片无关。
+   * 标记在**决定要弹的那一刻**写（而不是第二段被关掉时），中途被杀也不会再打扰一次。
+   *
+   * <p>点「去添加」时加桌面板会随即打开，第二段由 `ProfileGuideDialog` 自己等面板关掉再出现 ——
+   * 所以这里只管把开关立起来。
+   */
+  const close = () => {
+    setShowWidgetGuide(false)
+
+    // 这个组件在非安卓原生时已经返回 null，因此这里「有小工具」恒为真。
+    const shouldShowProfile = shouldShowProfileGuide({ nativeWidgetAvailable: true, seen: hasSeenProfileGuide() })
+    if (!shouldShowProfile) return
+
+    markProfileGuideSeen()
+    setShowProfileGuide(true)
+  }
 
   return (
     <Dialog open={showWidgetGuide} onOpenChange={(open) => (open ? undefined : close())}>

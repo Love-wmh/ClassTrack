@@ -6,14 +6,29 @@ import { getCourseColor, getWeekParityLabel } from './utils'
 type ScheduleCourseCellProps = {
   course: Class
   mark: ClassMark | undefined
+  /**
+   * 「出勤统计」是否开启（个人中心的开关）。
+   *
+   * 关闭时这一格不出现任何已上/未上痕迹（外圈、左侧色条、角标与 title 文案），
+   * **但备注照常显示** —— 备注与出勤共用同一条 `ClassMark`，却是两件事。
+   */
+  attendanceEnabled: boolean
   showClassroom: boolean
   showTeacher: boolean
   showNote: boolean
   onClick: () => void
 }
 
-export default function ScheduleCourseCell({ course, mark, showClassroom, showTeacher, showNote, onClick }: ScheduleCourseCellProps) {
-  const isAttended = !!mark?.isAttended
+export default function ScheduleCourseCell({
+  course,
+  mark,
+  attendanceEnabled,
+  showClassroom,
+  showTeacher,
+  showNote,
+  onClick,
+}: ScheduleCourseCellProps) {
+  const isAttended = attendanceEnabled && !!mark?.isAttended
   const note = mark?.note || ''
   const parityLabel = getWeekParityLabel(course.weeks)
   const courseColor = getCourseColor(course.courseId)
@@ -25,12 +40,12 @@ export default function ScheduleCourseCell({ course, mark, showClassroom, showTe
       className={cn(
         'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden px-1 py-0.5 text-left transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex-row md:items-start md:justify-between md:gap-1 md:px-2 md:py-1.5',
         courseColor,
-        isAttended ? 'ring-1 ring-inset ring-emerald-300/70' : 'ring-1 ring-inset ring-rose-300/70'
+        attendanceEnabled && (isAttended ? 'ring-1 ring-inset ring-emerald-300/70' : 'ring-1 ring-inset ring-rose-300/70')
       )}
       onClick={onClick}
-      title={`${course.name}，${isAttended ? '已上' : '未上'}，点击查看详情`}
+      title={attendanceEnabled ? `${course.name}，${isAttended ? '已上' : '未上'}，点击查看详情` : `${course.name}，点击查看详情`}
     >
-      <span className={cn('absolute left-0 top-0 h-full w-0.5', isAttended ? 'bg-emerald-500' : 'bg-rose-500')} />
+      {attendanceEnabled && <span className={cn('absolute left-0 top-0 h-full w-0.5', isAttended ? 'bg-emerald-500' : 'bg-rose-500')} />}
       <span className="flex min-h-0 flex-1 flex-col pl-1 md:min-w-0">
         <span
           data-course-name
@@ -59,14 +74,16 @@ export default function ScheduleCourseCell({ course, mark, showClassroom, showTe
           </span>
         )}
       </span>
-      <span
-        className={cn(
-          'absolute bottom-0.5 right-0.5 rounded-sm bg-white/70 md:static md:mt-0.5 md:shrink-0 md:bg-transparent',
-          isAttended ? 'text-emerald-600' : 'text-rose-600'
-        )}
-      >
-        {isAttended ? <CheckCircle2 className="size-3 md:size-4" /> : <CircleAlert className="size-3 md:size-4" />}
-      </span>
+      {attendanceEnabled && (
+        <span
+          className={cn(
+            'absolute bottom-0.5 right-0.5 rounded-sm bg-white/70 md:static md:mt-0.5 md:shrink-0 md:bg-transparent',
+            isAttended ? 'text-emerald-600' : 'text-rose-600'
+          )}
+        >
+          {isAttended ? <CheckCircle2 className="size-3 md:size-4" /> : <CircleAlert className="size-3 md:size-4" />}
+        </span>
+      )}
     </button>
   )
 }

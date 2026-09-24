@@ -1,5 +1,5 @@
 import type { Class, ClassMark } from '~/lib/types'
-import { getMarkKey } from '~/store/utils'
+import { getMarkKey, isAttendanceMarked } from '~/store/utils'
 
 export type CourseSession = {
   id: string
@@ -7,6 +7,31 @@ export type CourseSession = {
   week: number
   mark?: ClassMark
   isPast: boolean
+}
+
+/**
+ * 已上课次：标记里明确记过「已上」。
+ *
+ * 「只写了备注」的标记 `isAttended` 是 `false`，因此天然不算已上，无需额外判据。
+ */
+export function isAttendedSession(session: CourseSession) {
+  return session.mark?.isAttended === true
+}
+
+/**
+ * 缺勤课次：**做过出勤判断**且判的是「未上」。
+ *
+ * 只看 `!isAttended` 会把「只写了备注」的课次也算成缺勤 —— 那正是本任务要修掉的老账。
+ */
+export function isAbsentSession(session: CourseSession) {
+  return isAttendanceMarked(session.mark) && !session.mark?.isAttended
+}
+
+/**
+ * 未标记课次：没有做过出勤判断（没有任何标记，或只有备注）。
+ */
+export function isUnmarkedSession(session: CourseSession) {
+  return !isAttendanceMarked(session.mark)
 }
 
 export type DashboardRange = {

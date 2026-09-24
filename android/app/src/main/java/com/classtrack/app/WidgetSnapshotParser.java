@@ -44,6 +44,10 @@ public final class WidgetSnapshotParser {
             // generatedAt / timezone 只用于诊断，缺失不应让整份快照不可用。
             String generatedAtLabel = root.optString("generatedAt", "");
             String timezone = root.optString("timezone", "");
+            // 「今天」的日期与星期同样是**可选**字段：上一版应用写入的快照没有它们，
+            // 缺了只是 hero 的日期行不画日期，绝不能让整份快照不可用。
+            String todayDayKey = root.optString("todayDayKey", "");
+            String todayWeekdayLabel = root.optString("todayWeekdayLabel", "");
 
             List<WidgetOccurrence> entries = new ArrayList<>();
             for (int index = 0; index < entriesJson.length(); index++) {
@@ -59,7 +63,7 @@ public final class WidgetSnapshotParser {
                 dayEnds.add(((Number) value).longValue());
             }
             return new WidgetSnapshot(WidgetSnapshot.SCHEMA_VERSION, status, generatedAt,
-                    validUntil, entries, dayEnds, generatedAtLabel, timezone);
+                    validUntil, entries, dayEnds, generatedAtLabel, timezone, todayDayKey, todayWeekdayLabel);
         } catch (Exception ignored) {
             return null;
         }

@@ -22,6 +22,7 @@ export interface ClassMark {
   classId: string
   week: number
   isAttended: boolean // 是否上课
+  attendanceMarked: boolean // 这一条是否做过出勤判断（只写了备注时为 false）
   note: string // 备注
 }
 
@@ -106,5 +107,5 @@ export interface AppData {
   semesters: Semester[]
   currentSemesterId: string | null
   courseMetadata: CourseMetadataMap
-  schemaVersion: 3
+  schemaVersion: 4
 }

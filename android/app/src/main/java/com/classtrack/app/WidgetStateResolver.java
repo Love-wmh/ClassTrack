@@ -79,7 +79,8 @@ public final class WidgetStateResolver {
                 : Collections.<WidgetDayItem>emptyList();
 
         return WidgetDisplayState.ready(hero, dayItems(entries, currentDayOffset, nowEpochMs), nextDayItems, heroState,
-                snapshot.getValidUntilEpochMs(), currentDayEnd, boundary);
+                snapshot.getValidUntilEpochMs(), currentDayEnd, boundary,
+                snapshot.getTodayDayKey(), snapshot.getTodayWeekdayLabel());
     }
 
     /**

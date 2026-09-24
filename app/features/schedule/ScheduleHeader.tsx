@@ -3,11 +3,19 @@ import { ChevronLeft, ChevronRight, CheckCircle2, CircleAlert } from 'lucide-rea
 import ConfirmDialog from '~/components/dialog/ConfirmDialog'
 import WidgetPinEntry from './WidgetPinEntry'
 import { Button } from '~/components/ui/button'
+import { cn } from '~/lib/utils'
 
 type ScheduleHeaderProps = {
   currentWeek: number
   maxWeek: number
   currentRealWeek: number
+  /**
+   * 「出勤统计」是否开启。
+   *
+   * 关闭时整组批量标记入口（「全部已上 / 全部未上」及其确认弹窗）不渲染，
+   * 手机端左侧动作组随之从 5 列收窄到 3 列 —— 少两个按钮还留着空洞会让顶栏显得断裂。
+   */
+  attendanceEnabled: boolean
   onWeekChange: (week: number) => void
   onMarkAllAsAttended: () => void
   onMarkAllAsUnattended: () => void
@@ -19,6 +27,7 @@ export default function ScheduleHeader({
   currentWeek,
   maxWeek,
   currentRealWeek,
+  attendanceEnabled,
   onWeekChange,
   onMarkAllAsAttended,
   onMarkAllAsUnattended,
@@ -46,7 +55,12 @@ export default function ScheduleHeader({
   return (
     <>
       <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid grid-cols-[2.25rem_2.25rem_1fr_1fr_2.25rem] items-center gap-1.5 sm:flex sm:gap-2">
+        <div
+          className={cn(
+            'grid items-center gap-1.5 sm:flex sm:gap-2',
+            attendanceEnabled ? 'grid-cols-[2.25rem_2.25rem_1fr_1fr_2.25rem]' : 'grid-cols-[2.25rem_2.25rem_2.25rem]'
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -67,22 +81,26 @@ export default function ScheduleHeader({
           >
             <ChevronRight className="size-4" />
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setConfirmAction('attended')}
-            className="h-9 min-w-0 bg-emerald-50 px-2 text-sm font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900 sm:px-3"
-          >
-            <CheckCircle2 className="size-4 sm:mr-1.5" />
-            全部已上
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setConfirmAction('unattended')}
-            className="h-9 min-w-0 bg-rose-50 px-2 text-sm font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 sm:px-3"
-          >
-            <CircleAlert className="size-4 sm:mr-1.5" />
-            全部未上
-          </Button>
+          {attendanceEnabled && (
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmAction('attended')}
+                className="h-9 min-w-0 bg-emerald-50 px-2 text-sm font-medium text-emerald-700 shadow-xs hover:bg-emerald-100 hover:text-emerald-900 sm:px-3"
+              >
+                <CheckCircle2 className="size-4 sm:mr-1.5" />
+                全部已上
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmAction('unattended')}
+                className="h-9 min-w-0 bg-rose-50 px-2 text-sm font-medium text-rose-700 shadow-xs hover:bg-rose-100 hover:text-rose-900 sm:px-3"
+              >
+                <CircleAlert className="size-4 sm:mr-1.5" />
+                全部未上
+              </Button>
+            </>
+          )}
           {/* 应用内「添加到桌面」：只在 Android 原生渲染（见组件注释）。放在动作组同一行，
               不额外占一行高度 —— 顶栏本来就是这次要压缩的地方。 */}
           <WidgetPinEntry />
@@ -102,14 +120,16 @@ export default function ScheduleHeader({
         </div>
       </div>
 
-      <ConfirmDialog
-        open={confirmAction !== null}
-        title={confirmTitle}
-        description={confirmDescription}
-        confirmVariant={isAttendedAction ? 'default' : 'destructive'}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-        onConfirm={handleConfirm}
-      />
+      {attendanceEnabled && (
+        <ConfirmDialog
+          open={confirmAction !== null}
+          title={confirmTitle}
+          description={confirmDescription}
+          confirmVariant={isAttendedAction ? 'default' : 'destructive'}
+          onOpenChange={(open) => !open && setConfirmAction(null)}
+          onConfirm={handleConfirm}
+        />
+      )}
     </>
   )
 }

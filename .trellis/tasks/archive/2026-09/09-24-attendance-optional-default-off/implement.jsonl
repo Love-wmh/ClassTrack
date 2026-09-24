@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "新增设备级 store 的约定依据：key、partialize、merge 收窄，以及「为什么要独立于 useClassStore」"}
+{"file": ".trellis/spec/frontend/app-update.md", "reason": "设备相关偏好 store 的先例：默认值口径、merge 逐字段白名单、诚实文案要求"}
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "课表顶栏手机端列数与控件尺寸契约（去掉两个批量按钮后列数必须同步收窄）"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件放位、props 类型与 default/named export 的既有模式"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "新文件落点：app/lib、app/store、app/features/<feature>/components 的分工"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "交付前必须跑的五项门禁、禁止模式（any/ts-ignore/eslint-disable）与中文注释口径"}
