@@ -33,9 +33,6 @@ export default function ScheduleTable({
 }: ScheduleTableProps) {
   const isMobile = useIsMobile()
   const { zoom, detailLevel, scrollRef, gridRef, containerProps, zoomIn, zoomOut, canZoomIn, canZoomOut } = useScheduleZoom()
-  // 内容显隐主要由课程格子的高度容器查询驱动；缩放 full 档（2x）强制显示教师与备注。
-  const showTeacher = detailLevel === 'full'
-  const showNote = detailLevel === 'full'
 
   const monthDate = getDayDate(firstWeekStartDate, currentWeek, 1)
   const getClassMark = (classId: string, week: number) => classMarks[getMarkKey(classId, week)]
@@ -62,7 +59,7 @@ export default function ScheduleTable({
           data-schedule-grid
           data-zoom-level={zoom}
           data-zoom-tier={detailLevel}
-          className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(2.75rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
+          className="grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-cols-[2rem_repeat(7,minmax(0,1fr))] grid-rows-[2.25rem_repeat(12,minmax(4rem,1fr))] md:min-w-[760px] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]"
           style={{ '--schedule-zoom': String(zoom) } as CSSProperties}
         >
           <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted text-[10px] font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] md:text-sm">
@@ -124,7 +121,7 @@ export default function ScheduleTable({
           {visibleCourses.map(({ course, isOutOfWeek }) => (
             <div
               key={course.id}
-              className="min-h-0 overflow-hidden p-px [container-type:size]"
+              className="min-h-0 overflow-hidden p-px"
               style={{
                 gridColumn: course.dayOfWeek + 1,
                 gridRow: `${course.startSection + 1} / ${course.endSection + 2}`,
@@ -135,8 +132,6 @@ export default function ScheduleTable({
                 mark={getClassMark(course.id, currentWeek)}
                 attendanceEnabled={attendanceEnabled}
                 isOutOfWeek={isOutOfWeek}
-                showTeacher={showTeacher}
-                showNote={showNote}
                 onClick={() => onCourseClick(course)}
               />
             </div>

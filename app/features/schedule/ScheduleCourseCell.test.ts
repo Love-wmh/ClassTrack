@@ -35,8 +35,6 @@ function render(overrides: Partial<ScheduleCourseCellProps> = {}) {
       mark: attendedMark,
       attendanceEnabled: true,
       isOutOfWeek: false,
-      showTeacher: true,
-      showNote: true,
       onClick: () => {},
       ...overrides,
     })
