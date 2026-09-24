@@ -134,6 +134,24 @@ channel:
 #   dispatch_mode: auto  # or "inline"; legacy alias: "sub-agent"
 
 #-------------------------------------------------------------------------------
+# Pi (dispatch behavior) —— 本项目已固化 inline
+#-------------------------------------------------------------------------------
+# **不要**在本项目派发任何子代理。Pi 的平台扩展（.pi/extensions/trellis/index.ts）
+# 把 `--platform pi` 硬编码写死，上游没有 `pi.dispatch_mode` 这样的旋钮；`codex.*`
+# 那一段只被 Codex 的平台适配读，Pi 读不到。所以这个固化不靠 config 开关，靠三处
+# 实体改动（见 AGENTS.md「子代理禁令」段的对照表）：
+#   1) AGENTS.md 的「子代理禁令」段       —— 权威约束，trellis update 不覆盖；
+#   2) .trellis/workflow.md 的平台标记块 —— 把 Pi 并入 codex-inline 组，共 5 组开闭标记；
+#   3) 删除 .pi/agents/trellis-*.md      —— 技术层兜底，Pi 无子代理类型可派发。
+#
+# 复核（任何一条不成立就说明固化被 trellis update 冲掉了）：
+#   python3 ./.trellis/scripts/get_context.py --mode phase --platform pi --step 2.1
+#   grep -n '^\[' .trellis/workflow.md | grep Pi
+#   ls .pi/agents/trellis-*.md 2>/dev/null || echo OK
+#
+# 下面这段仍是上游的「Sub-agent context injection limits」小节；本项目走 inline，
+# 它只在你未来真的启用子代理时才有意义。
+#-------------------------------------------------------------------------------
 # Sub-agent context injection limits
 #-------------------------------------------------------------------------------
 # Caps how much task context (implement.jsonl / check.jsonl referenced files,
