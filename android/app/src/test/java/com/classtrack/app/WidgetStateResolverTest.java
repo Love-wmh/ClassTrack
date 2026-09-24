@@ -64,6 +64,22 @@ public class WidgetStateResolverTest {
         assertNull(unavailable.getHero());
     }
 
+    /**
+     * 「今天」的日期与星期要一路带到渲染状态：hero 的日期行只能靠它
+     * （「今天没课」时 entries 里没有任何今天的课程）。
+     */
+    @Test
+    public void carriesTodayDateLabelIntoDisplayState() {
+        // NOW_DAY0 在 3 小时后，因此这节「还没结束」的课会让状态停在 READY（而不是 NO_UPCOMING）。
+        WidgetSnapshot snapshot = schedule(VALID_UNTIL, DAYS_1, occurrence("MATH", GENERATED_AT + 4 * HOUR_MS, GENERATED_AT + 5 * HOUR_MS, 0));
+        WidgetDisplayState state = WidgetStateResolver.resolve(snapshot, NOW_DAY0);
+
+        assertEquals("2026-09-07", state.getTodayDayKey());
+        assertEquals("周一", state.getTodayWeekdayLabel());
+        // 非 READY 状态没有日期可言：空串，渲染层据此不画日期行。
+        assertEquals("", WidgetStateResolver.resolve(standalone(WidgetSnapshot.Status.EMPTY), NOW_DAY0).getTodayDayKey());
+    }
+
     @Test
     public void staleWhenNowIsPastTheCoverageWindow() {
         WidgetSnapshot snapshot = schedule(VALID_UNTIL, DAYS_3);
@@ -334,6 +350,6 @@ public class WidgetStateResolverTest {
         List<Long> dayEnds = new ArrayList<>();
         for (long value : dayEndEpochMs) dayEnds.add(value);
         return new WidgetSnapshot(schemaVersion, status, GENERATED_AT, validUntilEpochMs, entries, dayEnds,
-                "2026-09-07T09:00:00+08:00", "Asia/Shanghai");
+                "2026-09-07T09:00:00+08:00", "Asia/Shanghai", "2026-09-07", "周一");
     }
 }

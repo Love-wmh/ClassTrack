@@ -222,6 +222,7 @@ public class WidgetLinePolicyTest {
     private static final WidgetDayItem.Phase UPCOMING = WidgetDayItem.Phase.UPCOMING;
 
     private static final WidgetBodyLine.Kind HERO = WidgetBodyLine.Kind.HERO;
+    private static final WidgetBodyLine.Kind HERO_EMPTY = WidgetBodyLine.Kind.HERO_EMPTY;
     private static final WidgetBodyLine.Kind SUMMARY = WidgetBodyLine.Kind.SUMMARY;
     private static final WidgetBodyLine.Kind COUNTER = WidgetBodyLine.Kind.COUNTER;
     private static final WidgetBodyLine.Kind COLLAPSED = WidgetBodyLine.Kind.COLLAPSED;
@@ -237,15 +238,31 @@ public class WidgetLinePolicyTest {
 
     private static WidgetBodyPlan body(WidgetStyleConfig.LayoutStyle style, WidgetStyleConfig.FinishedPolicy policy,
             WidgetStyleConfig.WideLayout wide, List<WidgetDayItem> today, List<WidgetDayItem> tomorrow) {
+        return body(style, policy, wide, today, tomorrow, true, false);
+    }
+
+    /**
+     * 今天已经没有可上的课（hero 落在别的日子）时的单栏行序列。
+     *
+     * <p>渲染层传进来的 `heroIsToday` 就是 `heroState != UPCOMING_OTHER_DAY`。
+     */
+    private static WidgetBodyPlan emptyHeroBody(WidgetStyleConfig.LayoutStyle style,
+            WidgetStyleConfig.FinishedPolicy policy, WidgetStyleConfig.WideLayout wide, List<WidgetDayItem> today,
+            List<WidgetDayItem> tomorrow) {
+        return body(style, policy, wide, today, tomorrow, false, false);
+    }
+
+    private static WidgetBodyPlan body(WidgetStyleConfig.LayoutStyle style, WidgetStyleConfig.FinishedPolicy policy,
+            WidgetStyleConfig.WideLayout wide, List<WidgetDayItem> today, List<WidgetDayItem> tomorrow,
+            boolean heroIsToday, boolean dualColumn) {
         WidgetDayPlan dayPlan = WidgetDayPlan.resolve(today, tomorrow, policy);
-        return WidgetLinePolicy.resolve(new WidgetStyleConfig(style, policy, wide), dayPlan, false);
+        return WidgetLinePolicy.resolve(new WidgetStyleConfig(style, policy, wide), dayPlan, heroIsToday, dualColumn);
     }
 
     /** 双栏（几何真的够宽）时的行序列：会比单栏多一组静态富内容行。 */
     private static WidgetBodyPlan dualBody(WidgetStyleConfig.LayoutStyle style, WidgetStyleConfig.FinishedPolicy policy,
             WidgetStyleConfig.WideLayout wide, List<WidgetDayItem> today, List<WidgetDayItem> tomorrow) {
-        WidgetDayPlan dayPlan = WidgetDayPlan.resolve(today, tomorrow, policy);
-        return WidgetLinePolicy.resolve(new WidgetStyleConfig(style, policy, wide), dayPlan, true);
+        return body(style, policy, wide, today, tomorrow, true, true);
     }
 
     /** 双栏富内容：汇总计数行 + 左卡中缝「下一节」行 + 列表底部「今天最后一节」行，顺序固定。 */
@@ -288,6 +305,64 @@ public class WidgetLinePolicyTest {
             }
         }
         return 0;
+    }
+
+    /**
+     * 今天没有可上的课时，hero 位置换成空课态：不再把明天的课冒充成「接下来」。
+     *
+     * <p>它只影响有 hero 行的两种样式；全天课表本来就没有 hero 行，因此必须与改动前完全一致。
+     */
+    @Test
+    public void heroBecomesTheEmptyStateWhenTodayHasNoClassLeft() {
+        assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems()), HERO_EMPTY, SUMMARY, COURSE,
+                COURSE);
+        // 紧凑样式会继续列出「主课之后的课」：空课态下没有主课可跳过，因此明天两节都在。
+        assertKinds(emptyHeroBody(COMPACT, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems()), HERO_EMPTY, COUNTER, COURSE,
+                COURSE);
+        // 长假：紧凑档的计数行只说「今天无课」，没有「下一节在哪天」就整张卡都看不到下一节课。
+        assertKinds(emptyHeroBody(COMPACT, SHOW_DIM, ADAPTIVE, empty(), empty()), HERO_EMPTY, COUNTER, NEXT_OTHER);
+        assertKinds(emptyHeroBody(DAY_LIST, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems()), SUMMARY, COURSE, COURSE);
+    }
+
+    /** 空课态的两个 flag：醒目行文案跟随「今天原本有没有课」，次要行文案跟随**样式**（不是格子尺寸）。 */
+    @Test
+    public void heroEmptyFlagsFollowThePlanAndTheStyle() {
+        List<WidgetDayItem> allFinished = items(item("已上完", FINISHED, "周日"));
+
+        WidgetBodyLine nextUp = emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()).getLines().get(0);
+        WidgetBodyLine compact = emptyHeroBody(COMPACT, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()).getLines().get(0);
+
+        assertEquals(HERO_EMPTY, nextUp.getKind());
+        assertTrue("今天原本有课 → 醒目行写「今天已无课」", nextUp.isTodayHadClasses());
+        assertFalse("「接下来」用长句", nextUp.isShortCopy());
+        assertTrue("「紧凑」用短句", compact.isShortCopy());
+        assertFalse("今天本来就没课 → 醒目行写「今天无课」",
+                emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, empty(), empty()).getLines().get(0).isTodayHadClasses());
+    }
+
+    /** 今天已上完、但今天仍有可见行时，hero 不再承担「下一节在哪天」，这一行必须补上。 */
+    @Test
+    public void finishedTodayStillGetsTheNextOtherDayLine() {
+        List<WidgetDayItem> allFinished = items(item("已上完", FINISHED, "周日"));
+
+        assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, SUMMARY, COURSE,
+                NEXT_OTHER);
+        assertKinds(emptyHeroBody(COMPACT, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, COUNTER,
+                NEXT_OTHER);
+        // 课表列的就是明天时不补：那是把同一节课说两遍（改动前的口径）。
+        assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems()), HERO_EMPTY, SUMMARY, COURSE,
+                COURSE);
+        // 「全部隐藏」策略下今天一行都不可见 → 走「没有课程行」那一支，同样有「下一节」。
+        assertKinds(emptyHeroBody(NEXT_UP, HIDE, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, NEXT_OTHER);
+    }
+
+    /** 空课态也占左栏：双栏的切分点必须把它算作 header，否则那半张卡会是空的。 */
+    @Test
+    public void heroEmptyStaysInTheLeftColumn() {
+        WidgetBodyPlan dual = body(NEXT_UP, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems(), false, true);
+
+        assertEquals(HERO_EMPTY, dual.getLines().get(0).getKind());
+        assertEquals("左栏 = 空课态 + 中缝行", 2, dual.getHeaderLineCount());
     }
 
     /** 一天里「已上完 + 正在进行 + 还有一节」，这样三种「已上完」策略的差异都能看出来。 */

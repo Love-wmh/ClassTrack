@@ -210,6 +210,23 @@ describe('buildWidgetSnapshot', () => {
     expect(snapshot.dayEndEpochMs).toEqual([])
   })
 
+  it('带上「今天」的日期与星期（原生不做日期运算，hero 的日期行只能靠它）', () => {
+    const math = makeClass({ id: 'MATH', dayOfWeek: 1 })
+    const empty = buildWidgetSnapshot({ classes: [], currentWeek: 3, firstWeekStartDate: FIRST_WEEK_START }, WEEK3_MONDAY)
+    const unavailable = buildWidgetSnapshot({ classes: [math], currentWeek: 3, firstWeekStartDate: null }, WEEK3_MONDAY)
+    const ok = buildWidgetSnapshot({ classes: [math], currentWeek: 3, firstWeekStartDate: FIRST_WEEK_START }, WEEK3_MONDAY)
+
+    // WEEK3_MONDAY 是 2026-09-21 周一。
+    expect(ok.todayDayKey).toBe('2026-09-21')
+    expect(ok.todayWeekdayLabel).toBe('周一')
+
+    // 三种 status 都要带上：字段缺失会让「今天没课」的空课态少一行日期。
+    for (const snapshot of [ok, empty, unavailable]) {
+      expect(snapshot.todayDayKey).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(snapshot.todayWeekdayLabel).toMatch(/^周[一二三四五六日]$/)
+    }
+  })
+
   it('dayEndEpochMs 严格递增，且与 entries 的 dayOffset 下标一致', () => {
     const math = makeClass({ id: 'MATH', dayOfWeek: 1, weeks: [3] })
     const physics = makeClass({ id: 'PHY', dayOfWeek: 4, weeks: [4] })

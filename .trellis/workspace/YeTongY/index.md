@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 15
-- **Last Active**: 2026-09-23
+- **Total Sessions**: 17
+- **Last Active**: 2026-09-24
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~523 | Active |
+| `journal-1.md` | ~603 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,8 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-09-24 | 出勤统计默认关闭并做成可选项（含备注/出勤解耦） | `fe8d131` | `fix/widget-today-empty-hero` |
+| 16 | 2026-09-24 | 小组件 hero 空课态 + 二次引导 + 更新通知默认关闭 | `0e12932` | `fix/widget-today-empty-hero` |
 | 15 | 2026-09-23 | 更新检测（Release 探测 + 通知 + 通道）与发版触发收窄 | `326cdc9`, `d9d3fd3`, `8114bd9` | `master` |
 | 14 | 2026-09-21 | 小工具：模拟器验掉拖动改尺寸与模态失败分支（并修出两个真缺陷） | `3b35a8e` | `master` |
 | 13 | 2026-09-21 | 小工具：五档 provider + 尺寸自动匹配 + 拾取器预览生成（模拟器验证） | `f957a56`, `947427e`, `ce87e7c` | `master` |

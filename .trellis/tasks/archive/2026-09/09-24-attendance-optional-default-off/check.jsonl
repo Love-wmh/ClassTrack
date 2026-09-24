@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "核对五项门禁是否逐个跑过、是否有新增 any/禁用注释、测试是否落在 vitest include 范围内"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "核对新 store 的 key/partialize/merge 是否符合约定，以及 classMarks 是否被误过滤或置空"}
+{"file": ".trellis/spec/frontend/mobile-schedule-layout.md", "reason": "核对关闭态顶栏列数、控件尺寸与可访问性锚点是否仍与契约一致"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "核对新增 prop 与布尔收窄函数的类型口径（unknown 输入收窄、无 any）"}

@@ -40,7 +40,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
   semesters: [],
   currentSemesterId: null,
   courseMetadata: {},
-  schemaVersion: 3,
+  schemaVersion: 4,
 
   setSchool: (school) => {
     set((state) => {
@@ -75,10 +75,12 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
           classId,
           week,
           isAttended: true,
+          attendanceMarked: true,
           note: '',
         }
       } else {
         state.classMarks[key].isAttended = !state.classMarks[key].isAttended
+        state.classMarks[key].attendanceMarked = true
       }
       syncCurrentSemester(state, { classMarks: state.classMarks })
     })
@@ -93,10 +95,12 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
             classId,
             week,
             isAttended: true,
+            attendanceMarked: true,
             note: '',
           }
         } else {
           state.classMarks[key].isAttended = true
+          state.classMarks[key].attendanceMarked = true
         }
       })
       syncCurrentSemester(state, { classMarks: state.classMarks })
@@ -112,10 +116,12 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
             classId,
             week,
             isAttended: false,
+            attendanceMarked: true,
             note: '',
           }
         } else {
           state.classMarks[key].isAttended = false
+          state.classMarks[key].attendanceMarked = true
         }
       })
       syncCurrentSemester(state, { classMarks: state.classMarks })
@@ -130,6 +136,8 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
           classId,
           week,
           isAttended: false,
+          // 只在标记不存在时新建，也就是「只写了备注」：不构成一次出勤判断（看板按未标记计）
+          attendanceMarked: false,
           note,
         }
       } else {
@@ -161,7 +169,7 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
       semesters: [],
       currentSemesterId: null,
       courseMetadata: {},
-      schemaVersion: 3,
+      schemaVersion: 4,
     })
   },
 

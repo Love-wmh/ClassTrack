@@ -34,14 +34,20 @@ public final class WidgetLinePolicy {
      *
      * @param config 该实例的配置（布局样式 + 已上完策略 + 大格子表现）。
      * @param plan 「列今天还是列明天」的裁决结果。
+     * @param heroIsToday hero 是不是**今天**的课（渲染层用 `heroState != UPCOMING_OTHER_DAY` 传入）。
+     *     `false` 表示今天已经没有可上的课了（本来没课，或今天的课已上完），此时 hero 位置改画
+     *     {@link WidgetBodyLine.Kind#HERO_EMPTY} 空课态 —— 不再把明天的课冒充成「接下来」。
      * @param dualColumn 这一次是否真的分了两栏（几何判据在 {@code WidgetLayoutMetrics} 里）。
      *     双栏的右栏更宽也更高，因此启用一组**静态富内容**（双行行项、汇总计数、左卡中缝、底部最后一节）。
      *     这些行只依赖渲染时刻已有的数据，不需要任何额外刷新。
      * @return 行序列与双栏切分点，永不为 `null`。
      */
-    public static WidgetBodyPlan resolve(WidgetStyleConfig config, WidgetDayPlan plan, boolean dualColumn) {
+    public static WidgetBodyPlan resolve(WidgetStyleConfig config, WidgetDayPlan plan, boolean heroIsToday,
+            boolean dualColumn) {
         WidgetStyleConfig.LayoutStyle style = config.getLayoutStyle();
         boolean dense = isDense(config);
+        // 今天没有可上的课时 hero 落在别的日子：此时 hero 位置画空课态。
+        boolean heroEmpty = !heroIsToday;
 
         if (style == WidgetStyleConfig.LayoutStyle.COMPACT) {
             // 「紧凑」= 一节主课 + 一行计数 + **主课之后的课**（2026-09-21 用户要求：1×2 下方原来是一整块空白）。
@@ -49,16 +55,22 @@ public final class WidgetLinePolicy {
             // 为什么是「主课之后」：主课就是 hero，再把它之后要上的课列出来，既补满了竖长格子的下半部分，
             // 又不会把同一节课说两遍。也因此**已完成的行永远不会出现在紧凑样式里** ——
             // 「今天已上完的课」这个选项对它始终无效果，与配置页那句灰显说明同源。
-            List<WidgetBodyLine> compact = new ArrayList<>(3);
+            List<WidgetBodyLine> compact = new ArrayList<>(4);
             // hero 明细拆两行（时间 / 教室）：紧凑只出现在窄格里，一行写「14:00 - 15:35 · C305」必然被裁，
             // 裁掉的正好是教室 —— 而教室是「这节课在哪上」的唯一线索，不能省。
-            compact.add(WidgetBodyLine.hero(COMPACT_TITLE_LINES, true));
+            compact.add(heroOrEmpty(heroEmpty, plan, COMPACT_TITLE_LINES, true));
             compact.add(WidgetBodyLine.counter());
             List<WidgetDayItem> rows = plan.getRows();
-            int afterHero = firstRowAfterHero(rows);
+            // 空课态时没有「主课」可跳过：只跳过已上完的行，否则明天第一节会被静默吞掉
+            // （那一节本来是 hero，如今 hero 位置画的是空课态）。
+            int afterHero = heroEmpty ? firstUnfinishedRow(rows) : firstRowAfterHero(rows);
             for (int index = afterHero; index < rows.size(); index++) {
                 // 下标在**本样式自己**的行序列里从 0 起：首行仍然多留一点与计数行之间的间距。
                 compact.add(WidgetBodyLine.course(rows.get(index), index - afterHero, false));
+            }
+            // 「今天已上完」时 hero 不再承担「下一节在哪天」，这一行必须补上；长假（没有课程行）同样补。
+            if (needsNextOther(style, plan, heroEmpty)) {
+                compact.add(WidgetBodyLine.nextOther());
             }
             // 课程行用窄卡形态（课名一行、「时间 · 教室」一行）：1×2 的格宽只有 82~105dp，
             // 时间一旦独占一列，课名就只剩三十几 dp，四个字的课名会被裁成「线性代…」。
@@ -67,7 +79,7 @@ public final class WidgetLinePolicy {
 
         List<WidgetBodyLine> lines = new ArrayList<>();
         if (style == WidgetStyleConfig.LayoutStyle.NEXT_UP) {
-            lines.add(WidgetBodyLine.hero(WIDE_TITLE_LINES));
+            lines.add(heroOrEmpty(heroEmpty, plan, WIDE_TITLE_LINES, false));
         }
         // 双栏：左卡中缝放「下一节 + 本周进度」，于是左卡里是「顶部块 / 中缝 / 底部块」三段。
         if (dualColumn) {
@@ -90,8 +102,7 @@ public final class WidgetLinePolicy {
                 lines.add(WidgetBodyLine.collapsed());
             }
             // 已经在列明天的课了，再补一行「下一节是明天 …」就是把同一节课说两遍。
-            if (style == WidgetStyleConfig.LayoutStyle.DAY_LIST
-                    && plan.getSource() != WidgetDayPlan.Source.TOMORROW) {
+            if (needsNextOther(style, plan, heroEmpty)) {
                 lines.add(WidgetBodyLine.nextOther());
             }
         } else {
@@ -109,7 +120,8 @@ public final class WidgetLinePolicy {
         // 没有 hero 的样式（全天课表）左栏拿首行 —— 否则左栏会是空的，看起来像排坏了。
         int header = 0;
         for (WidgetBodyLine line : lines) {
-            if (line.getKind() == WidgetBodyLine.Kind.HERO || line.getKind() == WidgetBodyLine.Kind.MID_NEXT) {
+            if (line.getKind() == WidgetBodyLine.Kind.HERO || line.getKind() == WidgetBodyLine.Kind.HERO_EMPTY
+                    || line.getKind() == WidgetBodyLine.Kind.MID_NEXT) {
                 header++;
             } else {
                 break;
@@ -150,6 +162,60 @@ public final class WidgetLinePolicy {
             }
         }
         return rows.size();
+    }
+
+    /**
+     * hero 位置的那一行：今天有课时是 {@link WidgetBodyLine#hero}，今天没课时是空课态。
+     *
+     * @param heroEmpty 今天是否已经没有可上的课。
+     * @param plan 「列今天还是列明天」的裁决结果（空课态要靠它区分「今天无课」与「今天已无课」）。
+     * @param titleMaxLines 有课时课名允许的行数。
+     * @param compact 这一档是否是窄格（决定明细与空课态文案都走短版）。
+     * @return hero 位置的行。
+     */
+    private static WidgetBodyLine heroOrEmpty(boolean heroEmpty, WidgetDayPlan plan, int titleMaxLines,
+            boolean compact) {
+        if (!heroEmpty) return WidgetBodyLine.hero(titleMaxLines, compact);
+        // 文案分档按**样式**而不是按格子尺寸：紧凑只出现在窄格里，长句必然被裁。
+        return WidgetBodyLine.heroEmpty(plan.isTodayHadClasses(), compact);
+    }
+
+    /**
+     * 行序列里第一条「还没上」的课的下标。
+     *
+     * <p>空课态下紧凑样式的起点：那时没有主课可跳过，但**已上完的行仍然不能出现**
+     * （紧凑样式从不列已上完的课，与配置页那句灰显说明同源）。
+     *
+     * @param rows 当天的行序列。
+     * @return 第一条还没上的课的下标；全部上完时为 `rows.size()`。
+     */
+    private static int firstUnfinishedRow(List<WidgetDayItem> rows) {
+        for (int index = 0; index < rows.size(); index++) {
+            if (!rows.get(index).isFinished()) return index;
+        }
+        return rows.size();
+    }
+
+    /**
+     * 「下一节 · 某日 某时刻 某课」这一行要不要补。
+     *
+     * <p>它就是「下一节课在哪天」的唯一出口，因此判据必须**不重不漏**：
+     *
+     * <ul>
+     *   <li>课表列的就是明天的课（`source == TOMORROW`）→ 不补：那是把同一节课说两遍；</li>
+     *   <li>全天课表（`DAY_LIST` 本来就没有 hero 行）→ 沿用改动前的口径：有课程行才补；</li>
+     *   <li>「接下来」/「紧凑」→ 只有 hero 不再承担这个信息（`heroEmpty`）时才补。</li>
+     * </ul>
+     *
+     * @param style 布局样式。
+     * @param plan 「列今天还是列明天」的裁决结果。
+     * @param heroEmpty 今天是否已经没有可上的课。
+     * @return 是否补这一行。
+     */
+    private static boolean needsNextOther(WidgetStyleConfig.LayoutStyle style, WidgetDayPlan plan, boolean heroEmpty) {
+        if (plan.getSource() == WidgetDayPlan.Source.TOMORROW) return false;
+        if (style == WidgetStyleConfig.LayoutStyle.DAY_LIST) return plan.hasRows();
+        return heroEmpty;
     }
 
     /**

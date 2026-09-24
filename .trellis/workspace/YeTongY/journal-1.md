@@ -521,3 +521,83 @@ Reproduced the reported white screen, layout and 404 on a real emulator and foun
 - stable 通道的真实推送路径还没在真机出现过（现网没有正式版 release）；等后面出了新测试版，可以用旧包实测一次「启动即提示 + 通知栏」。
 - 「去系统设置」跳转在 Android 16 上会被系统统一落到应用信息页，三级回退链在 API 26–35 才分别生效 —— 不是 bug，别照 Android 16 的表现去改。
 - 改发布链路后不再自动出包验证，需要验证时手动 dispatch。
+
+
+## Session 16: 小组件 hero 空课态 + 二次引导 + 更新通知默认关闭
+<!-- trellis-session: v=2 fp=d451a1dd5d8d9d6e -->
+
+**Date**: 2026-09-24
+**Task**: 小组件 hero 空课态 + 二次引导 + 更新通知默认关闭
+**Branch**: `fix/widget-today-empty-hero`
+
+### Summary
+
+hero 在今天没课时改显示空课态三行（含快照补今日日期字段）；加桌后新增第二段引导去个人中心；更新通知默认关闭。判据/文案/接线均已由 JVM + vitest 用例钉住，设备项待验。
+
+### Main Changes
+
+## 会话：小组件 hero 空课态 + 二次引导 + 更新通知默认关闭
+
+分支 `fix/widget-today-empty-hero`（从 `feat/nav-scroll-hint` 开出）。轻量规划，唯一产物 `prd.md`
+（含三支改动的口径记录、技术决策 D1–D18、验收清单）；`verification.md` 记录实际跑过的命令与**待验的设备项**。
+
+### 做了什么
+
+- **A 小组件 hero 空课态**：今天本来没课或今天的课已上完时，hero 不再把明天的课当「接下来」，
+  改成三行空课态（今天的日期 / 今天无课·今天已无课 / 一句轻松的话，长短档按样式分）。
+  判决层新增 `heroIsToday` 入参与 `WidgetBodyLine.Kind.HERO_EMPTY`；触发条件复用既有的
+  `heroState == UPCOMING_OTHER_DAY`，没有新增时间比较。顺带补上「今天已上完仍有可见行 → 补一行
+  `NEXT_OTHER`」与「紧凑样式后续课从第一条还没上的课起列」（旧口径会吞掉明天第一节）。
+- **A2 快照补今日日期**：`todayDayKey` / `todayWeekdayLabel` 作为**可选字段**（Web 预格式化、
+  `schemaVersion` 仍为 1）。原生不做日期运算这条硬约束因此没有被破。
+  跨层夹具用真实 builder 重新生成，逐字段比对只多了这两个字段。
+- **B 更新通知默认关闭**：默认值与坏值收窄抽到 `app/lib/app-update/settings.ts`，`updateStore`
+  只把它交给 persist 的 `merge`；已存过 `notify: true` 的设备不受影响。
+- **C 第二段引导**：`ProfileGuideDialog` + `profile-guide.ts`，第一段引导关闭时（两个按钮都算）
+  判断并写标记，显示条件 `showProfileGuide && !widgetPinSheetOpen`（点「去添加」时等面板关掉再出现）；
+  两段引导的存储读写收敛到 `guide-storage.ts`。
+
+### 验证
+
+`pnpm test` 226 用例、`pnpm typecheck`、`pnpm lint`、`./android/gradlew -p android :app:testDebugUnitTest`
+（259 用例）、`generate-widget-preview-layouts.py --check`、`pnpm test:android-assets` 全绿。
+设备类验收（两种空课态观感、1×2 截断、双栏左卡、两段引导衔接、通知默认值）在本沙箱做不了
+（无 `/dev/kvm`、`~/.android/avd` 只读），逐项 ⏳ 留在 `verification.md`，任务按用户口径**先归档**。
+
+### 环境坑（下次省事）
+
+- `$HOME/.gradle` 在本沙箱只读 → 拷到 `/tmp/gh` 后 `GRADLE_USER_HOME=/tmp/gh ./android/gradlew -p android :app:testDebugUnitTest --offline`。
+- `scripts/check-android-assets.js` 在当前工作区本就失败（`build/client` 比 `assets/public` 新，后者被 gitignore），与本任务无关。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0e12932` | feat(widget): 今天没课时 hero 不再显示明天的课，改显示空课态 |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 17: 出勤统计默认关闭并做成可选项（含备注/出勤解耦）
+<!-- trellis-session: v=2 fp=b4a23200b86be482 -->
+
+**Date**: 2026-09-24
+**Task**: 出勤统计默认关闭并做成可选项（含备注/出勤解耦）
+**Branch**: `fix/widget-today-empty-hero`
+
+### Summary
+
+把整块出勤能力（课表标记 + 看板出勤统计）改为默认关闭，个人中心新增「出勤统计」开关（独立 store class-track-attendance，不进备份、不动业务 schema 版本）。关闭时课表无状态色条/外圈/角标、顶栏无批量按钮（列数收窄到 3 列）、弹窗无出勤切换按钮；看板收起完成度/缺勤率/标记覆盖率/未标记/周趋势/风险课程/完成度排行，分布图只留总课次，顶部加提示卡带「去开启」。备注与出勤解耦：ClassMark 补 attendanceMarked 字段（schema 3→4），四个写入点写已判断、setNote 新建写未判断，看板把「未判断」算未标记而非缺勤，判据收敛到 isAttendanceMarked + 三个 Session 谓词；旧数据一律补成已判断，现有统计零变化。门禁五项全绿（254 例单测），视觉证据 11 张截图 + 只写备注对照（2%/60 → 3%/59）。未验证：Android WebView 与 ≥768px 桌面像素表现。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fe8d131` | feat(attendance): 出勤统计默认关闭并做成可选项 |
+
+### Status
+
+[OK] **Completed**

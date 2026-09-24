@@ -1,13 +1,18 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChartFrame } from './ChartFrame'
+import { getSectionDistributionConfig } from '../distributionCharts'
 
 type SectionDistributionChartProps = {
   data: Array<{ name: string; total: number; attended: number; absent: number }>
+  /** 「出勤统计」是否开启；关闭时只画「总课次」系列（见 `distributionCharts.ts`）。 */
+  attendanceEnabled: boolean
 }
 
-export function SectionDistributionChart({ data }: SectionDistributionChartProps) {
+export function SectionDistributionChart({ data, attendanceEnabled }: SectionDistributionChartProps) {
+  const { description, series } = getSectionDistributionConfig(attendanceEnabled)
+
   return (
-    <ChartFrame title="节次分布" description="按上课节次统计课程密度和完成情况。">
+    <ChartFrame title="节次分布" description={description}>
       <div className="h-60 min-w-0 overflow-hidden sm:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -15,9 +20,9 @@ export function SectionDistributionChart({ data }: SectionDistributionChartProps
             <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
             <YAxis width={28} tickLine={false} axisLine={false} tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} />
-            <Bar dataKey="total" name="总课次" fill="#111827" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="attended" name="已上" fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="absent" name="缺勤" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            {series.map((item) => (
+              <Bar key={item.key} dataKey={item.key} name={item.name} fill={item.fill} radius={[4, 4, 0, 0]} />
+            ))}
           </BarChart>
         </ResponsiveContainer>
       </div>

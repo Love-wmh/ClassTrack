@@ -14,6 +14,8 @@ import type { SectionTime } from './utils'
 type ScheduleTableProps = {
   weekClasses: Class[]
   classMarks: Record<string, ClassMark>
+  /** 「出勤统计」是否开启；关闭时课程格不画出勤痕迹（备注照常显示）。 */
+  attendanceEnabled: boolean
   currentWeek: number
   firstWeekStartDate: string | null
   sectionTimes: Record<number, SectionTime>
@@ -23,6 +25,7 @@ type ScheduleTableProps = {
 export default function ScheduleTable({
   weekClasses,
   classMarks,
+  attendanceEnabled,
   currentWeek,
   firstWeekStartDate,
   sectionTimes,
@@ -134,6 +137,7 @@ export default function ScheduleTable({
               <ScheduleCourseCell
                 course={course}
                 mark={getClassMark(course.id, currentWeek)}
+                attendanceEnabled={attendanceEnabled}
                 showClassroom={showClassroom}
                 showTeacher={showTeacher}
                 showNote={showNote}

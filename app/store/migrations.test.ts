@@ -57,4 +57,38 @@ describe('数据迁移', () => {
     expect(normalizeImportedData(null)).toBeNull()
     expect(normalizeImportedData('错误数据')).toBeNull()
   })
+
+  it('旧标记补齐「已做出勤判断」，既有统计口径不变', () => {
+    const result = migrateClassTrackState({
+      classes: [createClass('2025-2026-1')],
+      classMarks: { 'class-1-1': { classId: 'class-1', week: 1, isAttended: false, note: '请假' } },
+    })
+
+    expect(result.classMarks['class-1-1']).toEqual({
+      classId: 'class-1',
+      week: 1,
+      isAttended: false,
+      note: '请假',
+      attendanceMarked: true,
+    })
+  })
+
+  it('显式记为「只写了备注」的标记原样保留', () => {
+    const result = migrateClassTrackState({
+      classes: [createClass('2025-2026-1')],
+      classMarks: { 'class-1-1': { classId: 'class-1', week: 1, isAttended: false, note: '带作业', attendanceMarked: false } },
+    })
+
+    expect(result.classMarks['class-1-1'].attendanceMarked).toBe(false)
+  })
+
+  it('丢弃非对象的标记条目，并保留原存储键', () => {
+    const result = migrateClassTrackState({
+      classes: [createClass('2025-2026-1')],
+      classMarks: { 'odd-key': null, 'class-1-1': { classId: 'class-1', week: 1, isAttended: true, note: '' } },
+    })
+
+    expect(Object.keys(result.classMarks)).toEqual(['class-1-1'])
+    expect(result.classMarks['class-1-1'].attendanceMarked).toBe(true)
+  })
 })

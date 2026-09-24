@@ -45,10 +45,14 @@ public final class WidgetDisplayState {
     private final long validUntilEpochMs;
     private final long currentDayEndEpochMs;
     private final Long nextBoundaryEpochMs;
+    /** 今天的本地日期键与中文星期标签（Web 预格式化）；快照里没有这两个字段时为空串。 */
+    private final String todayDayKey;
+    private final String todayWeekdayLabel;
 
     private WidgetDisplayState(Type type, WidgetOccurrence hero, List<WidgetDayItem> todayItems,
             List<WidgetDayItem> nextDayItems,
-            HeroState heroState, long validUntilEpochMs, long currentDayEndEpochMs, Long nextBoundaryEpochMs) {
+            HeroState heroState, long validUntilEpochMs, long currentDayEndEpochMs, Long nextBoundaryEpochMs,
+            String todayDayKey, String todayWeekdayLabel) {
         this.type = type;
         this.hero = hero;
         this.todayItems = Collections.unmodifiableList(new ArrayList<>(todayItems));
@@ -57,6 +61,8 @@ public final class WidgetDisplayState {
         this.validUntilEpochMs = validUntilEpochMs;
         this.currentDayEndEpochMs = currentDayEndEpochMs;
         this.nextBoundaryEpochMs = nextBoundaryEpochMs;
+        this.todayDayKey = todayDayKey == null ? "" : todayDayKey;
+        this.todayWeekdayLabel = todayWeekdayLabel == null ? "" : todayWeekdayLabel;
 
         // 两个计数在这里一次算好：让「今天还有几节」「已上完几节」只有一处事实来源，
         // 避免渲染层各自重算导致文案与列表不一致。
@@ -117,18 +123,21 @@ public final class WidgetDisplayState {
      * @param validUntilEpochMs 快照覆盖窗口的结束时刻。
      * @param currentDayEndEpochMs 当前自然日的本地 24:00。
      * @param nextBoundaryEpochMs 下一次需要重新渲染的时刻；为 `null` 表示无需排程。
+     * @param todayDayKey 今天的本地日期键（`YYYY-MM-DD`），由 Web 预格式化。
+     * @param todayWeekdayLabel 今天的中文星期标签（如 `周三`）。
      * @return 渲染状态。
      */
     public static WidgetDisplayState ready(WidgetOccurrence hero, List<WidgetDayItem> todayItems,
             List<WidgetDayItem> nextDayItems,
-            HeroState heroState, long validUntilEpochMs, long currentDayEndEpochMs, Long nextBoundaryEpochMs) {
+            HeroState heroState, long validUntilEpochMs, long currentDayEndEpochMs, Long nextBoundaryEpochMs,
+            String todayDayKey, String todayWeekdayLabel) {
         return new WidgetDisplayState(Type.READY, hero, todayItems, nextDayItems, heroState, validUntilEpochMs,
-                currentDayEndEpochMs, nextBoundaryEpochMs);
+                currentDayEndEpochMs, nextBoundaryEpochMs, todayDayKey, todayWeekdayLabel);
     }
 
     private static WidgetDisplayState emptyState(Type type) {
         return new WidgetDisplayState(type, null, Collections.emptyList(), Collections.emptyList(), null,
-                Long.MIN_VALUE, Long.MIN_VALUE, null);
+                Long.MIN_VALUE, Long.MIN_VALUE, null, "", "");
     }
 
     public Type getType() {
@@ -181,5 +190,19 @@ public final class WidgetDisplayState {
     /** @return 下一次需要重新渲染的时刻；`null` 表示不需要排程。 */
     public Long getNextBoundaryEpochMs() {
         return nextBoundaryEpochMs;
+    }
+
+    /**
+     * @return 今天的本地日期键（`YYYY-MM-DD`）；快照里没有该字段时为空串。
+     *
+     *     <p>原生不做日期运算：这两个值由 Web 侧一次算好并预格式化，渲染层只做拼接。
+     */
+    public String getTodayDayKey() {
+        return todayDayKey;
+    }
+
+    /** @return 今天的中文星期标签（如 `周三`）；快照里没有该字段时为空串。 */
+    public String getTodayWeekdayLabel() {
+        return todayWeekdayLabel;
     }
 }

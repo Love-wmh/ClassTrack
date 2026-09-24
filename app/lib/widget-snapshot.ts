@@ -96,6 +96,18 @@ export type WidgetSnapshotV1 = {
   generatedAt: string
   /** IANA 时区名，仅用于诊断。 */
   timezone: string
+  /**
+   * 今天的本地日期键（`YYYY-MM-DD`），由 Web 预格式化。
+   *
+   * 原生不做日期运算，而「今天没课」时 `entries` 里没有任何今天的课程，也就无从得到今天的日期；
+   * hero 的日期行（`10月8日 周三`）只能靠它。
+   *
+   * **可选字段**：上一版应用写入的快照没有它，原生解析后退化为「不在日期行显示日期」，
+   * 而不是整份快照不可用。
+   */
+  todayDayKey: string
+  /** 今天的中文星期标签（如 `周三`），与 `WidgetOccurrence.weekdayLabel` 同源；可选字段。 */
+  todayWeekdayLabel: string
 }
 
 export type WidgetSnapshotInput = {
@@ -324,6 +336,10 @@ export function buildWidgetSnapshot(input: WidgetSnapshotInput, now: Date): Widg
     generatedAtEpochMs,
     generatedAt: toLocalIsoWithOffset(now),
     timezone: resolvedTimeZone(),
+    // 「今天」的日期与星期：原生不做日期运算，所以在这里一次算好、预格式化后带过去。
+    // 三种 status 都带上 —— `empty` / `unavailable` 时原生虽然不渲染课程，但字段缺失会让契约更难推理。
+    todayDayKey: formatLocalDayKey(startOfLocalDay(now)),
+    todayWeekdayLabel: WEEKDAY_LABELS[weekdayOf(now)] ?? '',
   } as const
 
   if (input.classes.length === 0) {

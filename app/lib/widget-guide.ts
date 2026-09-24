@@ -1,3 +1,5 @@
+import { hasGuideFlag, markGuideFlag } from './guide-storage'
+import type { GuideStorage } from './guide-storage'
 import { WIDGET_PIN_PRESETS, WIDGET_PIN_SIZE_TUNING_HINT } from '~/features/schedule/widgetPinPresets'
 
 /**
@@ -6,36 +8,13 @@ import { WIDGET_PIN_PRESETS, WIDGET_PIN_SIZE_TUNING_HINT } from '~/features/sche
  * 两件事拆开：这里的纯逻辑（「该不该弹」+ 文案）可以被 vitest 钉住，
  * 弹窗本身在 `app/components/native-widget/WidgetGuideDialog.tsx`。
  *
- * **已读标记放在设备本地的独立 localStorage 键里**，不进 Zustand persist 的 `partialize`：
- * 它是「这台设备上别再打扰我」的一次性状态，不该随备份迁移到新设备后再也不弹。
+ * **已读标记放在设备本地的独立 localStorage 键里**（读写复用 `guide-storage.ts`），
+ * 不进 Zustand persist 的 `partialize`：它是「这台设备上别再打扰我」的一次性状态，
+ * 不该随备份迁移到新设备后再也不弹。
  */
 export const WIDGET_GUIDE_STORAGE_KEY = 'class-track-widget-guide-seen'
 
-/**
- * 只依赖 `getItem` / `setItem` 的存储形状，便于测试注入假实现。
- *
- * 不用完整的 `Storage`：引导只读写一个键，收窄接口能让「storage 抛异常」这类边界变得好测。
- */
-export type GuideStorage = Pick<Storage, 'getItem' | 'setItem'>
-
-/**
- * 取实际使用的存储。
- *
- * `undefined`（没传）表示「用 `window.localStorage`」，显式传 `null` 表示「这台环境没有存储」——
- * 两者必须区分：前者是正常调用，后者是测试要覆盖的无存储分支。
- */
-function resolveStorage(storage?: GuideStorage | null): GuideStorage | null {
-  if (storage !== undefined) {
-    return storage
-  }
-
-  try {
-    return typeof window === 'undefined' ? null : window.localStorage
-  } catch {
-    // 隐私模式 / 禁用存储时读 window.localStorage 本身就会抛。
-    return null
-  }
-}
+export type { GuideStorage }
 
 /**
  * 这台设备上是不是已经读过引导。
@@ -44,14 +23,7 @@ function resolveStorage(storage?: GuideStorage | null): GuideStorage | null {
  * @returns 读到标记为 `true`；没有存储、读失败、没标记一律 `false`（当作没读过，宁可多弹一次也不静默吞掉引导）。
  */
 export function hasSeenWidgetGuide(storage?: GuideStorage | null): boolean {
-  const target = resolveStorage(storage)
-  if (!target) return false
-
-  try {
-    return target.getItem(WIDGET_GUIDE_STORAGE_KEY) === '1'
-  } catch {
-    return false
-  }
+  return hasGuideFlag(WIDGET_GUIDE_STORAGE_KEY, storage)
 }
 
 /**
@@ -62,14 +34,7 @@ export function hasSeenWidgetGuide(storage?: GuideStorage | null): boolean {
  * @param storage 存储实现；省略时用 `window.localStorage`。
  */
 export function markWidgetGuideSeen(storage?: GuideStorage | null): void {
-  const target = resolveStorage(storage)
-  if (!target) return
-
-  try {
-    target.setItem(WIDGET_GUIDE_STORAGE_KEY, '1')
-  } catch {
-    // 配额满 / 隐私模式下写不进去：后果只是「可能再弹一次」，不该因此打断导入成功后的流程。
-  }
+  markGuideFlag(WIDGET_GUIDE_STORAGE_KEY, storage)
 }
 
 /**

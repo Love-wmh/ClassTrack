@@ -1,6 +1,15 @@
 import { useMemo } from 'react'
 import { useClassStore } from '~/store'
-import { expandCourseSessions, formatPercent, getDashboardRange, safeRate, toChineseWeekday } from '../utils'
+import {
+  expandCourseSessions,
+  formatPercent,
+  getDashboardRange,
+  isAbsentSession,
+  isAttendedSession,
+  isUnmarkedSession,
+  safeRate,
+  toChineseWeekday,
+} from '../utils'
 
 type GroupStats = {
   name: string
@@ -21,10 +30,10 @@ export function useDashboardStats() {
     const range = getDashboardRange(firstWeekStartDate, currentWeek, maxWeek)
     const sessions = expandCourseSessions(classes, classMarks, range)
     const pastSessions = sessions.filter((session) => session.isPast)
-    const attendedSessions = sessions.filter((session) => session.mark?.isAttended)
-    const pastAttendedSessions = pastSessions.filter((session) => session.mark?.isAttended)
-    const pastAbsentSessions = pastSessions.filter((session) => session.mark && !session.mark.isAttended)
-    const pastUnmarkedSessions = pastSessions.filter((session) => !session.mark)
+    const attendedSessions = sessions.filter(isAttendedSession)
+    const pastAttendedSessions = pastSessions.filter(isAttendedSession)
+    const pastAbsentSessions = pastSessions.filter(isAbsentSession)
+    const pastUnmarkedSessions = pastSessions.filter(isUnmarkedSession)
     const futureSessions = sessions.filter((session) => !session.isPast)
     const notedSessions = sessions.filter((session) => session.mark?.note)
     const uniqueCourseNames = new Set(classes.map((classItem) => classItem.name)).size
@@ -53,9 +62,9 @@ export function useDashboardStats() {
     const weeklyTrend = Array.from({ length: maxWeek }, (_, index) => {
       const week = index + 1
       const weekSessions = sessions.filter((session) => session.week === week)
-      const attended = weekSessions.filter((session) => session.mark?.isAttended).length
-      const absent = weekSessions.filter((session) => session.mark && !session.mark.isAttended).length
-      const unmarked = weekSessions.filter((session) => !session.mark && session.isPast).length
+      const attended = weekSessions.filter(isAttendedSession).length
+      const absent = weekSessions.filter(isAbsentSession).length
+      const unmarked = weekSessions.filter((session) => session.isPast && isUnmarkedSession(session)).length
       return {
         week: `第${week}周`,
         应上: weekSessions.length,
@@ -71,8 +80,8 @@ export function useDashboardStats() {
       return {
         name: `周${toChineseWeekday(dayOfWeek)}`,
         总课次: daySessions.length,
-        已上: daySessions.filter((session) => session.mark?.isAttended).length,
-        缺勤: daySessions.filter((session) => session.mark && !session.mark.isAttended).length,
+        已上: daySessions.filter(isAttendedSession).length,
+        缺勤: daySessions.filter(isAbsentSession).length,
       }
     })
 
@@ -134,9 +143,9 @@ function groupByName(
   return Array.from(new Set(names)).map((name) => {
     const items = sessions.filter((session) => selector(session) === name)
     const pastItems = items.filter((session) => session.isPast)
-    const attended = items.filter((session) => session.mark?.isAttended).length
-    const absent = pastItems.filter((session) => session.mark && !session.mark.isAttended).length
-    const unmarked = pastItems.filter((session) => !session.mark).length
+    const attended = items.filter(isAttendedSession).length
+    const absent = pastItems.filter(isAbsentSession).length
+    const unmarked = pastItems.filter(isUnmarkedSession).length
     return {
       name,
       total: items.length,

@@ -160,7 +160,10 @@ internal fun WidgetContent(state: WidgetDisplayState, config: WidgetStyleConfig,
     // 「列今天还是列明天」的裁决只在这里做一次：三种样式共用，避免各自重算导致文案与列表打架。
     val plan = WidgetDayPlan.resolve(state.todayItems, state.nextDayItems, effectiveConfig.finishedPolicy)
     val dualColumn = isDualColumn(effectiveConfig, metrics)
-    val body = WidgetLinePolicy.resolve(effectiveConfig, plan, dualColumn)
+    // hero 是不是**今天**的课：`UPCOMING_OTHER_DAY` 表示今天已经没有可上的课（本来没课，或今天的课已上完），
+    // 此时判决层会把 hero 位置换成空课态 —— 不再把明天的课冒充成「接下来」。
+    val heroIsToday = state.heroState != WidgetDisplayState.HeroState.UPCOMING_OTHER_DAY
+    val body = WidgetLinePolicy.resolve(effectiveConfig, plan, heroIsToday, dualColumn)
 
 
     if (!preview) {
@@ -371,25 +374,36 @@ private fun ColumnScope.DualColumnBody(context: Context, state: WidgetDisplaySta
             // 今天还有 N 节）。两个等权重的 Spacer 把余量摊到中缝上下，于是那半张卡不再是一个空洞 ——
             // 这是「中缝放真信息 + 均分余量」的组合，而不是靠留白撑场面。
             Column(modifier = GlanceModifier.fillMaxSize()) {
-                val bottomLine = remainingTodayText(context, state)
-                val heroLine = headerLines.firstOrNull { it.kind == WidgetBodyLine.Kind.HERO }
                 val leftMetrics = metrics.withFontBoost(leftFill.localBoost)
-                if (heroLine != null) {
-                    HeroHeading(context, state, hero, appWidgetId, leftMetrics, heroLine.titleMaxLines)
-                }
-                // Glance 的 `defaultWeight()` 不支持自定义权重（只能等权），因此用**份数**表达 2 : 3 ——
-                // 中缝略靠下，读起来像「顶部信息 + 下半部分的时间/下一节」，而不是三块等距的孤岛。
-                repeat(SPACER_UNITS_ABOVE_MID) { Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) }
-                for (line in headerLines) {
-                    if (line.kind == WidgetBodyLine.Kind.MID_NEXT) {
-                        BodyLineView(context, state, plan, hero, appWidgetId, leftMetrics, leftFill, line)
+                val emptyLine = headerLines.firstOrNull { it.kind == WidgetBodyLine.Kind.HERO_EMPTY }
+
+                if (emptyLine != null) {
+                    // 今天没课：左卡里没有「一节课」可讲，三行空课态就在垂直中线上居中 ——
+                    // 不画课名、不画时间 · 教室、也不画底部「今天还有 N 节」。
+                    // 中缝（`MID_NEXT`）此时必然为空：hero 不属于今天时 `upcomingAfterHero` 恒返回空列表。
+                    Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight())
+                    HeroEmptyLines(context, state, appWidgetId, leftMetrics, emptyLine, showStyleEntry = true)
+                    Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight())
+                } else {
+                    val bottomLine = remainingTodayText(context, state)
+                    val heroLine = headerLines.firstOrNull { it.kind == WidgetBodyLine.Kind.HERO }
+                    if (heroLine != null) {
+                        HeroHeading(context, state, hero, appWidgetId, leftMetrics, heroLine.titleMaxLines)
                     }
-                }
-                repeat(SPACER_UNITS_BELOW_MID) { Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) }
-                HeroDetail(context, hero, leftMetrics)
-                if (bottomLine != null) {
-                    Text(text = bottomLine, maxLines = 1,
-                        style = captionStyle(leftMetrics, R.color.widget_text_muted))
+                    // Glance 的 `defaultWeight()` 不支持自定义权重（只能等权），因此用**份数**表达 2 : 3 ——
+                    // 中缝略靠下，读起来像「顶部信息 + 下半部分的时间/下一节」，而不是三块等距的孤岛。
+                    repeat(SPACER_UNITS_ABOVE_MID) { Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) }
+                    for (line in headerLines) {
+                        if (line.kind == WidgetBodyLine.Kind.MID_NEXT) {
+                            BodyLineView(context, state, plan, hero, appWidgetId, leftMetrics, leftFill, line)
+                        }
+                    }
+                    repeat(SPACER_UNITS_BELOW_MID) { Spacer(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) }
+                    HeroDetail(context, hero, leftMetrics)
+                    if (bottomLine != null) {
+                        Text(text = bottomLine, maxLines = 1,
+                            style = captionStyle(leftMetrics, R.color.widget_text_muted))
+                    }
                 }
             }
         }
@@ -420,6 +434,13 @@ private fun headerTextLines(context: Context, state: WidgetDisplayState, hero: W
                 out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, heroLabel(context, state, hero).length, widthDp)
                 out += WidgetFillPlan.TextLine(TITLE_BASE_SP, maxOf(1, line.titleMaxLines), hero.name.length, widthDp)
                 out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, widthDp)
+            }
+            WidgetBodyLine.Kind.HERO_EMPTY -> {
+                // 与渲染一一对应：日期行（caption）+ 醒目行（title）+ 次要行（body）。
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, todayDateLabel(state).length, widthDp)
+                out += WidgetFillPlan.TextLine(TITLE_BASE_SP, 1,
+                    todayEmptyText(context, line.isTodayHadClasses()).length, widthDp)
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroEmptyHintText(context, line).length, widthDp)
             }
             else -> {
                 // 中缝可能是一行或两行：按真实行数估算，别让字号因为少算一行而放得过大。
@@ -453,6 +474,13 @@ private fun bodyTextLines(context: Context, state: WidgetDisplayState, hero: Wid
                 } else {
                     out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroDetailText(context, hero).length, listWidthDp)
                 }
+            }
+            WidgetBodyLine.Kind.HERO_EMPTY -> {
+                // 空课态只有一个形态，单栏与双栏左卡完全一致（不像 hero 那样有拆行变体）。
+                out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, todayDateLabel(state).length, listWidthDp)
+                out += WidgetFillPlan.TextLine(TITLE_BASE_SP, 1,
+                    todayEmptyText(context, line.isTodayHadClasses()).length, listWidthDp)
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroEmptyHintText(context, line).length, listWidthDp)
             }
             WidgetBodyLine.Kind.COURSE -> {
                 // 单栏的课程行是**一行**（课名 + 右侧教室），只有双栏才是双行行项（课名一行、节次·教室一行）。
@@ -512,6 +540,7 @@ private fun BodyLineView(context: Context, state: WidgetDisplayState, plan: Widg
     when (line.kind) {
         WidgetBodyLine.Kind.HERO -> HeroSection(context, state, hero, appWidgetId, metrics, line.titleMaxLines,
             stackedDetail = line.isStackedDetail)
+        WidgetBodyLine.Kind.HERO_EMPTY -> HeroEmptySection(context, state, appWidgetId, metrics, line, rowForm)
         WidgetBodyLine.Kind.SUMMARY -> SummaryRow(context, state, plan, appWidgetId, metrics, line.isShowCounts, true)
         WidgetBodyLine.Kind.SUMMARY_COUNTS -> SummaryCountsRow(context, state, plan, metrics)
         WidgetBodyLine.Kind.COUNTER -> CounterRow(context, state, plan, appWidgetId, metrics)
@@ -785,6 +814,74 @@ private fun HeroDetail(context: Context, hero: WidgetOccurrence, metrics: Widget
         style = bodyStyle(metrics, R.color.widget_text_secondary))
 }
 
+/**
+ * 单栏与预览里的 hero 空课态：三行 + 末尾与课表之间的一段间距（与 [HeroSection] 同源）。
+ *
+ * <p>触发条件是「今天已经没有可上的课」（本来没课，或今天的课已上完）。此时 hero 位置不再画
+ * 明天的课 —— 那是把明天的一节课冒充成「接下来」；三行改成：今天的日期 → 醒目行（今天无课 /
+ * 今天已无课）→ 一句轻松的话。
+ */
+@Composable
+private fun HeroEmptySection(context: Context, state: WidgetDisplayState, appWidgetId: Int,
+                             metrics: WidgetLayoutMetrics, line: WidgetBodyLine,
+                             rowForm: WidgetBodyPlan.RowForm) {
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        // 「紧凑」的窄格里日期与「样式」入口挤不下，而计数行本来就有入口（见 CounterRow）。
+        HeroEmptyLines(context, state, appWidgetId, metrics, line,
+            showStyleEntry = rowForm != WidgetBodyPlan.RowForm.COMPACT)
+        Spacer(modifier = GlanceModifier.height(metrics.heroGapDp.dp))
+    }
+}
+
+/** 空课态的三行：单栏 hero 与双栏左卡共用，因此两处不可能画出不同的内容。 */
+@Composable
+private fun HeroEmptyLines(context: Context, state: WidgetDisplayState, appWidgetId: Int,
+                           metrics: WidgetLayoutMetrics, line: WidgetBodyLine, showStyleEntry: Boolean) {
+    HeroEmptyHeading(context, state, appWidgetId, metrics, showStyleEntry)
+    Text(text = todayEmptyText(context, line.isTodayHadClasses()), maxLines = 1, style = titleStyle(metrics))
+    Text(text = heroEmptyHintText(context, line), maxLines = 1,
+        style = bodyStyle(metrics, R.color.widget_text_secondary))
+}
+
+/** 空课态的第一行：今天的日期（`10月8日 周三`），右侧是「样式」入口。 */
+@Composable
+private fun HeroEmptyHeading(context: Context, state: WidgetDisplayState, appWidgetId: Int,
+                             metrics: WidgetLayoutMetrics, showStyleEntry: Boolean) {
+    Row(modifier = GlanceModifier.fillMaxWidth()) {
+        val label = todayDateLabel(state)
+        if (label.isEmpty()) {
+            // 旧快照里没有今天的日期（可选字段）：只留「样式」入口，不画一个空行。
+            Spacer(modifier = GlanceModifier.defaultWeight())
+        } else {
+            Text(text = label, maxLines = 1, modifier = GlanceModifier.defaultWeight(),
+                style = captionStyle(metrics, R.color.widget_accent))
+        }
+        if (showStyleEntry) StyleEntry(context, appWidgetId, metrics)
+    }
+}
+
+/**
+ * 「10月8日 周三」：**今天**的日期，由 Web 侧预格式化。
+ *
+ * <p>原生不做日期运算：这两个字段来自快照（见 `WidgetSnapshotV1.todayDayKey/todayWeekdayLabel`），
+ * 这里只做 `WidgetDateLabel` 那种字符串拆分与拼接。
+ */
+private fun todayDateLabel(state: WidgetDisplayState): String =
+    WidgetDateLabel.withWeekday(state.todayDayKey, state.todayWeekdayLabel)
+
+/**
+ * 空课态的次要行：一句轻松的话。
+ *
+ * <p>长句 / 短句按**样式**分档，不按格子尺寸：`compact` 的内容宽只有 54~69dp，长句必然被裁成
+ * 「享受你的美…」，而尺寸阈值被小组件契约禁止（分档只跟着样式走）。
+ */
+private fun heroEmptyHintText(context: Context, line: WidgetBodyLine): String = when {
+    line.isTodayHadClasses() && line.isShortCopy() -> context.getString(R.string.widget_hero_done_hint_short)
+    line.isTodayHadClasses() -> context.getString(R.string.widget_hero_done_hint)
+    line.isShortCopy() -> context.getString(R.string.widget_hero_free_hint_short)
+    else -> context.getString(R.string.widget_hero_free_hint)
+}
+
 /** 「14:00 - 15:40 · B203」：渲染与高度估算共用同一份文案，避免两处写法漂移。 */
 private fun heroTimeRangeText(context: Context, hero: WidgetOccurrence): String =
     context.getString(R.string.widget_time_range, hero.startLabel, hero.endLabel)
@@ -885,8 +982,8 @@ private fun remainingTodayText(context: Context, state: WidgetDisplayState): Str
 private fun heroLabel(context: Context, state: WidgetDisplayState, hero: WidgetOccurrence): String =
     when (state.heroState) {
         WidgetDisplayState.HeroState.IN_PROGRESS -> context.getString(R.string.widget_hero_in_progress)
-        WidgetDisplayState.HeroState.UPCOMING_OTHER_DAY ->
-            context.getString(R.string.widget_hero_upcoming_other_day, heroDayLabel(hero))
+        // 今天没课时这个函数不会被调用（那时画的是 HERO_EMPTY；`UPCOMING_OTHER_DAY` 已不再有专属文案），
+        // 兜底按「接下来」写即可 —— 正常路径不可能命中一个属于别的日子的 hero。
         else -> context.getString(R.string.widget_hero_upcoming, hero.sections)
     }
 
@@ -929,7 +1026,19 @@ private fun daySummaryText(context: Context, plan: WidgetDayPlan): String = when
  * 下一节课在哪天由 [NextOtherDayLine] 用绝对日期表达。
  */
 private fun emptyDayText(context: Context, plan: WidgetDayPlan): String =
-    if (plan.isTodayHadClasses) context.getString(R.string.widget_day_no_class)
+    todayEmptyText(context, plan.isTodayHadClasses)
+
+/**
+ * 「今天没有课可上」的两种写法：今天的课上完了 → 「今天已无课」；今天本来就没课 → 「今天无课」。
+ *
+ * <p>它同时是 hero 空课态醒目行的来源。判决层把 `plan.isTodayHadClasses` 抄进了
+ * {@code WidgetBodyLine#isTodayHadClasses()}，所以这两处不可能写出不一致的文案。
+ *
+ * @param todayHadClasses 今天原本有没有课。
+ * @return 今天没课的文案。
+ */
+private fun todayEmptyText(context: Context, todayHadClasses: Boolean): String =
+    if (todayHadClasses) context.getString(R.string.widget_day_no_class)
     else context.getString(R.string.widget_day_empty)
 
 /** 「紧凑」样式底部那行计数；今天没课时说清是「明天」还是「今天无课」。 */

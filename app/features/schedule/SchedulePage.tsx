@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import ImportDialog from '~/components/dialog/ImportDialog'
 import { useClassStore } from '~/store'
+import { useAttendanceStore } from '~/store/attendanceStore'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
@@ -45,6 +46,7 @@ export default function SchedulePage() {
 
   useWeekKeyboardNavigation({ currentWeek, maxWeek, onWeekChange: setCurrentWeek })
 
+  const attendanceEnabled = useAttendanceStore((state) => state.enabled)
   const { markAllAsAttended, markAllAsUnattended } = useWeekAttendance()
 
   const selectedCourse = weekClasses.find((classItem) => classItem.id === selectedCourseId) || null
@@ -61,6 +63,7 @@ export default function SchedulePage() {
       <div className="mx-auto flex min-h-0 w-full max-w-[1410px] flex-1 flex-col">
         <ScheduleHeader
           currentWeek={currentWeek}
+          attendanceEnabled={attendanceEnabled}
           maxWeek={maxWeek}
           currentRealWeek={currentRealWeek}
           onWeekChange={setCurrentWeek}
@@ -70,6 +73,7 @@ export default function SchedulePage() {
         <ScheduleTable
           weekClasses={weekClasses}
           classMarks={classMarks}
+          attendanceEnabled={attendanceEnabled}
           currentWeek={currentWeek}
           firstWeekStartDate={firstWeekStartDate}
           sectionTimes={sectionTimes}
@@ -81,6 +85,7 @@ export default function SchedulePage() {
         course={selectedCourse}
         currentWeek={currentWeek}
         mark={selectedMark}
+        attendanceEnabled={attendanceEnabled}
         open={selectedCourse !== null}
         onOpenChange={(open) => !open && setSelectedCourseId(null)}
         onToggleAttendance={toggleAttendance}

@@ -38,6 +38,7 @@ export function createPastClassMarks(
         classId: classItem.id,
         week,
         isAttended: true,
+        attendanceMarked: true,
         note: '',
       }
     })
@@ -58,6 +59,23 @@ export function createPastClassMarks(
  */
 export function getMarkKey(classId: string, week: number) {
   return `${classId}-${week}`
+}
+
+/**
+ * 这条标记是否包含一次真实的出勤判断。
+ *
+ * 「只写了备注」的标记（`attendanceMarked === false`）不算判断，因此看板把它计入**未标记**
+ * 而不是缺勤 —— 这是「写备注不等于缺勤」的唯一判据，新增读取出勤状态的代码必须复用它。
+ *
+ * 运行时字段仍可能是 `undefined`（旧备份在迁移前就进过内存、或外部 JSON 手改过）：按「已判断」处理，
+ * 与 `migrations.ts` 的补齐口径一致。
+ *
+ * @param mark 出勤标记；不存在时返回 `false`（没有标记自然没有判断）。
+ * @returns 这条标记是否做过出勤判断。
+ */
+export function isAttendanceMarked(mark: ClassMark | undefined): boolean {
+  if (!mark) return false
+  return mark.attendanceMarked !== false
 }
 
 export function getCourseKey(classItem: Class) {

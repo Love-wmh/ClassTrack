@@ -19,6 +19,13 @@ public final class WidgetBodyLine {
     public enum Kind {
         /** hero：状态标签 +「样式」入口 + 课程名 + 时间与教室。 */
         HERO,
+        /**
+         * hero 位置的「今天的空课态」（今天没有可上的课：本来没课，或今天的课已上完）。
+         *
+         * <p>三行：今天的日期行 → 醒目行（今天无课 / 今天已无课）→ 次要行（一句轻松的话）。
+         * 它和 {@link #HERO} 占同一个位置，区别只是「这一格没有课可讲」。
+         */
+        HERO_EMPTY,
         /** 汇总行：「今天 周一 · 共 3 节」+「样式」入口；今天没课时这一行就是「今天无课」。 */
         SUMMARY,
         /** 「紧凑」样式底部的计数行。 */
@@ -44,9 +51,13 @@ public final class WidgetBodyLine {
     private final boolean showCounts;
     private final boolean showSections;
     private final boolean stackedDetail;
-
+    /** 空课态专用：今天原本有没有课（决定醒目行写「今天无课」还是「今天已无课」）。 */
+    private final boolean todayHadClasses;
+    /** 空课态专用：次要行用短句还是长句；由**样式**决定（紧凑 → 短句），与格子尺寸无关。 */
+    private final boolean shortCopy;
     private WidgetBodyLine(Kind kind, WidgetDayItem item, int index, int titleMaxLines,
-            boolean showCounts, boolean showSections, boolean stackedDetail) {
+            boolean showCounts, boolean showSections, boolean stackedDetail, boolean todayHadClasses,
+            boolean shortCopy) {
         this.kind = kind;
         this.item = item;
         this.index = index;
@@ -54,6 +65,8 @@ public final class WidgetBodyLine {
         this.showCounts = showCounts;
         this.showSections = showSections;
         this.stackedDetail = stackedDetail;
+        this.todayHadClasses = todayHadClasses;
+        this.shortCopy = shortCopy;
     }
 
     /**
@@ -72,7 +85,20 @@ public final class WidgetBodyLine {
      * @return hero 行。
      */
     public static WidgetBodyLine hero(int titleMaxLines, boolean stackedDetail) {
-        return new WidgetBodyLine(Kind.HERO, null, 0, Math.max(1, titleMaxLines), false, false, stackedDetail);
+        return new WidgetBodyLine(Kind.HERO, null, 0, Math.max(1, titleMaxLines), false, false, stackedDetail, false,
+                false);
+    }
+
+    /**
+     * 今天的空课态（hero 位置）。
+     *
+     * @param todayHadClasses 今天原本有课、只是已上完时为 `true`（醒目行写「今天已无课」）；
+     *     本来就没课时为 `false`（写「今天无课」）。
+     * @param shortCopy 次要行用短句（`compact` 那种窄格）还是长句。
+     * @return 空课态行。
+     */
+    public static WidgetBodyLine heroEmpty(boolean todayHadClasses, boolean shortCopy) {
+        return new WidgetBodyLine(Kind.HERO_EMPTY, null, 0, 1, false, false, false, todayHadClasses, shortCopy);
     }
 
     /**
@@ -80,22 +106,22 @@ public final class WidgetBodyLine {
      * @return 汇总行。
      */
     public static WidgetBodyLine summary(boolean showCounts) {
-        return new WidgetBodyLine(Kind.SUMMARY, null, 0, 1, showCounts, false, false);
+        return new WidgetBodyLine(Kind.SUMMARY, null, 0, 1, showCounts, false, false, false, false);
     }
 
     /** @return 「紧凑」样式的计数行。 */
     public static WidgetBodyLine counter() {
-        return new WidgetBodyLine(Kind.COUNTER, null, 0, 1, false, false, false);
+        return new WidgetBodyLine(Kind.COUNTER, null, 0, 1, false, false, false, false, false);
     }
 
     /** @return 「已上完 N 节」折叠行。 */
     public static WidgetBodyLine collapsed() {
-        return new WidgetBodyLine(Kind.COLLAPSED, null, 0, 1, false, false, false);
+        return new WidgetBodyLine(Kind.COLLAPSED, null, 0, 1, false, false, false, false, false);
     }
 
     /** @return 「下一节 · 某日 某时刻 某课」行。 */
     public static WidgetBodyLine nextOther() {
-        return new WidgetBodyLine(Kind.NEXT_OTHER, null, 0, 1, false, false, false);
+        return new WidgetBodyLine(Kind.NEXT_OTHER, null, 0, 1, false, false, false, false, false);
     }
 
     /**
@@ -106,17 +132,17 @@ public final class WidgetBodyLine {
      */
     /** @return 双栏富内容：汇总行下面的当天计数行。 */
     public static WidgetBodyLine summaryCounts() {
-        return new WidgetBodyLine(Kind.SUMMARY_COUNTS, null, 0, 1, true, false, false);
+        return new WidgetBodyLine(Kind.SUMMARY_COUNTS, null, 0, 1, true, false, false, false, false);
     }
 
     /** @return 双栏富内容：左卡中缝的「下一节」行。 */
     public static WidgetBodyLine midNext() {
-        return new WidgetBodyLine(Kind.MID_NEXT, null, 0, 1, false, false, false);
+        return new WidgetBodyLine(Kind.MID_NEXT, null, 0, 1, false, false, false, false, false);
     }
 
     /** @return 双栏富内容：列表底部的「今天最后一节」行。 */
     public static WidgetBodyLine footerLast() {
-        return new WidgetBodyLine(Kind.FOOTER_LAST, null, 0, 1, false, false, false);
+        return new WidgetBodyLine(Kind.FOOTER_LAST, null, 0, 1, false, false, false, false, false);
     }
 
     /**
@@ -126,7 +152,7 @@ public final class WidgetBodyLine {
      * @return 一行课程。
      */
     public static WidgetBodyLine course(WidgetDayItem item, int index, boolean showSections) {
-        return new WidgetBodyLine(Kind.COURSE, item, index, 1, false, showSections, false);
+        return new WidgetBodyLine(Kind.COURSE, item, index, 1, false, showSections, false, false, false);
     }
 
     public Kind getKind() {
@@ -161,5 +187,15 @@ public final class WidgetBodyLine {
     /** @return hero 明细是否要拆成两行（时间 / 教室）。 */
     public boolean isStackedDetail() {
         return stackedDetail;
+    }
+
+    /** @return 空课态：今天原本有没有课；其它种类恒为 `false`。 */
+    public boolean isTodayHadClasses() {
+        return todayHadClasses;
+    }
+
+    /** @return 空课态：次要行是否用短句；其它种类恒为 `false`。 */
+    public boolean isShortCopy() {
+        return shortCopy;
     }
 }

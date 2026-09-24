@@ -31,6 +31,13 @@ export interface UiSlice {
   showWidgetGuide: boolean
   /** 加桌面板（课表页顶栏那个 Sheet）是否打开；引导的「去添加」靠它直达。 */
   widgetPinSheetOpen: boolean
+  /**
+   * 第一段加桌引导关闭后那段「去个人中心看看」的一次性引导是否打开。
+   *
+   * 它还需要加桌面板**不在**打开状态才会真的出现（见 `ProfileGuideDialog`）：点「去添加」时
+   * 面板会随即打开，第二段等它关掉再出现，不叠在面板上。
+   */
+  showProfileGuide: boolean
   markdownEditorDialog: MarkdownEditorDialogState
   setShowSchoolDialog: (show: boolean) => void
   setShowImportDialog: (show: boolean) => void
@@ -39,6 +46,7 @@ export interface UiSlice {
   setSelectedImportMethod: (method: ImportMethod) => void
   setShowWidgetGuide: (show: boolean) => void
   setWidgetPinSheetOpen: (open: boolean) => void
+  setShowProfileGuide: (show: boolean) => void
   openMarkdownEditorDialog: (options: MarkdownEditorDialogOptions) => void
   closeMarkdownEditorDialog: () => void
 }
@@ -51,6 +59,7 @@ export const createUiSlice: StoreSlice<UiSlice> = (set) => ({
   selectedImportMethod: 'parser',
   showWidgetGuide: false,
   widgetPinSheetOpen: false,
+  showProfileGuide: false,
   markdownEditorDialog: {
     open: false,
     sessionId: 0,
@@ -87,6 +96,10 @@ export const createUiSlice: StoreSlice<UiSlice> = (set) => ({
 
   setWidgetPinSheetOpen: (open) => {
     set({ widgetPinSheetOpen: open })
+  },
+
+  setShowProfileGuide: (show) => {
+    set({ showProfileGuide: show })
   },
 
   openMarkdownEditorDialog: (options) => {

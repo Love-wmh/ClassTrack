@@ -6,6 +6,7 @@ import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { getExportSuccessMessage } from '~/lib/exportFile'
 import { useClassStore } from '~/store'
+import { useAttendanceStore } from '~/store/attendanceStore'
 import { useDataExportImport } from './hooks/useDataExportImport'
 
 export default function DataManagementPage() {
@@ -14,7 +15,9 @@ export default function DataManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const totalClasses = classes.length
-  const totalAttended = Object.values(classMarks).filter((mark) => mark.isAttended).length
+  const attendanceEnabled = useAttendanceStore((state) => state.enabled)
+  // 关闭出勤时连这条计数都不算：这一行本来就不渲染，不做无意义的出勤统计。
+  const totalAttended = attendanceEnabled ? Object.values(classMarks).filter((mark) => mark.isAttended).length : 0
   const totalWithNote = Object.values(classMarks).filter((mark) => mark.note).length
 
   const handleExportClick = async () => {
@@ -63,12 +66,14 @@ export default function DataManagementPage() {
                   <div className="text-sm font-medium">当前周次</div>
                   <DataDisplayButton>第 {currentWeek} 周</DataDisplayButton>
                 </div>
-                <div className="flex items-center justify-between gap-3 py-2">
-                  <div className="text-sm font-medium">已标记课程</div>
-                  <DataDisplayButton>
-                    {totalAttended} / {totalClasses}
-                  </DataDisplayButton>
-                </div>
+                {attendanceEnabled && (
+                  <div className="flex items-center justify-between gap-3 py-2">
+                    <div className="text-sm font-medium">已标记课程</div>
+                    <DataDisplayButton>
+                      {totalAttended} / {totalClasses}
+                    </DataDisplayButton>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-3 py-2">
                   <div className="text-sm font-medium">备注数量</div>
                   <DataDisplayButton>{totalWithNote}</DataDisplayButton>
