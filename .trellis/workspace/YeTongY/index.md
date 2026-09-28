@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
-- **Last Active**: 2026-09-25
+- **Total Sessions**: 23
+- **Last Active**: 2026-09-28
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~764 | Active |
+| `journal-1.md` | ~835 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 23 | 2026-09-28 | 小工具「今天已无课」档重做（列明天课表 + 「下次上课」块）并修掉快照丢弃当天已上完课 | `4adc1b4`, `5f176f8` | `fix/widget-today-done-show-tomorrow` |
 | 21 | 2026-09-25 | 前台课表尺度响应式化：字号改由格子尺寸推导，去掉硬编码 px | `6f82dc3` | `feat/schedule-responsive-sizing` |
 | 18 | 2026-09-24 | 课表格子彩色实底改版 + 教师/备注实测降级 | `00aba63` | `feat/schedule-cell-pastel` |
 | 17 | 2026-09-24 | 出勤统计默认关闭并做成可选项（含备注/出勤解耦） | `fe8d131` | `fix/widget-today-empty-hero` |

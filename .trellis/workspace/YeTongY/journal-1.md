@@ -762,3 +762,74 @@ AC-E4（真机/模拟器截图复核）保持未勾选：本机已出 240/360/41
 ### Status
 
 [OK] **Completed**
+
+
+## Session 23: 小工具「今天已无课」档重做（列明天课表 + 「下次上课」块）并修掉快照丢弃当天已上完课
+<!-- trellis-session: v=2 fp=ba882cf1857907cf -->
+
+**Date**: 2026-09-28
+**Task**: 小工具「今天已无课」档重做（列明天课表 + 「下次上课」块）并修掉快照丢弃当天已上完课
+**Branch**: `fix/widget-today-done-show-tomorrow`
+
+### Summary
+
+Session summary was not supplied.
+
+### Main Changes
+
+## 本轮做了什么
+
+用户报了两件事，一起修（分支 `fix/widget-today-done-show-tomorrow`，独立工作树）：
+
+1. 「上完课后 / 没课后，小工具非 hero 区域只剩一行『下一节 · …』」→ 先做了「之前 vs 现在」的取证
+   （结论：变的是 hero 区域，非 hero 那一行两代其实一样，但 004fe24 确实给 `next_up` 补了 `NEXT_OTHER`、
+   也改了 compact 的起始下标，所以那半张卡是「变过」的），再按用户拍板重做这一档：
+   - 今天没有「还没上完」的课且明天有课 → 直接列明天课表（三种「已上完」策略都切）；
+     回退时把 `todayHadClasses` 与折叠计数一并带过去，否则空课态会写成「今天无课」、折叠档会丢「已上完 N 节」。
+   - 明天也没课（周末 / 长假）→ 不列下一个有课日的课表（保持 2026-09-20 口径），但把原来那行 caption 小字
+     换成「下次上课」块：title 字号标签 + body 字号「9月28日 周一 08:00」，课名去掉（它正是被省略号截掉的那段）；
+     1×2 窄档只画日期，计数行不再重复 hero 已经说过的「今天无课」，两处高度估算同步跟着改。
+2. 「上完课切前台后，今天已上完的课全都不见了」→ 根因是 Web 快照生成时丢弃 `endEpochMs <= generatedAt`
+   的条目；而覆盖窗口从**今天**开始，所以这条过滤只能删掉「今天已上完」的课（未来日子一条都删不掉，
+   省不下 payload），同时让 `todayFinishedCount` 恒为 0（「已上完 N 节」与双栏计数恒错）。删掉该过滤即可。
+
+文案/形态来回问了三轮才对上：用户否掉了「明天也没有课」「明天也无课」「连着两天无课」，也否掉了我第一版的
+「下次上课 · 日期时刻」单行；最后定在标签式两行（「下次上课」/「9月28日 周一 08:00」）。教训：这一档是
+「不写否定句、用卡上既有词汇」的极简标签风，别自己造句。
+
+## 证据 / 门禁
+
+- Android 单测 34 类 / 262 例全过；`WidgetSnapshotCrossLayerTest` **未重新生成夹具**即全绿
+  （夹具当天唯一一节 10:00–11:40 在 `generatedAt` 09:00 时未结束，那条过滤在夹具上从未生效）。
+- Web 36 文件 / 289 例全过；`pnpm typecheck` / `lint` / `format:check` / `build` 全部 exit 0。
+- 沙盒环境两处坑记进了 `verification.md`（下次省时间）：`~/.gradle` 只读 → 用
+  `GRADLE_USER_HOME=/media/.../CodeFiles/.worktrees/.gradle-home` + `--offline`，并把
+  `~/.gradle/caches/modules-2` 合并进那个可写 home（否则 `compose-compiler-gradle-plugin:2.1.20` 拉不到）；
+  `~/.android` 只读 → `assembleDebug` 必须让 `HOME`/`ANDROID_USER_HOME` 指向 `~/.cache/android-home`，
+  否则 `:app:validateSigningDebug` 报 「Unable to create debug keystore」。
+- 另：主检出里被 `.gitignore` 列出的沙盒占位点文件（`.gitconfig` / `.bashrc` / `.mcp.json` …）中途消失，
+  导致 bwrap 起不来，已补回空文件。
+
+## 未完成
+
+- 渲染层没有设备截图：**沙盒里没有 `/dev/kvm`**（`emulator -accel-check` 报 `/dev/kvm is not found`），
+  模拟器起不来 —— 这是环境限制，不是漏做。debug APK 已产出
+  （`android/app/build/outputs/apk/debug/app-debug.apk`，10.7MB），交本机设备补验三件事：
+  3×2 的两行层级、1×2 有没有省略号、以及切后台再回前台后已上完的课是否仍在。
+- 因此任务未归档；设备确认后再 `task.py archive`。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4adc1b4` | fix(widget): 今天已无课时直接列明天课表，长假档换成「下次上课」块，并修掉快照丢弃当天已上完课 |
+| `5f176f8` | chore(task): 补记设备验证缺口（沙盒无 /dev/kvm）与可安装 APK 的复现命令 |
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 本机设备补渲染截图（沙盒无 /dev/kvm）；确认后 task.py archive
