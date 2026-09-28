@@ -165,9 +165,9 @@ export default function AppUpdateSettings() {
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-0.5">
-            <div className="text-sm font-medium">上次检查</div>
+            <div className="text-sm font-medium">上次检查成功</div>
             <p className="text-xs text-muted-foreground">
-              {lastCheckAt === null ? '尚未检查' : format(new Date(lastCheckAt), 'yyyy-MM-dd HH:mm')}
+              {lastCheckAt === null ? '还没有成功检查过' : format(new Date(lastCheckAt), 'yyyy-MM-dd HH:mm')}
             </p>
           </div>
           <Button

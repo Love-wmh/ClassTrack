@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest'
 import { Dialog } from '~/components/ui/dialog'
 import type { UpdateCandidate } from '~/lib/app-update/channels'
 import { UpdateAvailableBody } from './UpdateAvailableDialog'
-import { UPDATE_DOWNLOAD_ACTION, UPDATE_LATER_ACTION, UPDATE_SKIP_ACTION, formatReleaseNotes } from './updateDialogCopy'
+import { UPDATE_DOWNLOAD_ACTION, UPDATE_LATER_ACTION, UPDATE_SKIP_ACTION } from './updateDialogCopy'
 
 const candidate: UpdateCandidate = {
   version: '1.2.0',
   prerelease: false,
   tag: 'v1.2.0',
   title: 'ClassTrack Android 1.2.0',
-  notes: 'ClassTrack Android **1.2.0**\n\n## 本次改动\n\n- 修掉某个问题 (abc1234)',
+  notes: 'ClassTrack Android **1.2.0**\n\n## 本次改动\n\n- 修掉某个问题 (`abc1234`)',
   pageUrl: 'https://github.com/Love-wmh/ClassTrack/releases/tag/v1.2.0',
 }
 
@@ -56,26 +56,26 @@ describe('更新模态框内容', () => {
     expect(html).toContain('href="https://github.com/Love-wmh/ClassTrack/releases/tag/v1.2.0"')
   })
 
-  it('更新说明按纯文本渲染：markdown 粗体标记被去掉，且没有任何注入的标签', () => {
+  it('更新说明按 markdown 渲染：粗体与列表出元素，不再看到 `**` / `##` 字面量', () => {
     const html = render()
 
-    expect(html).not.toContain('**')
     expect(html).toContain('本次改动')
-    // 正文里的尖括号/脚本不会被当成标签执行。
+    expect(html).toContain('<strong')
+    expect(html).toContain('<li')
+    expect(html).toContain('修掉某个问题')
+    expect(html).not.toContain('**')
+    expect(html).not.toContain('##')
+  })
+
+  it('更新说明里的远端 HTML 不会变成元素', () => {
+    const html = render({ notes: '<script>alert(1)</script>' })
+
     expect(html).not.toContain('<script')
+    expect(html).toContain('&lt;script&gt;')
   })
 
   it('没有更新说明时给一句占位，而不是空框', () => {
     expect(render({ notes: '' })).toContain('本次发布没有填写更新说明。')
-  })
-})
-
-describe('更新说明的纯文本清理', () => {
-  it('只去掉粗体标记并裁掉首尾空白', () => {
-    expect(formatReleaseNotes('  **1.2.0** 已发布\n')).toBe('1.2.0 已发布')
-  })
-
-  it('不去碰其它字符（不解析 markdown、不生成标签）', () => {
-    expect(formatReleaseNotes('<b>x</b> & `code`')).toBe('<b>x</b> & `code`')
+    expect(render({ notes: '   \n' })).toContain('本次发布没有填写更新说明。')
   })
 })

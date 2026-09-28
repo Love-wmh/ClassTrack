@@ -3,14 +3,15 @@ import { Badge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import type { UpdateCandidate } from '~/lib/app-update/channels'
-import { UPDATE_DOWNLOAD_ACTION, UPDATE_LATER_ACTION, UPDATE_SKIP_ACTION, formatReleaseNotes } from './updateDialogCopy'
+import { UPDATE_DOWNLOAD_ACTION, UPDATE_LATER_ACTION, UPDATE_SKIP_ACTION } from './updateDialogCopy'
+import { renderReleaseNotes } from './releaseNotes'
 
 /**
  * 发现新版本时弹出的前台模态框。
  *
- * **release 正文按纯文本渲染（prd T5）**：正文是远端内容，`marked` 的输出未经净化，
- * 直接 `dangerouslySetInnerHTML` 会在 WebView 里开出一个脚本注入面 —— 而这个 WebView 的
- * localStorage 里放着用户的全部课程数据。纯文本足够看懂「本次改动」，不值得为排版换一个注入面。
+ * **release 正文按 markdown 渲染**（2026-09-28 用户口径）：正文是远端内容，所以它走
+ * `renderReleaseNotes()` 的 token → React 元素映射，**全程没有 `dangerouslySetInnerHTML`**；
+ * 原始 HTML / 图片 / 表格一律降级成文本。安全边界与降级表见 `releaseNotes.tsx`。
  */
 
 type UpdateAvailableBodyProps = {
@@ -27,7 +28,8 @@ type UpdateAvailableBodyProps = {
  * （与 `WidgetGuideDialog` 同一约定）。
  */
 export function UpdateAvailableBody({ candidate, currentVersion, onDismiss, onSkip }: UpdateAvailableBodyProps) {
-  const notes = formatReleaseNotes(candidate.notes)
+  // 空正文（trim 后为空）由这里兜底：`renderReleaseNotes` 返回 `null` 时给一句占位。
+  const hasNotes = candidate.notes.trim() !== ''
 
   return (
     <>
@@ -44,9 +46,9 @@ export function UpdateAvailableBody({ candidate, currentVersion, onDismiss, onSk
         </DialogDescription>
       </DialogHeader>
 
-      {notes ? (
-        <div className="max-h-56 overflow-y-auto rounded-md border bg-muted/30 p-3 text-sm leading-6 whitespace-pre-wrap text-muted-foreground">
-          {notes}
+      {hasNotes ? (
+        <div className="max-h-56 overflow-y-auto rounded-md border bg-muted/30 p-3 text-sm leading-6 text-muted-foreground">
+          {renderReleaseNotes(candidate.notes)}
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">本次发布没有填写更新说明。</p>
