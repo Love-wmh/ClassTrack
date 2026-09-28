@@ -3,7 +3,7 @@
   "name": "widget-finished-day-tomorrow",
   "title": "今天已无课的小工具卡片直接列下一个有课日的课表，并修掉快照丢弃当天已上完课",
   "description": "今天已无课（今天没课或今天的课已上完）时，小工具卡片不再只剩一行「下一节 · …」：直接列出下一个有课日的课表并写明是哪一天；同时修掉 Web 侧快照生成丢弃「当天已上完」条目导致上完课切前台后已上完课全部消失、todayFinishedCount 恒为 0 的缺陷。",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "YeTongY",
   "assignee": "YeTongY",
   "createdAt": "2026-09-28",
-  "completedAt": null,
+  "completedAt": "2026-09-28",
   "branch": "fix/widget-today-done-show-tomorrow",
   "base_branch": "master",
   "worktree_path": null,
@@ -22,5 +22,7 @@
   "parent": null,
   "relatedFiles": [],
   "notes": "",
-  "meta": {}
+  "meta": {
+    "pr_url": "https://github.com/Love-wmh/ClassTrack/pull/23"
+  }
 }
