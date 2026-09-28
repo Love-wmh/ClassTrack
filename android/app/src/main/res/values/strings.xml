@@ -55,6 +55,14 @@
     <string name="widget_day_summary_tomorrow">明天 %1$s · 共 %2$d 节</string>
     <string name="widget_day_summary_tomorrow_no_weekday">明天 · 共 %1$d 节</string>
     <string name="widget_tomorrow_count">明天 %1$d 节</string>
+    <!--
+      「下次上课」块：今天已无课、且明天也没有课（周末 / 长假）时卡上唯一的课程信息。
+      宽档（接下来 / 全天课表）= 标签（title 字号）+ 日期时刻（body 字号）；窄档（紧凑 1×2）只画日期，
+      标签由计数行承担（见 compactCounterText）。分档按**样式**，不看格子尺寸。
+      课名一律不写：3×2 里被省略号截掉的正好是课名。
+    -->
+    <string name="widget_next_class_label">下次上课</string>
+    <string name="widget_next_class_when">%1$s %2$s</string>
     <string name="widget_finished_count">已上完 %1$d 节</string>
     <string name="widget_today_remaining_count">今天还有 %1$d 节</string>
     <!-- 双栏富内容（静态数据，不需要额外刷新） -->
@@ -64,7 +72,6 @@
     <!-- hero 本身就是「接下来」那一节时，它之后的课要再退一级称呼，否则会出现「接下来 A / 下一节 B」这种自相矛盾的读法。 -->
     <string name="widget_mid_next_third">再之后 %1$s %2$s</string>
     <string name="widget_footer_last">今天最后一节 %1$s %2$s</string>
-    <string name="widget_next_other_day_line">下一节 · %1$s %2$s %3$s</string>
     <string name="widget_style_entry">样式</string>
     <string name="widget_sections_suffix">第%1$s节</string>
 

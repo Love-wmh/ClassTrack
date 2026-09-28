@@ -442,6 +442,12 @@ private fun headerTextLines(context: Context, state: WidgetDisplayState, hero: W
                     todayEmptyText(context, line.isTodayHadClasses()).length, widthDp)
                 out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, heroEmptyHintText(context, line).length, widthDp)
             }
+            WidgetBodyLine.Kind.NEXT_OTHER -> {
+                // `day_list` + 双栏时这一行落在左栏（那个样式没有 hero 行）：宽档两行，与渲染一致。
+                out += WidgetFillPlan.TextLine(TITLE_BASE_SP, 1,
+                    context.getString(R.string.widget_next_class_label).length, widthDp)
+                out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, nextClassWhenText(context, hero).length, widthDp)
+            }
             else -> {
                 // 中缝可能是一行或两行：按真实行数估算，别让字号因为少算一行而放得过大。
                 for (text in midNextTexts(context, state)) {
@@ -500,6 +506,16 @@ private fun bodyTextLines(context: Context, state: WidgetDisplayState, hero: Wid
                 val text = if (last == null) "" else context.getString(R.string.widget_footer_last, last.startLabel, last.name)
                 out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 2, text.length, listWidthDp)
             }
+            WidgetBodyLine.Kind.NEXT_OTHER -> {
+                // 「下次上课」块：宽档两行（标签 + 日期时刻），窄档一行日期 —— 与渲染逐项对应。
+                if (body.rowForm == WidgetBodyPlan.RowForm.COMPACT) {
+                    out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, nextClassDateText(hero).length, listWidthDp)
+                } else {
+                    out += WidgetFillPlan.TextLine(TITLE_BASE_SP, 1,
+                        context.getString(R.string.widget_next_class_label).length, listWidthDp)
+                    out += WidgetFillPlan.TextLine(BODY_BASE_SP, 1, nextClassWhenText(context, hero).length, listWidthDp)
+                }
+            }
             else -> {
                 out += WidgetFillPlan.TextLine(CAPTION_BASE_SP, 1, SUMMARY_LENGTH, listWidthDp)
             }
@@ -545,7 +561,7 @@ private fun BodyLineView(context: Context, state: WidgetDisplayState, plan: Widg
         WidgetBodyLine.Kind.SUMMARY_COUNTS -> SummaryCountsRow(context, state, plan, metrics)
         WidgetBodyLine.Kind.COUNTER -> CounterRow(context, state, plan, appWidgetId, metrics)
         WidgetBodyLine.Kind.COLLAPSED -> CollapsedLine(context, plan, metrics)
-        WidgetBodyLine.Kind.NEXT_OTHER -> NextOtherDayLine(context, state, metrics)
+        WidgetBodyLine.Kind.NEXT_OTHER -> NextOtherDayLine(context, state, metrics, rowForm)
         WidgetBodyLine.Kind.MID_NEXT -> MidNextRow(context, state, metrics)
         WidgetBodyLine.Kind.FOOTER_LAST -> FooterLastRow(context, state, metrics)
         WidgetBodyLine.Kind.COURSE -> DayRow(context, line.item, metrics, line.isShowSections, rowForm)
@@ -951,18 +967,40 @@ private fun StyleEntry(context: Context, appWidgetId: Int, metrics: WidgetLayout
     )
 }
 
-/** 今天已无课、但后面还有课时，补一行「下一节 · 10月8日 周四 08:00 高等数学」。 */
+/**
+ * 「下次上课」块：今天已无课、且**明天也没有课**（周末 / 长假 / 学期尾声）时，卡上唯一的课程信息。
+ *
+ * <p>它是 `NEXT_OTHER` 行的宽档形态：主体标题（title 字号）+ 日期时刻（body 字号、accent）。
+ * 课名一律不写 —— 3×2 的内容宽约 22 个汉字，`9月28日 周一 08:00 毛泽东思想和中国特…` 里被截掉的
+ * 正好是课名，而「哪天恢复上课」才是这一档真正要回答的问题。日期时刻来自 hero（下一条没结束的课）。
+ *
+ * <p>窄档（`compact`，1×2 内容宽约 5 个汉字）只留一行日期；`下次上课` 这个标签由计数行承担
+ * （见 [compactCounterText]），而计数行本来就带「样式」入口，因此窄档不会多占一行。
+ */
 @Composable
-private fun NextOtherDayLine(context: Context, state: WidgetDisplayState, metrics: WidgetLayoutMetrics) {
+private fun NextOtherDayLine(context: Context, state: WidgetDisplayState, metrics: WidgetLayoutMetrics,
+                             rowForm: WidgetBodyPlan.RowForm) {
     val hero = state.hero ?: return
     if (state.heroState != WidgetDisplayState.HeroState.UPCOMING_OTHER_DAY) return
 
-    Text(
-        text = context.getString(R.string.widget_next_other_day_line, heroDayLabel(hero), hero.startLabel, hero.name),
-        maxLines = 1,
-        style = captionStyle(metrics, R.color.widget_accent)
-    )
+    if (rowForm == WidgetBodyPlan.RowForm.COMPACT) {
+        Text(text = nextClassDateText(hero), maxLines = 1, style = captionStyle(metrics, R.color.widget_accent))
+        return
+    }
+
+    Column(modifier = GlanceModifier.fillMaxWidth()) {
+        Text(text = context.getString(R.string.widget_next_class_label), maxLines = 1, style = titleStyle(metrics))
+        Text(text = nextClassWhenText(context, hero), maxLines = 1,
+            style = bodyStyle(metrics, R.color.widget_accent))
+    }
 }
+
+/** 宽档次要行：「9月28日 周一 08:00」—— 日期 + 星期 + 开始时刻。 */
+private fun nextClassWhenText(context: Context, hero: WidgetOccurrence): String =
+    context.getString(R.string.widget_next_class_when, heroDayLabel(hero), hero.startLabel)
+
+/** 窄档短文案：只有日期（`9月28日`）—— 星期与时刻在 1×2 上放不下（分档跟着样式走，不看尺寸）。 */
+private fun nextClassDateText(hero: WidgetOccurrence): String = WidgetDateLabel.monthDay(hero.dayKey)
 
 /**
  * 主卡底部的副信息：「今天还有 N 节」。
@@ -1041,7 +1079,13 @@ private fun todayEmptyText(context: Context, todayHadClasses: Boolean): String =
     if (todayHadClasses) context.getString(R.string.widget_day_no_class)
     else context.getString(R.string.widget_day_empty)
 
-/** 「紧凑」样式底部那行计数；今天没课时说清是「明天」还是「今天无课」。 */
+/**
+ * 「紧凑」样式底部那行计数；今天没课时说清是「明天」还是「下次上课」。
+ *
+ * <p>「明天也没有课」这一档不能再说「今天无课」—— 上面 hero 的醒目行已经在说同一件事，1×2 上同一句话
+ * 出现两遍纯属浪费；那一档真正要回答的是「下次上课在哪天」，因此计数行改成那个标签，日期由
+ * [NextOtherDayLine] 的窄档文案给。
+ */
 private fun compactCounterText(context: Context, state: WidgetDisplayState, plan: WidgetDayPlan): String =
     when (plan.source) {
         WidgetDayPlan.Source.TODAY -> if (state.todayRemainingCount > 0)
@@ -1050,7 +1094,7 @@ private fun compactCounterText(context: Context, state: WidgetDisplayState, plan
 
         WidgetDayPlan.Source.TOMORROW -> context.getString(R.string.widget_tomorrow_count, plan.rows.size)
 
-        else -> emptyDayText(context, plan)
+        else -> context.getString(R.string.widget_next_class_label)
     }
 
 /**

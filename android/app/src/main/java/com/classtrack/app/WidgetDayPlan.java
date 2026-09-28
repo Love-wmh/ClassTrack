@@ -11,14 +11,16 @@ import java.util.List;
  * 国庆，还有好几天，但是一直提示有课」）：
  *
  * <ol>
- *   <li>今天有课可列 → 列今天；</li>
- *   <li>今天真的没课、且**明天有课** → 列明天的课，并且汇总行必须写明「明天」，不能冒充今天；</li>
- *   <li>今天与明天都没课（长假）→ 一行课表都不列，只给「下一节 · 10月8日 周四 08:00」这类提示。
- *       否则用户在长假里会一直看到课表，误以为第二天要上课。</li>
+ *   <li>今天还有**没上完**的课（正在上，或还没开始）→ 列今天；</li>
+ *   <li>今天已经没有没上完的课（今天本来没课，或今天的课都上完了 —— 三种「已上完」策略都算），且
+ *       **明天有课** → 列明天的课，并且汇总行必须写明「明天」，不能冒充今天；</li>
+ *   <li>明天也没课（周末 / 长假 / 学期尾声）→ 一行课表都不列，只由 hero 的空课态与「下次上课」块说明。
+ *       否则用户在长假里会一直看到课表，误以为第二天要上课（用户 2026-09-20 明确否掉「下一个有课的日子」）。</li>
  * </ol>
  *
- * <p>另一种「没有行可列」的情况是：今天本来有课，但用户选了「不显示已上完的课」且这些课都已上完。
- * 这时**不回退**到明天 —— 用户刚刚表达了「不想看已上完的课」，把明天的课塞进来会被误读成今天的课。
+ * <p>「今天的课已上完」为什么也列明天（2026-09-28 用户口径）：hero 从 2026-09-23 起在这两种情况下
+ * 都画「今天已无课」的空课态，于是卡上再也没有任何课程信息 —— 只剩一行「下一节 · …」被用户明确否掉。
+ * 今天原本有课时 {@link #isTodayHadClasses()} 仍然为 `true`，空课态的醒目行因此照样写「今天已无课」。
  *
  * <p>纯函数：只做列表遍历与调用 {@link WidgetDayListPolicy}，不碰时间、不碰 Android。
  */
@@ -60,24 +62,44 @@ public final class WidgetDayPlan {
     public static WidgetDayPlan resolve(List<WidgetDayItem> todayItems, List<WidgetDayItem> nextDayItems,
             WidgetStyleConfig.FinishedPolicy policy) {
         List<WidgetDayItem> today = todayItems == null ? Collections.<WidgetDayItem>emptyList() : todayItems;
+        // 裁剪只对「今天」生效：它决定今天这一天的行里哪些能被画出来。
+        WidgetDayListPolicy.Result clipped = WidgetDayListPolicy.apply(today, policy);
+        boolean todayHadClasses = !today.isEmpty();
 
-        if (!today.isEmpty()) {
-            WidgetDayListPolicy.Result clipped = WidgetDayListPolicy.apply(today, policy);
-            if (!clipped.getRows().isEmpty()) {
-                return new WidgetDayPlan(Source.TODAY, clipped.getRows(), clipped.getCollapsedFinishedCount(),
-                        weekdayOf(today), true);
-            }
-            // 今天有课、但被「不显示已上完」全部裁掉：不回退到明天，只如实说「今天已无课」。
-            return new WidgetDayPlan(Source.NONE, Collections.<WidgetDayItem>emptyList(),
-                    clipped.getCollapsedFinishedCount(), weekdayOf(today), true);
+        if (hasUnfinishedRow(clipped.getRows())) {
+            return new WidgetDayPlan(Source.TODAY, clipped.getRows(), clipped.getCollapsedFinishedCount(),
+                    weekdayOf(today), true);
         }
 
+        // 今天已经没有「还没上」的课：今天本来没课，或今天的课都上完了。明天有课就列明天 ——
+        // 汇总行必须写明「明天」，而 hero 的空课态说的是今天（`todayHadClasses` 仍然是上面那个值）。
         List<WidgetDayItem> tomorrow = nextDayItems == null ? Collections.<WidgetDayItem>emptyList() : nextDayItems;
         if (!tomorrow.isEmpty()) {
-            return new WidgetDayPlan(Source.TOMORROW, tomorrow, 0, weekdayOf(tomorrow), false);
+            // 折叠计数跟着一起走：那是用户显式选的策略，不该因为列表切到明天就消失。
+            return new WidgetDayPlan(Source.TOMORROW, tomorrow, clipped.getCollapsedFinishedCount(),
+                    weekdayOf(tomorrow), todayHadClasses);
         }
 
-        return new WidgetDayPlan(Source.NONE, Collections.<WidgetDayItem>emptyList(), 0, "", false);
+        // 明天也没课（周末 / 长假 / 学期尾声）：一行课表都不列，只给 hero 空课态与「下次上课」块。
+        // 不回退到「下一个有课的日子」—— 那是用户在 2026-09-20 明确否掉的口径。
+        return new WidgetDayPlan(Source.NONE, Collections.<WidgetDayItem>emptyList(),
+                clipped.getCollapsedFinishedCount(), todayHadClasses ? weekdayOf(today) : "", todayHadClasses);
+    }
+
+    /**
+     * 裁剪后的行里还有没有「还没上完」的课。
+     *
+     * <p>判据是「存在一条 {@link WidgetDayItem.Phase#FINISHED} 以外的行」，而不是「行列表非空」：
+     * 「显示已上完」策略下今天只剩灰课，此时今天同样已经没有可上的课了。
+     *
+     * @param rows 按策略裁剪后的当天行。
+     * @return 是否还有可上的课。
+     */
+    private static boolean hasUnfinishedRow(List<WidgetDayItem> rows) {
+        for (WidgetDayItem row : rows) {
+            if (row.getPhase() != WidgetDayItem.Phase.FINISHED) return true;
+        }
+        return false;
     }
 
     /**
