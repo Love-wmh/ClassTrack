@@ -818,6 +818,16 @@ Session summary was not supplied.
   3×2 的两行层级、1×2 有没有省略号、以及切后台再回前台后已上完的课是否仍在。
 - 因此任务未归档；设备确认后再 `task.py archive`。
 
+## Session 22: 前台课表缺勤改为实色红框，未标记格子不再显出勤痕迹
+<!-- trellis-session: v=2 fp=01cb899d7007659b -->
+
+**Date**: 2026-09-28
+**Task**: 前台课表缺勤改为实色红框，未标记格子不再显出勤痕迹
+**Branch**: `feat/schedule-absent-solid-red-ring`
+
+### Summary
+
+缺勤从 opacity-60 saturate-50 整卡淡化改为不变淡 + 实色红描边（新增 cellScale.ts 的 CELL_ABSENT_RING_CLASS，#ef4444，宽度仍走 --cc-ring），出勤痕迹收窄到 isAttendanceMarked() 为真的格子（未标记/只写备注完全中性）；同步单测、源码守卫与 mobile-schedule-layout.md（新增「出勤表现」小节）。五道门禁全绿（295 例），真实应用逐格计算样式复核见任务 research/verify-report.md。
 
 ### Git Commits
 
@@ -825,6 +835,7 @@ Session summary was not supplied.
 |------|---------|
 | `4adc1b4` | fix(widget): 今天已无课时直接列明天课表，长假档换成「下次上课」块，并修掉快照丢弃当天已上完课 |
 | `5f176f8` | chore(task): 补记设备验证缺口（沙盒无 /dev/kvm）与可安装 APK 的复现命令 |
+| `3afe55d` | feat(schedule): 课表缺勤改为实色红框，未标记格子不再显出勤痕迹 |
 
 ### Status
 

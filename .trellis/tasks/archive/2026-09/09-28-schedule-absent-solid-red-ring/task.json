@@ -1,0 +1,28 @@
+{
+  "id": "schedule-absent-solid-red-ring",
+  "name": "schedule-absent-solid-red-ring",
+  "title": "前台课表缺勤改为实色红框，未标记格子不再显出勤痕迹",
+  "description": "前台课表课程格的缺勤表现从「淡化（opacity-60 saturate-50，与非本周课程视觉雷同）」改为「不变淡 + 实色红色描边」；同时把出勤表现收窄到真正做过出勤判断的课次，未标记 / 只写备注的格子不再有任何已上/未上痕迹。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "YeTongY",
+  "assignee": "YeTongY",
+  "createdAt": "2026-09-28",
+  "completedAt": "2026-09-28",
+  "branch": "feat/schedule-absent-solid-red-ring",
+  "base_branch": "master",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "pr_url": "https://github.com/Love-wmh/ClassTrack/pull/21"
+  }
+}

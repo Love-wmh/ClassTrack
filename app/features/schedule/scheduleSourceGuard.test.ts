@@ -82,6 +82,16 @@ describe('schedule 目录源码守卫', () => {
     expect(cell).not.toMatch(/leading-\d/)
   })
 
+  it('缺勤描边的颜色只有 cellScale.ts 一处真源（组件里不得内联颜色字面量）', () => {
+    const cell = readFileSync(join(SCHEDULE_DIR, 'ScheduleCourseCell.tsx'), 'utf8')
+
+    // 回归守卫：描边宽度已有 `--cc-ring` 单一真源，颜色同理。组件里内联 `#ef4444` / `rgb(...)`
+    // 会让「改配色只改一处」失效，也会绕过 cellScale.test.ts 的形状断言。
+    expect(cell).not.toMatch(/#[0-9a-fA-F]{6}/)
+    expect(cell).not.toMatch(/rgb\(/)
+    expect(cell).toContain('CELL_ABSENT_RING_CLASS')
+  })
+
   it('尺度常量集中在 cellScale.ts，组件里不出现第二份数值', () => {
     const cell = readFileSync(join(SCHEDULE_DIR, 'ScheduleCourseCell.tsx'), 'utf8')
     const table = readFileSync(join(SCHEDULE_DIR, 'ScheduleTable.tsx'), 'utf8')

@@ -153,11 +153,26 @@ export const CELL_FONT_CLASS = {
   name: '[font-size:clamp(8px,calc(clamp(8px,var(--cc-name-raw),15px)*var(--cc-scale,1)),15px)] [line-height:var(--cc-name-lh)]',
   room: '[font-size:clamp(8px,calc(clamp(8px,var(--cc-room-raw),12px)*var(--cc-scale,1)),12px)] [line-height:var(--cc-room-lh)]',
 } as const
-/** 卡片描边：半透明白内描边（纯白会被看成「卡片被缩小」），宽度随容器走。 */
+/** 卡片描边（常态）：半透明白内描边（纯白会被看成「卡片被缩小」），宽度随容器走。缺勤格改用 `CELL_ABSENT_RING_CLASS`。 */
 export const CELL_RING_CLASS =
   '[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(255_255_255_/_0.55)] focus-visible:[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(255_255_255_/_0.55),0_0_0_2px_var(--ring)]'
 
-/** 出勤角标尺寸。 */
+/**
+ * 卡片描边（缺勤）：**实色红**内描边，宽度与常态白描边共用同一个 `--cc-ring`。
+ *
+ * 为什么缺勤不用「整卡变淡」：`opacity-60 saturate-50` 与非本周课程的淡化色观感雷同——同一张
+ * 课表上「缺勤」与「这周没这节课」几乎分不出来（用户原话：「跟单双周但是这周没有这节课的显示效果一致」），
+ * 而且整卡发灰既不明显也不好看。缺勤需要的是**边缘信号**：卡片底色照旧，只把描边换成不透明红——
+ * 一眼可辨，且与非本周在**形状**上就不同（缺勤改边、非本周换面色）。
+ *
+ * 红色取 `#ef4444`（= `rgb(239 68 68)`），与看板「缺勤」系列 `ABSENT_FILL` 同色。
+ * 任意值里的 `_` 是 Tailwind 的空格写法；**这一串必须是字面量**，运行时拼出来的类名不会被
+ * Tailwind 扫描生成（与 `CELL_RING_CLASS` / `CELL_FONT_CLASS` 同一条约定）。
+ */
+export const CELL_ABSENT_RING_CLASS =
+  '[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(239_68_68)] focus-visible:[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(239_68_68),0_0_0_2px_var(--ring)]'
+
+/** 出勤角标尺寸；角标只出现在**做过出勤判断**的格子上（见 `ScheduleCourseCell.tsx`）。 */
 export const CELL_BADGE_CLASS = '[width:var(--cc-badge)] [height:var(--cc-badge)]'
 
 function toVarName(key: CellScaleKey) {
