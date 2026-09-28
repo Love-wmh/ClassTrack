@@ -60,13 +60,37 @@
 
 **模拟器 / 真机**（渲染层，尚无 JVM 测试）
 
-- [ ] ⏳ 3×2 与 1×2 在四档状态下的真实渲染截图（见下节「未覆盖」）
+- [ ] ❌ 3×2 与 1×2 的真实渲染截图 —— **本次沙盒起不了模拟器**（没有 `/dev/kvm`），已把可安装的 debug APK 留在工作树交给本机设备补验（见下节）
+
+## 设备验证尝试（2026-09-28，沙盒里失败，留可安装 APK）
+
+- 已成功产出**可安装的 debug APK**：`android/app/build/outputs/apk/debug/app-debug.apk`（10,713,023 B）。
+  复现命令（沙盒里 `$HOME/.android` 与 `$HOME/.gradle` 都是只读，两处都必须改写）：
+
+  ```bash
+  pnpm cap:sync:android
+  HOME=/home/yetongy/.cache/android-home ANDROID_USER_HOME=/home/yetongy/.cache/android-home \
+    GRADLE_USER_HOME=/media/yetongy/64E8E38AE8E358B65/CodeFiles/.worktrees/.gradle-home \
+    ./android/gradlew -p android assembleDebug --offline
+  ```
+
+  不设 `ANDROID_USER_HOME` 时 `:app:validateSigningDebug` 会失败：
+  `Unable to create debug keystore in /home/yetongy/.android because it is not writable`
+  （`/home/yetongy/.cache/android-home` 里有可写的 `debug.keystore`）。
+- **模拟器起不来**：沙盒里没有 `/dev/kvm`（`ls /dev/kvm` → No such file or directory；
+  `emulator -accel-check` → `/dev/kvm is not found: VT disabled in BIOS or KVM kernel module not loaded`）。
+  这与 spec 里「本机可用：`/dev/kvm` 存在」那条注记不冲突 —— 那是用户的正常环境，不是 agent 沙盒。
+  因此下面这些只能在本机设备上补齐：`adb install -r -t <上面的 APK>` 之后，用「接下来（3×2）」与
+  「紧凑（1×2）」各看这四档：`今天已上完（显示已上完 / 不显示已上完 / 折叠）`、`长假（今天与明天都没课）`。
+  重点看三件事：(1) 3×2 的「下次上课」+「9月28日 周一 08:00」两行层级；
+  (2) 1×2 的「下次上课 / 9月28日」有没有出现省略号；(3) App 切后台再切回（会重推快照）后，
+  今天已上完的课是否仍灰显在卡上（C 的现场验证）。
 
 ## 未覆盖 / 已知缺口
 
 - **渲染层未做设备验证**：`NextOtherDayLine` 的宽/窄两档、`compactCounterText` 的新文案、两处高度估算都只经
-  编译 + 行序单测覆盖，没有模拟器截图。缺口与 2026-09-23 的 hero 空课态相同（那次也没做设备验证）——
-  下一次真机轮次要一并补：`今天已上完（三种策略）`、`长假档（3×2 / 1×2）`、以及「1×2 上不出现省略号」。
+  编译 + 行序单测覆盖，没有模拟器截图 —— 原因是本次沙盒没有 `/dev/kvm`（见上一节），不是「忘了做」。
+  APK 已留在工作树，本机设备上按上一节那三条重点看一遍即可闭环。
 - 1×2 的短档文案 `9月28日` 是按「数字窄、约 3.5 个汉字宽」推算的；若实测仍被截，降级方案是只留 `28日`
   （已写进 PRD 的 D7，改动只涉及一处字符串函数）。
 - 双栏（`two_column`）+ `day_list` 档下 `NEXT_OTHER` 落在左栏这一支，估算分支已补齐，但没有对应截图。
