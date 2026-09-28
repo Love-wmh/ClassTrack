@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Class, ClassMark } from '~/lib/types'
 import ScheduleCourseCell from './ScheduleCourseCell'
+import { CELL_ABSENT_RING_CLASS, CELL_RING_CLASS } from './cellScale'
 
 type ScheduleCourseCellProps = Parameters<typeof ScheduleCourseCell>[0]
 
@@ -41,53 +42,80 @@ function render(overrides: Partial<ScheduleCourseCellProps> = {}) {
   )
 }
 
-/** 出勤淡化（未上）在合并后的视觉里是这样两段类名。 */
+/** 缺勤红描边里的实色红（`#ef4444`）——出现它就说明这一格用的是 `CELL_ABSENT_RING_CLASS`。 */
+const ABSENT_RING_COLOR = 'rgb(239_68_68)'
+/** 已上打勾 / 缺勤警示两个 lucide 图标的类名。 */
+const CHECK_ICON = 'lucide-circle-check'
+const ALERT_ICON = 'lucide-circle-alert'
+/** 旧的「未上淡化」两段类名：口径收窄后任何格子都不该再出现。 */
 const DIM_CLASSES = ['opacity-60', 'saturate-50']
 
-describe('课程格的出勤外观', () => {
-  it('关闭出勤统计时：打勾角标、未上淡化与「已上/未上」文案一个都不出现', () => {
-    const html = render({ mark: absentMark, attendanceEnabled: false })
+function badgeCount(html: string) {
+  return html.match(/\[width:var\(--cc-badge\)\]/g)?.length ?? 0
+}
 
-    for (const cls of DIM_CLASSES) {
-      expect(html).not.toContain(cls)
+/** 断言这一格**没有任何**出勤痕迹：不变淡、无红描边、无角标、文案不提已上 / 未上。 */
+function expectNoAttendanceTrace(html: string) {
+  for (const cls of DIM_CLASSES) expect(html).not.toContain(cls)
+  expect(html).not.toContain(ABSENT_RING_COLOR)
+  expect(html).not.toContain(CHECK_ICON)
+  expect(html).not.toContain(ALERT_ICON)
+  expect(badgeCount(html)).toBe(0)
+  expect(html).not.toContain('已上')
+  expect(html).not.toContain('未上')
+}
+
+describe('课程格的出勤外观', () => {
+  it('缺勤：不变淡，改为实色红描边，并保留警示角标', () => {
+    const html = render({ mark: absentMark, attendanceEnabled: true })
+
+    for (const cls of DIM_CLASSES) expect(html).not.toContain(cls)
+    expect(html).toContain(CELL_ABSENT_RING_CLASS)
+    expect(html).not.toContain(CELL_RING_CLASS)
+    expect(html).toContain(ALERT_ICON)
+    expect(html).not.toContain(CHECK_ICON)
+    expect(badgeCount(html)).toBe(1)
+    expect(html).toContain('未上')
+  })
+
+  it('已上：保留打勾角标，不变淡也不加红描边', () => {
+    const html = render({ mark: attendedMark, attendanceEnabled: true })
+
+    for (const cls of DIM_CLASSES) expect(html).not.toContain(cls)
+    expect(html).toContain(CELL_RING_CLASS)
+    expect(html).not.toContain(CELL_ABSENT_RING_CLASS)
+    expect(html).toContain(CHECK_ICON)
+    expect(badgeCount(html)).toBe(1)
+    expect(html).toContain('已上')
+  })
+
+  it('未标记：完全中性 —— 不变淡、无角标、文案不提已上 / 未上', () => {
+    expectNoAttendanceTrace(render({ mark: undefined, attendanceEnabled: true }))
+  })
+
+  it('只写了备注：与未标记一样中性，但备注照旧显示（备注与出勤解耦）', () => {
+    const html = render({ mark: notedMark, attendanceEnabled: true })
+
+    expectNoAttendanceTrace(html)
+    expect(html).toContain('带实验报告')
+  })
+
+  it('关闭出勤统计时：缺勤 / 已上 / 未标记都不出现任何出勤痕迹', () => {
+    for (const mark of [absentMark, attendedMark, notedMark, undefined]) {
+      expectNoAttendanceTrace(render({ mark, attendanceEnabled: false }))
     }
-    expect(html).not.toContain('已上')
-    expect(html).not.toContain('未上')
   })
 
   it('关闭出勤统计时备注照旧显示（备注与出勤解耦）', () => {
     expect(render({ mark: notedMark, attendanceEnabled: false })).toContain('带实验报告')
   })
 
-  it('开启出勤统计时：已上写「已上」且不打淡化', () => {
-    const html = render({ mark: attendedMark, attendanceEnabled: true })
-
-    expect(html).toContain('已上')
-    for (const cls of DIM_CLASSES) {
-      expect(html).not.toContain(cls)
-    }
-  })
-
-  it('开启出勤统计时：未上（含只写了备注）写「未上」并淡化', () => {
-    for (const mark of [absentMark, notedMark, undefined]) {
-      const html = render({ mark, attendanceEnabled: true })
-
-      expect(html).toContain('未上')
-      for (const cls of DIM_CLASSES) {
-        expect(html).toContain(cls)
-      }
-    }
-  })
-
-  it('非本周课走灰色淡化，不叠加出勤痕迹（即使它其实未上）', () => {
+  it('非本周课走灰色淡化，不叠加出勤痕迹（即使标记为未上）', () => {
     const html = render({ mark: absentMark, attendanceEnabled: true, isOutOfWeek: true })
 
     expect(html).toContain('data-course-out-of-week')
     expect(html).toContain('非本周')
-    expect(html).not.toContain('未上')
-    for (const cls of DIM_CLASSES) {
-      expect(html).not.toContain(cls)
-    }
+    expectNoAttendanceTrace(html)
   })
 })
 

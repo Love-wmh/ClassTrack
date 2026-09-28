@@ -3,7 +3,8 @@ import { CheckCircle2, CircleAlert } from 'lucide-react'
 import type { Class, ClassMark } from '~/lib/types'
 import { cn } from '~/lib/utils'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
-import { CELL_BADGE_CLASS, CELL_FALLBACK_SCALES, CELL_FONT_CLASS, CELL_RING_CLASS } from './cellScale'
+import { isAttendanceMarked } from '~/store/utils'
+import { CELL_ABSENT_RING_CLASS, CELL_BADGE_CLASS, CELL_FALLBACK_SCALES, CELL_FONT_CLASS, CELL_RING_CLASS } from './cellScale'
 import { getCourseColor, getCourseOutOfWeekColor, getWeekParityLabel } from './utils'
 
 type ScheduleCourseCellProps = {
@@ -12,7 +13,7 @@ type ScheduleCourseCellProps = {
   /**
    * 「出勤统计」是否开启（个人中心的开关）。
    *
-   * 关闭时这一格不出现任何已上/未上痕迹（打勾角标、未上淡化与 title 文案），
+   * 关闭时这一格不出现任何已上/未上痕迹（打勾 / 警示角标、缺勤红描边与 title 文案），
    * **但备注照常显示** —— 备注与出勤共用同一条 `ClassMark`，却是两件事。
    */
   attendanceEnabled: boolean
@@ -23,14 +24,31 @@ type ScheduleCourseCellProps = {
 
 export default function ScheduleCourseCell({ course, mark, attendanceEnabled, isOutOfWeek, onClick }: ScheduleCourseCellProps) {
   const showAttendanceStatus = useScheduleDisplayStore((state) => state.showAttendanceStatus)
-  const isAttended = !!mark?.isAttended
+  /**
+   * 这一格是否**做过出勤判断** —— 判据只用 `isAttendanceMarked()`（`app/store/utils.ts`）：
+   * 看板 `isAbsentSession()` 用的是同一条，课表不得另写一份 `mark?.attendanceMarked !== false`（会漂移）。
+   * 「只写了备注」的标记 `attendanceMarked === false`，不算判断。
+   */
+  const attendanceMarked = isAttendanceMarked(mark)
+  const isAttended = attendanceMarked && !!mark?.isAttended
+  /** 缺勤 = 做过判断且判的是「未上」；未标记 / 只写备注的格子两种都不是。 */
+  const isAbsent = attendanceMarked && !isAttended
   const note = mark?.note || ''
   const parityLabel = isOutOfWeek ? '非本周' : getWeekParityLabel(course.weeks)
   const courseColor = getCourseColor(course.courseId)
   const courseOutOfWeekColor = getCourseOutOfWeekColor(course.courseId)
   // 出勤痕迹要同时满足「出勤统计已开启」与「用户在课表显示里没关掉它」，且只针对本周课：
-  // 非本周课一般没有当周标记，灰色态优先，不再叠加未上淡化。
+  // 非本周课一般没有当周标记，灰色态优先，不再叠加任何出勤痕迹。
   const showAttendance = attendanceEnabled && showAttendanceStatus && !isOutOfWeek
+  /**
+   * 是否显露这一格的出勤痕迹（角标 + title 文案）。
+   *
+   * 只有**做过出勤判断**的格子才露：未标记 / 只写备注的格子既不变淡、也没有角标与文案 ——
+   * 「还没标记」不等于「缺勤」，课表不该替用户下这个结论。
+   */
+  const showAttendanceMarks = showAttendance && attendanceMarked
+  /** 缺勤红描边：受同样的两层开关与「非本周优先」约束（非本周走灰色态，不叠出勤痕迹）。 */
+  const showAbsentRing = showAttendance && isAbsent
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLSpanElement>(null)
@@ -156,15 +174,15 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
       data-course-cell
       {...(isOutOfWeek ? { 'data-course-out-of-week': '' } : {})}
       className={cn(
-        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden text-left transition-opacity focus-visible:z-10 focus-visible:outline-none',
-        // 尺度全部由课程格容器的尺寸推导（见 cellScale.ts）：内边距、圆角、白描边都不再是固定 px。
+        'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden text-left focus-visible:z-10 focus-visible:outline-none',
+        // 尺度全部由课程格容器的尺寸推导（见 cellScale.ts）：内边距、圆角、描边都不再是固定 px。
         '[padding:var(--cc-pad-y)_var(--cc-pad-x)] [border-radius:var(--cc-radius)]',
-        CELL_RING_CLASS,
-        isOutOfWeek ? courseOutOfWeekColor : courseColor,
-        showAttendance && !isAttended && 'opacity-60 saturate-50'
+        // 描边：常态半透明白；缺勤换成实色红（宽度共用同一个 `--cc-ring`，不为缺勤另起尺度）。
+        showAbsentRing ? CELL_ABSENT_RING_CLASS : CELL_RING_CLASS,
+        isOutOfWeek ? courseOutOfWeekColor : courseColor
       )}
       onClick={onClick}
-      title={`${course.name}${showAttendance ? `，${isAttended ? '已上' : '未上'}` : ''}${isOutOfWeek ? '，非本周' : ''}，点击查看详情`}
+      title={`${course.name}${showAttendanceMarks ? `，${isAttended ? '已上' : '未上'}` : ''}${isOutOfWeek ? '，非本周' : ''}，点击查看详情`}
     >
       {/* 内容**顶部对齐**（不是垂直居中）：1 行内容的格子和 7 行内容的格子都从同一条顶边起排，
           否则短内容浮在卡片中间、长内容贴着顶部，同一屏里每格的起始高度都不一样。
@@ -201,7 +219,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
           </span>
         </span>
       </span>
-      {showAttendance && (
+      {showAttendanceMarks && (
         <span className="absolute bottom-1 right-1 text-white/90">
           {isAttended ? <CheckCircle2 className={CELL_BADGE_CLASS} /> : <CircleAlert className={CELL_BADGE_CLASS} />}
         </span>
