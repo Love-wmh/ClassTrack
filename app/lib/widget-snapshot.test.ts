@@ -135,18 +135,23 @@ describe('buildWidgetSnapshot', () => {
     expect(inProgress && inProgress.endEpochMs).toBeGreaterThan(now.getTime())
   })
 
-  it('已结束的课程被丢弃，但当天边界信息仍然保留', () => {
+  it('今天已结束的课仍留在快照里（原生据此画「已上完」并数 todayFinishedCount）', () => {
     const math = makeClass({ id: 'MATH', dayOfWeek: 1, startTime: '10:00', endTime: '11:40' })
     const tuesday = makeClass({ id: 'ENG', dayOfWeek: 2, startTime: '08:00', endTime: '09:40', weeks: [3] })
     const now = localDate(2026, 9, 21, 20, 0)
 
     const snapshot = buildWidgetSnapshot({ classes: [math, tuesday], currentWeek: 3, firstWeekStartDate: FIRST_WEEK_START }, now)
 
-    expect(snapshot.entries.some((entry) => entry.id === `MATH#${WEEK3_MONDAY_DATE}`)).toBe(false)
+    // 当天 20:00 时周一那节已经上完 —— 它必须还在，否则卡片上再也画不出「已上完」。
+    const finishedToday = snapshot.entries.find((entry) => entry.id === `MATH#${WEEK3_MONDAY_DATE}`)
+    expect(finishedToday).toBeDefined()
+    expect(finishedToday && finishedToday.endEpochMs).toBeLessThan(now.getTime())
     // 「今天是哪天」不依赖 entries，因此当天没有剩余课程时 dayEndEpochMs 依旧覆盖今天。
     expect(snapshot.dayEndEpochMs[0]).toBe(localEpoch(2026, 9, 22))
     expect(snapshot.dayEndEpochMs[0]).toBeGreaterThan(now.getTime())
-    expect(snapshot.entries[0]).toMatchObject({ dayKey: '2026-09-22', dayOffset: 1 })
+    // 顺序仍是按开始时刻升序：今天的已结束那节在前，明天的在后（MATH 每周一都有，看前两条即可）。
+    expect(snapshot.entries.slice(0, 2).map((entry) => entry.id)).toEqual([`MATH#${WEEK3_MONDAY_DATE}`, 'ENG#2026-09-22'])
+    expect(snapshot.entries[1]).toMatchObject({ dayKey: '2026-09-22', dayOffset: 1 })
   })
 
   it('休息日：当天没有课程，但后续日期仍然被覆盖', () => {
@@ -175,7 +180,7 @@ describe('buildWidgetSnapshot', () => {
     const week3Sunday = makeClass({ id: 'SUN3', dayOfWeek: 7, weeks: [3], startTime: '10:00', endTime: '11:40' })
     const week4Monday = makeClass({ id: 'MON4', dayOfWeek: 1, weeks: [4], startTime: '08:00', endTime: '09:40' })
     const week3MondayOnly = makeClass({ id: 'MON3', dayOfWeek: 1, weeks: [3], startTime: '08:00', endTime: '09:40' })
-    // 2026-09-27 是第 3 周周日；当天 20:00 时周日的课已结束。
+    // 2026-09-27 是第 3 周周日；当天 20:00 时周日的课已结束（已结束的课仍然留在快照里）。
     const sundayEvening = localDate(2026, 9, 27, 20, 0)
 
     const snapshot = buildWidgetSnapshot(
@@ -184,9 +189,10 @@ describe('buildWidgetSnapshot', () => {
     )
 
     const ids = snapshot.entries.map((entry) => entry.id)
-    expect(ids).toEqual([`MON4#2026-09-28`])
+    // 周日（第 3 周）那节已上完但仍在；跨周之后要拿到的是第 4 周周一那节。
+    expect(ids).toEqual([`SUN3#2026-09-27`, `MON4#2026-09-28`])
     expect(ids).not.toContain(`MON3#2026-09-28`)
-    expect(snapshot.entries[0]).toMatchObject({ dayKey: '2026-09-28', dayOffset: 1, weekdayLabel: '周一' })
+    expect(snapshot.entries[1]).toMatchObject({ dayKey: '2026-09-28', dayOffset: 1, weekdayLabel: '周一' })
   })
 
   it('firstWeekStartDate 缺失或非法时返回 unavailable，而不是猜一个日期', () => {

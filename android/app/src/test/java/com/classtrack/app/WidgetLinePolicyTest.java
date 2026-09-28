@@ -340,20 +340,42 @@ public class WidgetLinePolicyTest {
                 emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, empty(), empty()).getLines().get(0).isTodayHadClasses());
     }
 
-    /** 今天已上完、但今天仍有可见行时，hero 不再承担「下一节在哪天」，这一行必须补上。 */
+    /**
+     * 今天已上完（hero 落在别的日子）时，列表列的是**明天**：三种样式都不该再补「下一节 · …」那行。
+     *
+     * <p>改动前这里是反向断言：`SHOW_DIM` 下今天还留着灰课，于是走「有课程行」那一支、再补一行
+     * `NEXT_OTHER`（那是 2026-09-23 的 D6）。2026-09-28 起「今天的课都上完了」也回退到明天，
+     * 汇总行已经写明「明天」，再补一行就是把同一节课说两遍。
+     */
     @Test
-    public void finishedTodayStillGetsTheNextOtherDayLine() {
+    public void finishedTodayListsTomorrowWithoutTheNextOtherDayLine() {
         List<WidgetDayItem> allFinished = items(item("已上完", FINISHED, "周日"));
 
-        assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, SUMMARY, COURSE,
-                NEXT_OTHER);
+        assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, SUMMARY,
+                COURSE, COURSE);
+        // 紧凑档从「第一条还没上的课」起列：空课态下没有主课可跳过，明天的两节都要在。
         assertKinds(emptyHeroBody(COMPACT, SHOW_DIM, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, COUNTER,
-                NEXT_OTHER);
-        // 课表列的就是明天时不补：那是把同一节课说两遍（改动前的口径）。
+                COURSE, COURSE);
+        // 「不显示已上完」下今天一行都不可见，同样列明天。
+        assertKinds(emptyHeroBody(NEXT_UP, HIDE, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, SUMMARY, COURSE,
+                COURSE);
+        // 今天本来就没课（既有的那一档）行为不变。
         assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, empty(), tomorrowItems()), HERO_EMPTY, SUMMARY, COURSE,
                 COURSE);
-        // 「全部隐藏」策略下今天一行都不可见 → 走「没有课程行」那一支，同样有「下一节」。
-        assertKinds(emptyHeroBody(NEXT_UP, HIDE, ADAPTIVE, allFinished, tomorrowItems()), HERO_EMPTY, NEXT_OTHER);
+    }
+
+    /**
+     * 明天也没课时没有课表可列，`NEXT_OTHER` 行必须仍然出现 —— 它是「下次上课」块唯一的载体。
+     *
+     * <p>这正是截图里那一档（周末 / 长假）：hero 空课态说今天，块说下次上课在哪天。
+     */
+    @Test
+    public void longHolidayStillKeepsTheNextOtherLine() {
+        List<WidgetDayItem> allFinished = items(item("已上完", FINISHED, "周日"));
+
+        assertKinds(emptyHeroBody(NEXT_UP, SHOW_DIM, ADAPTIVE, allFinished, empty()), HERO_EMPTY, NEXT_OTHER);
+        assertKinds(emptyHeroBody(COMPACT, SHOW_DIM, ADAPTIVE, allFinished, empty()), HERO_EMPTY, COUNTER, NEXT_OTHER);
+        assertKinds(emptyHeroBody(DAY_LIST, SHOW_DIM, ADAPTIVE, allFinished, empty()), SUMMARY, NEXT_OTHER);
     }
 
     /** 空课态也占左栏：双栏的切分点必须把它算作 header，否则那半张卡会是空的。 */

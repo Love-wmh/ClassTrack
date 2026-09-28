@@ -374,9 +374,11 @@ export function buildWidgetSnapshot(input: WidgetSnapshotInput, now: Date): Widg
         if (!classItem.weeks.includes(week)) continue
 
         const occurrence = toOccurrence(classItem, date, dayKey, dayOffset, dayOfWeek)
-        // 已经结束的课不进入快照：原生永远不会把已结束的课当作 hero 或今日剩余，
-        // 提前丢掉可以显著缩小 payload。进行中的课 `endEpochMs > now`，不会被丢弃。
-        if (occurrence && occurrence.endEpochMs > generatedAtEpochMs) dayEntries.push(occurrence)
+        // 已经结束的课**必须留在快照里**（2026-09-28 修正）：覆盖窗口从今天开始，所以「丢掉已结束的条目」
+        // 只能删掉**今天已上完**的课 —— 未来日子一条都丢不掉，省不下 payload，却让原生既画不出
+        // 「已上完灰显」「折叠计数」，也算不准 todayFinishedCount（双栏那句「已上完 N 节 · 还有 M 节」）。
+        // 原生侧 `firstNotEnded` 与阶段判定本来就按 `now` 自己算，留下它们不会把已结束的课当成 hero。
+        if (occurrence) dayEntries.push(occurrence)
       }
     }
 

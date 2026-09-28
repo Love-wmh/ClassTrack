@@ -17,7 +17,8 @@ import java.util.List;
  *
  * <p>这些规则直接对应真机回测发现的问题：周末「今天没课」时卡片只剩两行、下面一大片空白，
  * 而一旦无脑回退到「下一个有课的日子」，用户在国庆长假里又会一直看到课表。因此这里把三档
- * 边界全部钉死，包括「长假不列课表」和「今天有课但全被隐藏时也不回退到明天」。
+ * 边界全部钉死：包括「长假不列课表」（不回退到「下一个有课的日子」），以及 2026-09-28 的新口径 ——
+ * 「今天的课已上完」也要列明天（三种「已上完」策略都算）。
  */
 public class WidgetDayPlanTest {
     private static final WidgetStyleConfig.FinishedPolicy SHOW_DIM = WidgetStyleConfig.FinishedPolicy.SHOW_DIM;
@@ -65,55 +66,94 @@ public class WidgetDayPlanTest {
         assertFalse(plan.isTodayHadClasses());
     }
 
+    /**
+     * 「不显示已上完」把今天裁空之后同样要列明天（2026-09-28 用户口径）。
+     *
+     * <p>改动前这里是反向断言（「不能把明天的课塞进来冒充今天的」）。敢反过来是因为 hero 现在画的是
+     * 「今天已无课」的空课态、而汇总行明确写「明天」—— 两者合起来不可能被读成今天还有课。
+     */
     @Test
-    public void hiddenFinishedDayDoesNotFallBackToTomorrow() {
+    public void hiddenFinishedDayFallsBackToTomorrow() {
         WidgetDayPlan plan = WidgetDayPlan.resolve(
                 items(item("DONE", WidgetDayItem.Phase.FINISHED, "周三")),
                 items(item("TOMORROW", WidgetDayItem.Phase.UPCOMING, "周四")),
                 HIDE);
 
-        assertEquals("用户刚选了「不显示已上完」，不能把明天的课塞进来冒充今天的", WidgetDayPlan.Source.NONE,
-                plan.getSource());
-        assertTrue(plan.getRows().isEmpty());
-        assertTrue("文案要说「今天已无课」而不是「今天无课」", plan.isTodayHadClasses());
-        assertEquals(0, plan.getCollapsedFinishedCount());
+        assertEquals(WidgetDayPlan.Source.TOMORROW, plan.getSource());
+        assertEquals(1, plan.getRows().size());
+        assertEquals("TOMORROW", plan.getRows().get(0).getOccurrence().getId());
+        assertEquals("汇总行用明天的星期", "周四", plan.getWeekdayLabel());
+        assertTrue("空课态醒目行要说「今天已无课」而不是「今天无课」", plan.isTodayHadClasses());
+        assertEquals("没有可见行可折叠", 0, plan.getCollapsedFinishedCount());
     }
 
+    /** 「折叠」策略下今天一行都不画，但折叠计数要跟着回退到明天一起走（用户显式选的策略不能丢）。 */
     @Test
-    public void collapsedPolicyKeepsCountEvenWhenNoRowIsVisible() {
+    public void collapsedFinishedDayFallsBackToTomorrowAndKeepsTheCount() {
         WidgetDayPlan plan = WidgetDayPlan.resolve(
                 items(item("DONE_A", WidgetDayItem.Phase.FINISHED, "周三"), item("DONE_B", WidgetDayItem.Phase.FINISHED, "周三")),
                 items(item("TOMORROW", WidgetDayItem.Phase.UPCOMING, "周四")),
                 COLLAPSE);
 
-        assertEquals(WidgetDayPlan.Source.NONE, plan.getSource());
-        assertTrue(plan.getRows().isEmpty());
+        assertEquals(WidgetDayPlan.Source.TOMORROW, plan.getSource());
+        assertEquals("列的是明天的课", 1, plan.getRows().size());
+        assertEquals("汇总行用明天的星期", "周四", plan.getWeekdayLabel());
         assertEquals("折叠计数是这一档唯一的信息，不能丢", 2, plan.getCollapsedFinishedCount());
+        assertTrue(plan.isTodayHadClasses());
     }
 
+    /** 「显示已上完」也是同一档：今天没有可上的课了就一样列明天（2026-09-28 口径：三种策略都切）。 */
     @Test
-    public void dimPolicyKeepsFinishedRowsOnToday() {
+    public void dimPolicyAlsoFallsBackToTomorrowOnceTodayIsDone() {
         WidgetDayPlan plan = WidgetDayPlan.resolve(
                 items(item("DONE", WidgetDayItem.Phase.FINISHED, "周三")),
                 items(item("TOMORROW", WidgetDayItem.Phase.UPCOMING, "周四")),
                 SHOW_DIM);
 
-        assertEquals(WidgetDayPlan.Source.TODAY, plan.getSource());
-        assertEquals("灰显策略下已上完的课仍留在今天的列表里", 1, plan.getRows().size());
-        assertTrue(plan.getRows().get(0).isFinished());
+        assertEquals(WidgetDayPlan.Source.TOMORROW, plan.getSource());
+        assertEquals("TOMORROW", plan.getRows().get(0).getOccurrence().getId());
+        assertTrue("今天原本有课，空课态要说「今天已无课」", plan.isTodayHadClasses());
     }
 
+    /** 回归：白天还没上完时，「显示已上完」照旧把已上完的灰课留在今天的列表里。 */
+    @Test
+    public void dimPolicyKeepsFinishedRowsWhileTodayIsStillGoing() {
+        WidgetDayPlan plan = WidgetDayPlan.resolve(
+                items(item("DONE", WidgetDayItem.Phase.FINISHED, "周三"),
+                        item("NEXT", WidgetDayItem.Phase.UPCOMING, "周三")),
+                items(item("TOMORROW", WidgetDayItem.Phase.UPCOMING, "周四")),
+                SHOW_DIM);
+
+        assertEquals(WidgetDayPlan.Source.TODAY, plan.getSource());
+        assertEquals("灰显策略下已上完的课仍留在今天的列表里", 2, plan.getRows().size());
+        assertTrue(plan.getRows().get(0).isFinished());
+        assertEquals("NEXT", plan.getRows().get(1).getOccurrence().getId());
+    }
+
+    /** 今天已上完、明天也没课（周五晚上 / 长假）：不列课表，但要如实说「今天已无课」。 */
+    @Test
+    public void finishedDayWithoutTomorrowNeverListsCourses() {
+        WidgetDayPlan plan = WidgetDayPlan.resolve(
+                items(item("DONE", WidgetDayItem.Phase.FINISHED, "周三")),
+                Collections.<WidgetDayItem>emptyList(),
+                HIDE);
+
+        assertEquals(WidgetDayPlan.Source.NONE, plan.getSource());
+        assertTrue(plan.getRows().isEmpty());
+        assertTrue(plan.isTodayHadClasses());
+        assertEquals("NONE 档仍保留今天的星期文案（当前没有消费方，但语义不要无谓地改）", "周三", plan.getWeekdayLabel());
+    }
     @Test
     public void missingPolicyFallsBackToDefaultVisibleRows() {
         WidgetDayPlan plan = WidgetDayPlan.resolve(
-                items(item("DONE", WidgetDayItem.Phase.FINISHED, "周三")),
+                items(item("DONE", WidgetDayItem.Phase.FINISHED, "周三"),
+                        item("NEXT", WidgetDayItem.Phase.UPCOMING, "周三")),
                 Collections.<WidgetDayItem>emptyList(),
                 null);
 
         assertEquals("配置缺失不该把整天的课抹掉", WidgetDayPlan.Source.TODAY, plan.getSource());
-        assertEquals(1, plan.getRows().size());
+        assertEquals(2, plan.getRows().size());
     }
-
     @Test
     public void nullItemsAreTreatedAsEmpty() {
         WidgetDayPlan plan = WidgetDayPlan.resolve(null, null, SHOW_DIM);
