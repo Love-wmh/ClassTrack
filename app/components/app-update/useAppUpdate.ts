@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { UPDATE_CHANNEL_LABELS, resolveUpdate, seedChannel } from '~/lib/app-update/channels'
+import { UPDATE_CHANNEL_LABELS } from '~/lib/app-update/channels'
 import type { UpdateCandidate, UpdateChannel } from '~/lib/app-update/channels'
+import { runUpdateCheck } from '~/lib/app-update/check'
 import { fetchReleaseCandidates } from '~/lib/app-update/releases-api'
-import { shouldCheckNow } from '~/lib/app-update/schedule'
 import type { CheckInterval } from '~/lib/app-update/schedule'
 import {
   addAppResumeListener,
@@ -25,6 +25,10 @@ import { useUpdateStore } from '~/store/updateStore'
  * - `AppUpdateSettings`（个人中心）不传，只用设置项、通知权限与「立即检查」。
  *
  * 自动检查**只由 Runner 那一份实例驱动**（`autoCheck` 选项），否则设置页一打开就会多跑一轮调度。
+ *
+ * 这个 hook 只做三件事：平台/DEV 判定、`isChecking` 标志、把检查结果翻成 UI 副作用。
+ * 「什么时候该联网、什么时候算成功、成功才记账」全在 `app/lib/app-update/check.ts` 与
+ * `schedule.ts` 这两个可单测的模块里 —— 调度缺陷（2026-09-28：回到前台永远不检查）正是从那里修的。
  */
 
 export type AppUpdateApi = {
@@ -42,6 +46,7 @@ export type AppUpdateApi = {
   notify: boolean
   interval: CheckInterval
   isChecking: boolean
+  /** 上一次**成功**拿到结果的时间；`null` 表示还没成功过。 */
   lastCheckAt: number | null
   /** 系统通知权限；未查询到时为 `null`。 */
   notificationPermission: NotificationPermission | null
@@ -111,39 +116,45 @@ export function useAppUpdate({ autoCheck = false }: UseAppUpdateOptions = {}): A
       // 开发环境不打真接口：热更新会让这个 effect 反复触发，徒增噪声。手动检查仍然可用。
       if (!manual && import.meta.env.DEV) return
 
-      const version = store.currentVersion ?? (await loadVersion())
-      if (!version) return
-
-      const now = Date.now()
-      if (!manual && !shouldCheckNow({ interval: store.interval, lastCheckAt: store.lastCheckAt, now })) return
-
-      // 先记尝试时间再发请求：失败也要参与节流，否则断网时会变成每次切前台都重试。
-      const attempt = useUpdateStore.getState()
-      attempt.markChecked(now)
-      attempt.setIsChecking(true)
+      // 只有**真正开始**这一轮检查的调用才允许动 `isChecking`：被闸门拦下的调用如果也在 finally 里
+      // 清标志，会把正在跑的那一轮误标成「已结束」—— 按钮提前解禁，还会放进第三个并发请求。
+      const ownsFlag = !store.isChecking
+      if (ownsFlag) store.setIsChecking(true)
 
       try {
-        const result = await fetchReleaseCandidates()
-        if (!result.ok) {
+        const outcome = await runUpdateCheck({
+          manual,
+          supported,
+          autoCheckEnabled: store.autoCheck,
+          interval: store.interval,
+          lastCheckAt: store.lastCheckAt,
+          lastAttemptAt: store.lastAttemptAt,
+          inFlight: store.isChecking,
+          currentVersion: store.currentVersion,
+          channel: store.channel,
+          skippedVersion: store.skippedVersion,
+          now: Date.now(),
+          loadVersion,
+          markAttempted: store.markAttempted,
+          markChecked: store.markChecked,
+          fetchCandidates: fetchReleaseCandidates,
+        })
+
+        if (outcome.kind === 'failed') {
           if (manual) toast.error('检查更新失败，请稍后再试')
           return
         }
 
-        const found = resolveUpdate({
-          candidates: result.candidates,
-          channel: seedChannel(attempt.channel, version),
-          currentVersion: version,
-          skippedVersion: attempt.skippedVersion,
-          ignoreSkipped: manual,
-        })
-
-        if (!found) {
+        if (outcome.kind === 'up-to-date') {
           if (manual) toast.success('已是最新版本')
           return
         }
 
-        attempt.setPendingCandidate(found)
-        if (manual || !attempt.notify) return
+        if (outcome.kind !== 'found') return
+
+        const latest = useUpdateStore.getState()
+        latest.setPendingCandidate(outcome.candidate)
+        if (manual || !latest.notify) return
 
         // 首次要发通知时申请权限（Android 13+）。被拒时不改开关：用户没有做任何操作，
         // 静默把开关翻成关会让人莫名；设置页会显示「系统通知权限未开启」的提示。
@@ -152,9 +163,9 @@ export function useAppUpdate({ autoCheck = false }: UseAppUpdateOptions = {}): A
         setNotificationPermission(permission)
         if (permission !== 'granted') return
 
-        await sendUpdateNotification(found.version)
+        await sendUpdateNotification(outcome.candidate.version)
       } finally {
-        useUpdateStore.getState().setIsChecking(false)
+        if (ownsFlag) useUpdateStore.getState().setIsChecking(false)
       }
     },
     [loadVersion, supported]
