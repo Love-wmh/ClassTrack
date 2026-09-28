@@ -844,3 +844,37 @@ Session summary was not supplied.
 ### Next Steps
 
 - 本机设备补渲染截图（沙盒无 /dev/kvm）；确认后 task.py archive
+
+
+## Session 24: 更新检测：回前台检查改为成功才记账 + 更新说明按 markdown 渲染
+<!-- trellis-session: v=2 fp=8e0189cadf05c633 -->
+
+**Date**: 2026-09-28
+**Task**: 更新检测：回前台检查改为成功才记账 + 更新说明按 markdown 渲染
+**Branch**: `master`
+
+### Summary
+
+PR #24 已合并（master 4bc9973）。两处独立修复：① lastCheckAt 语义从「上次尝试」改成「上次成功拿到结果」，失败不再消耗间隔窗口（只写 lastAttemptAt，供 60 秒冷却用），间隔新增 1 小时档并设为默认，存量设备等价于旧默认 1d 且未手动改过间隔的由 applyLegacyIntervalMigration 一次性提升；检查内核抽成 app/lib/app-update/check.ts（依赖全注入）让「成功才记账」变成真单测。② 新增 releaseNotes.tsx：marked.lexer token → React 元素，全程 0 处 dangerouslySetInnerHTML，原 HTML/图片/表格按文本降级、链接只放行 http(s)。门禁：typecheck/test（38 文件 351 用例，基线 295）/lint/format/build 全过，grep dangerouslySetInnerHTML= 全仓库 0 命中。实现期揪出 4 个静默失效（判决顺序写错、marked 的 list 子项字段是 items 不是 tokens 导致列表渲染成空、isChecking 所有权、NaN 时间戳让判定恒为否），已写进 spec 的契约与 Common Mistakes。合并后 Android Release 产出 1.0.20-beta（含本次修复，尚未在设备上验收）。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3191fb9` | fix(app-update): 回前台检查改为成功才记账，默认间隔收紧到 1 小时 |
+| `6104fa3` | feat(app-update): 更新说明按 markdown 渲染，token 映射成元素且无注入面 |
+| `12be62b` | docs(spec): 更新 app-update 契约（记账语义、间隔档位与存量提升、渲染降级表） |
+| `d3689a7` | docs(task): 记录 09-28 更新检测修复的规划与验收证据 |
+| `e40790b` | chore(task): 记录 09-28 更新检测修复任务的分支 |
+
+### Testing
+
+- [OK] pnpm typecheck / pnpm test（38 文件 351 用例）/ pnpm lint（0 problems）/ pnpm format:check / pnpm build / pnpm test:android-assets 全过；CI（verify + commitlint）与 Android Release 在合并提交上均 success；未做模拟器真机验收（用户口径，已写进残余风险）
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 在设备上装 1.0.20-beta 验证：注入或等待比已装版本新的 release → 冷启动弹框 → 切后台再回前台仍能重新联网；确认更新说明按 markdown 渲染（列表/粗体/行内码）；顺手确认存量设备的上次检查时间戳语义与间隔已变 1 小时

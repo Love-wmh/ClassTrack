@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 23
+- **Total Sessions**: 24
 - **Last Active**: 2026-09-28
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~846 | Active |
+| `journal-1.md` | ~880 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 24 | 2026-09-28 | 更新检测：回前台检查改为成功才记账 + 更新说明按 markdown 渲染 | `3191fb9`, `6104fa3`, `12be62b`, `d3689a7`, `e40790b` | `master` |
 | 23 | 2026-09-28 | 小工具「今天已无课」档重做（列明天课表 + 「下次上课」块）并修掉快照丢弃当天已上完课 | `4adc1b4`, `5f176f8` | `fix/widget-today-done-show-tomorrow` |
 | 22 | 2026-09-28 | 前台课表缺勤改为实色红框，未标记格子不再显出勤痕迹 | `3afe55d` | `feat/schedule-absent-solid-red-ring` |
 | 21 | 2026-09-25 | 前台课表尺度响应式化：字号改由格子尺寸推导，去掉硬编码 px | `6f82dc3` | `feat/schedule-responsive-sizing` |
