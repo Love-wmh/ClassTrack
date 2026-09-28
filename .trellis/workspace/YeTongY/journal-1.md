@@ -762,3 +762,25 @@ AC-E4（真机/模拟器截图复核）保持未勾选：本机已出 240/360/41
 ### Status
 
 [OK] **Completed**
+
+
+## Session 22: 前台课表缺勤改为实色红框，未标记格子不再显出勤痕迹
+<!-- trellis-session: v=2 fp=01cb899d7007659b -->
+
+**Date**: 2026-09-28
+**Task**: 前台课表缺勤改为实色红框，未标记格子不再显出勤痕迹
+**Branch**: `feat/schedule-absent-solid-red-ring`
+
+### Summary
+
+缺勤从 opacity-60 saturate-50 整卡淡化改为不变淡 + 实色红描边（新增 cellScale.ts 的 CELL_ABSENT_RING_CLASS，#ef4444，宽度仍走 --cc-ring），出勤痕迹收窄到 isAttendanceMarked() 为真的格子（未标记/只写备注完全中性）；同步单测、源码守卫与 mobile-schedule-layout.md（新增「出勤表现」小节）。五道门禁全绿（295 例），真实应用逐格计算样式复核见任务 research/verify-report.md。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3afe55d` | feat(schedule): 课表缺勤改为实色红框，未标记格子不再显出勤痕迹 |
+
+### Status
+
+[OK] **Completed**
