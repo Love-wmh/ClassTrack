@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 25
+- **Total Sessions**: 26
 - **Last Active**: 2026-09-29
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~914 | Active |
+| `journal-1.md` | ~961 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 26 | 2026-09-29 | 修复旧 WebView 上课表无法上下滑动（html/body 高度兜底被构建删除）+ 预防性加固 | `904111f`, `280c1bf` | `fix/schedule-scroll-legacy-webview` |
 | 25 | 2026-09-29 | 课表左右边缘阻尼滑动切换上下周（可选开关，默认开） | `0b877f5` | `feat/schedule-edge-swipe-week-switch` |
 | 24 | 2026-09-28 | 更新检测：回前台检查改为成功才记账 + 更新说明按 markdown 渲染 | `3191fb9`, `6104fa3`, `12be62b`, `d3689a7`, `e40790b` | `master` |
 | 23 | 2026-09-28 | 小工具「今天已无课」档重做（列明天课表 + 「下次上课」块）并修掉快照丢弃当天已上完课 | `4adc1b4`, `5f176f8` | `fix/widget-today-done-show-tomorrow` |
