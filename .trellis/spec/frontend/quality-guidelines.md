@@ -125,3 +125,74 @@ versionName 按轨道取值（测试版 `1.0.<序号>-beta`，正式版取 tag �
 **不要用 `run_number` 当版本号或标签**：它是「每个 workflow 各自计数」的。2026-09-20 把 `android-beta.yml` 改名为 `android-release.yml` 后，新 workflow 的 `run_number` 从 1 重新开始，于是 `android-beta-1` 与既有 release 撞名、发布步骤以 `a release with the same tag name already exists` 失败；即使绕开撞名，重命名后的小序号也会小于测试机已装的版本，覆盖安装会被系统拒绝。
 
 生产镜像是两阶段构建（Node 22 + pnpm 构建 → nginx 托管 `build/client`，监听 3000）：`docker build -t classtrack .` 与 `docker run --rm -p 3000:3000 classtrack`。SPA 深层路由回退 `index.html`，`sw.js`/manifest/`index.html` 均为 `no-cache`，哈希资产长缓存。`pnpm start` 是 SSR 模式的模板残留脚本，本项目 `ssr: false` 下必然失败，不要使用。
+
+## 构建产物的兼容性契约（视口高度锚点）
+
+> 来源：任务 `09-29-fix-schedule-scroll-legacy-webview`（Android 12 上课表完全无法上下滑动）。
+
+### 当前支持基线
+
+CSS/JS 目标基线 = **Chrome 111+ / Safari 16.4+**（Tailwind v4 的默认面）。超过这条线的引擎**不保证**可用，
+但**必须保证不会静默失效**：低于基线的引擎要能落到可用的降级上，而不是「页面看着正常、功能悄悄没了」。
+这条线的依据是构建器行为：lightningcss 认为目标支持某特性时，会把「被它覆盖的前一条声明」当冗余删掉。
+
+### 「没有兜底」的特性清单
+
+| 特性 | 支持起点 | 现状 |
+| --- | --- | --- |
+| `dvh` / `svh` / `lvh` | Chrome 108 / Safari 15.4 | ⚠️ **已修**：`html/body` 高度靠独立 `@supports (height: 100dvh)` 块升级，兜底 `height: 100%` 写在块外（见下） |
+| `oklch()` / `color-mix()` | Chrome 111 / Safari 16.4 | 未兜底，出范围；低于基线的引擎会丢颜色，不丢功能 |
+| 容器查询 / `cqw` / `cqh` | Chrome 105（单位 105，`@container` 105） | 未兜底，出范围；低于基线的引擎课程格字号会退化为默认值 |
+| `.h-svh` / `.min-h-svh` | Chrome 108 | ⚠️ **仍未兜底**（sidebar 包装用），已知但未修 |
+| `[calc(100dvh-2rem)]` 对话框 | Chrome 108 | ⚠️ **仍未兜底**（`ImportDialog` / `MarkdownEditorDialog` / `ScheduleCourseDialog`），已知但未修 |
+
+### 视口高度锚点：写法契约（**必须遵守**）
+
+应用外壳的高度链是 `html`, `body` → `.app-viewport` → `SidebarInset` → 页面根 → 滚动容器。
+链条上只有 `html/body` 是「确定高度」的真源，**它一旦失效，全站所有内部滚动区都会退化成内容高度**
+（`scrollHeight == clientHeight`，于是「内容被 `overflow: hidden` 裁掉且永远滚不到」）。
+
+```css
+/* ✅ 正确：兜底写在块外，dvh 用独立 @supports 块升级 */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  html,
+  body {
+    height: 100dvh;
+  }
+}
+```
+
+**禁止**写成同一规则里的两次 `height` 声明：
+
+```css
+/* ❌ 构建产物里只剩 height:100dvh —— lightningcss 把前一条当「被后一条覆盖的冗余声明」删掉了 */
+html,
+body {
+  height: 100%;
+  height: 100dvh;
+}
+```
+
+其他已知不可行的写法（都已实测，见任务 `research/lightningcss-fallback-matrix.mjs`）：
+
+- `height: 100vh` + `height: 100dvh`：`100vh` 同样会被删；
+- `height: 100dvh` + `height: 100%`（顺序颠倒）：`dvh` 被删，现代引擎也退回 `100%`；
+- `html{height:100%}` + `body{height:100dvh}`：两条都在，但两个元素高度来源不一致，语义变了；
+- `min-height: 100%`：父级是 `auto` 时等于 `auto`，不解决问题。
+
+### 防回归检查（两条，都必须存在）
+
+- `app/appCssViewportAnchor.test.ts`（vitest，随 `pnpm test` 与 CI 一起跑）：**源码结构**断言 ——
+  `html, body` 规则体只有一条 `height` 且为 `100%`、存在 `@supports (height: 100dvh)` 块且覆盖 `html, body`、
+  升级块写在兜底之后。
+- `scripts/check-webview-css-fallback.js`（`pnpm webview:check-css`，需先 `pnpm build`）：**真产物**断言 ——
+  兜底在升级块之外、`dvh` 升级块存在、兜底在升级块之前。挂在 `cap:build:android` 链尾与 CI 的 `pnpm build` 之后。
+
+改动 `html/body` 的高度、或升级 Tailwind / Vite / lightningcss 之后，这两条必须仍然为绿；
+只改源码没改对会表现为「页面正常但课表滑不动」，没有任何运行时报错，所以**不要**只靠人眼看。
