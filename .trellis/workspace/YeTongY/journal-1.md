@@ -878,3 +878,37 @@ PR #24 已合并（master 4bc9973）。两处独立修复：① lastCheckAt 语�
 ### Next Steps
 
 - 在设备上装 1.0.20-beta 验证：注入或等待比已装版本新的 release → 冷启动弹框 → 切后台再回前台仍能重新联网；确认更新说明按 markdown 渲染（列表/粗体/行内码）；顺手确认存量设备的上次检查时间戳语义与间隔已变 1 小时
+
+
+## Session 25: 课表左右边缘阻尼滑动切换上下周（可选开关，默认开）
+<!-- trellis-session: v=2 fp=4901d3504ac3ca76 -->
+
+**Date**: 2026-09-29
+**Task**: 课表左右边缘阻尼滑动切换上下周（可选开关，默认开）
+**Branch**: `feat/schedule-edge-swipe-week-switch`
+
+### Summary
+
+手机端课表新增「滑到最左/最右边缘后继续拖 → 阻尼跟手位移 → 松手切上/下一周」，默认开启的可选开关 + 纯函数核 + 手势 hook；顺带修掉 pointercancel 被当成 tap 导致连续两次横滑误判成双击的旧缺陷。五项门禁全绿，浏览器真实触摸事件 8 组场景通过；真机验收因环境无 /dev/kvm 且 ~/.android 只读而未做，已标注并另开任务。
+
+### Main Changes
+
+- app/features/schedule/weekSwipe.ts(+test)、hooks/useWeekSwipeGesture.ts、ScheduleTable/SchedulePage/ScheduleHeader、scheduleDisplayStore(+test)、ScheduleDisplaySettings(+test)、useScheduleZoom（tap 修复）；spec: mobile-schedule-layout.md、state-management.md
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0b877f5` | feat(schedule): 手机端课表滑到左右边缘后阻尼切换上下周 |
+
+### Testing
+
+- [OK] pnpm lint / typecheck / format:check / test(388) / build 全绿；CDP Input.dispatchTouchEvent 8 组场景；agent-browser react renders 计数（拖动 0 commit、切周 1 commit）
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 真机触摸验收待补：.trellis/tasks/09-29-schedule-edge-swipe-device-verify（需有 /dev/kvm 的环境）；随后推分支开 PR 到 master
