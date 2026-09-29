@@ -33,6 +33,7 @@
 | 节次列时间 | 显示（节号 + 最多两行时间） | 不显示（只有节号） |
 | 节次列表头 | 月份（如 `9月`） | `节` |
 | 缩放 | 1x / 1.5x / 2x，双指捏合 + −/+ 按钮 + 双击 | 不启用 |
+| 边缘拖动翻周 | 「左右边缘滑动切换周」开启时：横向滑到最左/最右边缘后继续同向拖 → 阻尼跟手位移 → 松手切上/下一周（详见下方「横向轴的边缘阻尼手势」） | 不启用 |
 | 顶栏控件尺寸 | 一律 `h-9`（36px），图标 `size-4`；上一周/下一周与「添加到桌面」为 `h-9 w-9` 图标按钮 | 同左，`md:flex` 单行排布 |
 
 顶栏（`ScheduleHeader.tsx`）曾经用 `h-10`（40px）+ `size-5` 图标，2026-09-20 按产品要求整体压到 `h-9` / `size-4`，为「添加到桌面」入口腾出同一行的位置：手机端左侧动作组是 `grid-cols-[2.25rem_2.25rem_1fr_1fr_2.25rem]`（两个翻周图标 + 全部已上/全部未上 + 添加到桌面），右侧是 `grid-cols-2`（第 N 周 / 返回本周）。**新入口必须留在左侧动作组内**：塞进右侧那两列网格会让它换行成第三行，顶栏反而变高（真机截图确认过）。可访问性标签（`aria-label="上一周"` 等）保持原样，是自动化定位这些控件的唯一稳定锚点。
@@ -202,6 +203,19 @@ export function getDetailLevel(zoom: number): 'compact' | 'standard' | 'full'
 
 ---
 
+## 可选开关：左右边缘滑动切换周（2026-09-29 起）
+
+`useScheduleDisplayStore` 的 `edgeSwipeWeekSwitch`，持久化 key `class-track-schedule-display`，
+设置项在个人中心「课表显示」卡片里。**默认开启**（它是「滑到边缘才有反应」的补强手势，不占用任何既有交互）。
+
+- **只在手机端生效**：`enabled = isMobile && edgeSwipeWeekSwitch`；桌面端连监听器都不挂。
+- 关掉后横滑完全回到改动前的行为：无位移、不切周、`data-week-swipe-state` 属性不存在。
+- 边界（第 1 周 / 第 `maxWeek` 周方向）**仍然给阻尼位移**（有「到头了」的反馈），只是松手不切周 ——
+  与顶栏翻周按钮的禁用态语义一致。
+- 开关的初始值 / `partialize` / `merge` 三处必须同步维护，漏一处会在「旧数据 + 新增字段」时静默丢值。
+- 手势契约见下方 Gesture Implementation 的「横向轴的边缘阻尼手势」一节。
+---
+
 ## Gesture Implementation
 
 `useScheduleZoom()` 的约定：
@@ -213,6 +227,37 @@ export function getDetailLevel(zoom: number): 'compact' | 'standard' | 'full'
 - `setPointerCapture` 必须包 try/catch：合成的 pointer 事件（自动化断言）没有真实指针，捕获会抛异常，但不影响手势本身。
 - **双击切换必须去抖**：Android WebView 实测会在第二次抬起后同时派发我们自己的 `pointerup` 判定与浏览器合成的 `dblclick`，两条都触发就会切换两次、相互抵消（表现为“双击没反应”）。`toggleZoom` 用 400ms 窗口内的第二次调用直接返回。
 - 缩放控件用 `isMobile &&` 条件渲染而不是 `md:hidden`：桌面端要求“不渲染”（见 PRD D6），仅靠 CSS 隐藏会让 `document.querySelector('[data-schedule-zoom-control]')` 仍然命中。
+
+### 横向轴的边缘阻尼手势（`useWeekSwipeGesture`，2026-09-29 起）
+
+`app/features/schedule/hooks/useWeekSwipeGesture.ts`（DOM 层）+ `app/features/schedule/weekSwipe.ts`（纯函数核：
+全部数值与判据的唯一真源，因此可在 node 环境的 vitest 里钉死 —— DOM 手势本身没法单测）：
+
+- **只观测、不拦截**：`touchstart` / `touchmove` / `touchend` / `touchcancel` 全部 `{ passive: true }`，任何路径
+  都不 `preventDefault` —— 纵向滚动、课程格点按、双指与双击缩放都不受影响。
+- **用 touch 而不是 pointer**：触摸横滑时浏览器会给 pointer 序列发 `pointercancel`（**即使该方向根本不能
+  滚动也会发**），pointer 拿不到可用位移；被动 `touchmove` 在原生滚动期间照常派发。**这是本手势成立的前提**，
+  改成 pointer 会立刻坏掉。
+- **只用横向轴**：第一次越过 `SWIPE_AXIS_SLOP_PX`（12px）时定轴；纵向手势全程不碰 DOM。
+- **位移落在滚动容器自身**（`[data-schedule-scroll]`），**不是**内层网格：被 transform 的后代会计入滚动溢出区域，
+  写在内层会实时污染 `scrollWidth`，让边缘判定自己失效。外层新增的 `[data-schedule-swipe-stage]`
+  （`flex min-h-0 flex-1 flex-col overflow-hidden`）只负责裁剪，两层尺寸分配与改动前等价（有基线数字可比）。
+- **互斥规则（核心）**：每帧用 `resolveScrollEdges` + `sideAllowsRubber(edges, step)` 判定；**不允许阻尼时
+  重锚 + 位移归零**，把横向轴让给原生滚动。于是缩放态下是「先正常滚动，滚到该方向边缘后继续同向拖才出现
+  阻尼」；从边缘往回拖时原生滚动立刻接管（重锚），不会出现「原生滚动 + 阻尼位移」的双重位移；`scrollLeft`
+  因合成器滚动滞后时也只会「晚一两帧出现阻尼」，不会闪。
+- **阻尼与松手判据**：有界橡皮筋 `RUBBER_MAX_PX = 96`（82px 手指位移达到 `SWITCH_DISTANCE_PX = 44`），
+  另有快甩判据 `SWITCH_VELOCITY_PX_PER_MS = 0.6`（只认朝目标周方向的速度，反向甩动不算）。
+- **切周动画**（不预渲染相邻周）：滑出 110ms（沿手指方向 + 淡到 0.35）→ 换内容并把位移瞬时放到**对侧** →
+  双帧后滑入 170ms 回到 0。两段方向必须相反，否则是「反向弹回」。`prefers-reduced-motion: reduce` 时直接换周、
+  不做过渡。
+- **拖动期间不 setState**：只写内联 `transform` / `opacity`，切周只提交一次 `onWeekChange`（实测拖动 0 次
+  React commit、切周 1 次）。
+- **清理只有一个入口**：`reset()` 清掉 `transform` / `opacity` / `transition` 三个内联值（**不是**写
+  `translate3d(0px,0,0)`），被回弹结束、切周结束、`touchcancel`、第二根手指出现、`enabled` 变假、卸载、外部改周
+  全部复用。
+- **配套修掉的旧缺陷**：`pointercancel` 不再参与双击判定，且 `pointerup` 还要过「按下点 → 抬起点」的位移校验
+  （`isTapSizedMove`，容差 `TAP_MOVE_TOLERANCE_PX` 与手势层同源）。否则连续两次横滑会被判成双击、缩放档位来回切换。
 
 **在模拟器上验证触控**（真机行为只有真机才验得出来）：
 
@@ -263,6 +308,9 @@ export function deriveSectionTimes(classes: Class[]): Record<number, SectionTime
 | `data-course-parity` | 单双周徽标 | 1x 可见、桌面端 `display: none`（由 CSS 断点决定，不是「不在 DOM 里」） |
 | `data-course-out-of-week` | 非本周课程块 | 判定「淡化显示非本周课程」是否生效、灰色态是否渲染 |
 | `data-schedule-zoom-control` | 缩放浮层 | 手机端在、桌面端不在 DOM |
+| `data-schedule-swipe-stage` | 滚容器的外层裁剪层 | 定位 stage；确认尺寸分配由「stage + 滚容器」两层承担、数字与改动前一致 |
+| `data-week-swipe-state` | 滚容器（**命令式写，不在 React 树里**） | `'idle'` \| `'dragging'` \| `'switching'`；开关关闭或未启用时该属性不存在 |
+| `data-current-week` | 顶栏「第 N 周」span | 断言切周是否发生、切到哪一周（不依赖中文文案） |
 
 ---
 
@@ -298,7 +346,18 @@ agent-browser eval "String(document.querySelectorAll('[data-course-cell]').lengt
 **`storage local set` 之后必须立刻 `reload`，中间不能夹任何命令**（包括 `set viewport`）：
 上一页实例会抢在 reload 前把自己的内存状态回写进 localStorage，把刚写进去的夹具覆盖掉——
 表现是 reload 后 `cells=0`、落到空状态页。`openAt()` 把这一步做成了原子操作并带重试。
+ `openAt()` 把这一步做成了原子操作并带重试。
 
+### 触摸手势的一键验收（2026-09-29 起）
+
+`.trellis/tasks/archive/2026-09/09-29-schedule-edge-swipe-week-switch/research/cdp-touch-swipe.mjs`：
+用 CDP `Input.dispatchTouchEvent` 派发真实触摸序列（不是构造 `TouchEvent` 对象），四种模式：
+`full`（8 组场景）/ `off`（开关关闭时横滑无位移）/ `shot`（按住不放截图）/ `drag1 <fromX> <toX> <steps>`（单次拖动，便于外部夹住 `agent-browser react renders start|stop` 计数）。
+
+- 连接要用**page** target 的 `webSocketDebuggerUrl`（`agent-browser get cdp-url` 给的是 browser target，调 `Runtime.evaluate` 会报 `-32601`）。
+- `XDG_RUNTIME_DIR` 默认指向只读的 `/run/user/1000`，先 `export XDG_RUNTIME_DIR=/tmp/ab-runtime`；**不要把它与 `pnpm dev &` 写在同一条 `&&` 链里**（整条链会被 `&` 放进子 shell，export 不生效，报 `Failed to create socket directory: Read-only file system`）。
+- dev server 不能跨 bash 调用存活（每次调用是新的 net/pid 命名空间）：起服务、灌种子、跑脚本必须在**同一次**调用内完成。
+- 断言只看 `data-*` 与 computed style：拖动中读 `inlineTransform` / `data-week-swipe-state`，松手后读 `data-current-week` 与 `inlineTransform === ''`；关掉动画残留的判据是 `computedTransform === 'none'`（不是 matrix 全零）。
 ---
 
 ## Common Mistakes
@@ -328,3 +387,9 @@ agent-browser eval "String(document.querySelectorAll('[data-course-cell]').lengt
 - 把课程格内容改回垂直居中：1 行内容的格子会浮在中间、7 行内容的会贴着顶部，同一屏里每格起始高度都不一样。要**顶部对齐**（`justify-start`）。
 - 把兜底阶梯的粒度调粗（0.1 甚至两档）：缩幅会远超实际需要，超出的部分直接变成用户看到的「同屏字号落差」。粒度 0.05，取「刚好放得下的第一档」。
 - 把 `--cc-scale` 的缩放写成「先乘后钳上限」：基础长度已超上限的格子缩放会被上限吃掉，兜底等于失效。必须「先钳 → 再乘 → 再夹」。
+- 把边缘阻尼的位移写在**内层网格**上：被 transform 的后代会计入滚动溢出区域，`scrollWidth` 会被自己实时改大，于是 `resolveScrollEdges` 判定被污染（1x 的「两侧都允许」会自己失效）、还可能凭空长出滚动条。位移必须写在滚容器自身，由外层 `overflow-hidden` 裁剪。
+- 用 **pointer 事件**做横滑跟手：触摸横滑时浏览器会给 pointer 序列发 `pointercancel`（该方向根本不能滚动也会发），`pointerup` 的坐标是「取消点」而不是手指真实位置 → 位移全丢、双击还会被误判。手势只能靠被动 `touchmove` 观测。
+- 在手势里 `preventDefault()`：触摸序列里第一个 `touchmove` 没有 `preventDefault` 就会被当成被动，之后再拦已经无效；而且一旦拦截，纵向滚动与课程格点按都会被牵连。本手势的实现是**只观测不拦截**。
+- 复位时写 `translate3d(0px, 0, 0)` 而不清空内联值：会留下「有 transform」的残留状态（`getComputedStyle` 返回 matrix 而不是 `none`），自动化判据与后续手势的起点都会被误导。`reset()` 必须把 `transform` / `opacity` / `transition` 三个内联值都清空。
+- 让 `pointercancel` 参与双击判定（或只看两次抬起点的距离）：连续两次横滑会被判成双击、缩放档位来回切换。除了不让 cancel 参与，`pointerup` 还要过「按下点 → 抬起点」的位移校验。
+- 拖动期间用 React state 驱动位移（`setTranslateX`）：7×12 网格会每帧重渲染。跟手阶段只写 DOM 内联样式，松手才提交一次周次。

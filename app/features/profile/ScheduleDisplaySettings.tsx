@@ -10,9 +10,11 @@ export default function ScheduleDisplaySettings() {
   const showAttendanceStatus = useScheduleDisplayStore((state) => state.showAttendanceStatus)
   const showOutOfWeekCourses = useScheduleDisplayStore((state) => state.showOutOfWeekCourses)
   const collapseEmptyWeekdayColumns = useScheduleDisplayStore((state) => state.collapseEmptyWeekdayColumns)
+  const edgeSwipeWeekSwitch = useScheduleDisplayStore((state) => state.edgeSwipeWeekSwitch)
   const setShowAttendanceStatus = useScheduleDisplayStore((state) => state.setShowAttendanceStatus)
   const setShowOutOfWeekCourses = useScheduleDisplayStore((state) => state.setShowOutOfWeekCourses)
   const setCollapseEmptyWeekdayColumns = useScheduleDisplayStore((state) => state.setCollapseEmptyWeekdayColumns)
+  const setEdgeSwipeWeekSwitch = useScheduleDisplayStore((state) => state.setEdgeSwipeWeekSwitch)
 
   return (
     <Card id="card-schedule-display">
@@ -68,6 +70,23 @@ export default function ScheduleDisplaySettings() {
             checked={collapseEmptyWeekdayColumns}
             onCheckedChange={setCollapseEmptyWeekdayColumns}
             aria-label="收起整周无课的日期列"
+          />
+        </div>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-0.5">
+            <label className="text-sm font-medium" htmlFor="schedule-display-edge-swipe-week">
+              左右边缘滑动切换周
+            </label>
+            <p className="text-xs text-muted-foreground">
+              仅手机端：横向滑到课表最左或最右边缘后继续拖动，跟手阻尼回弹，松手即切换上一周或下一周。
+            </p>
+          </div>
+          <Switch
+            id="schedule-display-edge-swipe-week"
+            className="self-start"
+            checked={edgeSwipeWeekSwitch}
+            onCheckedChange={setEdgeSwipeWeekSwitch}
+            aria-label="左右边缘滑动切换周"
           />
         </div>
       </CardContent>

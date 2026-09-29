@@ -11,13 +11,23 @@ type ScheduleDisplayStore = {
    * 默认关闭：它会让列宽随当前展示周变化（翻周时列宽跳动），属于用户显式选择才开启的取舍。
    */
   collapseEmptyWeekdayColumns: boolean
+  /**
+   * 手机端课表横向滑到最左/最右边缘后继续拖动时，用阻尼跟手位移 + 松手切上下周。
+   *
+   * 默认开启：它是「滑到边缘」才有反应的补强手势，不占用任何既有交互，关掉只是少一个翻周方式。
+   */
+  edgeSwipeWeekSwitch: boolean
   setShowAttendanceStatus: (value: boolean) => void
   setShowOutOfWeekCourses: (value: boolean) => void
   setCollapseEmptyWeekdayColumns: (value: boolean) => void
+  setEdgeSwipeWeekSwitch: (value: boolean) => void
 }
 
 /** 真正落盘的字段：只有显示开关，没有 setter。 */
-type ScheduleDisplayPersisted = Pick<ScheduleDisplayStore, 'showAttendanceStatus' | 'showOutOfWeekCourses' | 'collapseEmptyWeekdayColumns'>
+type ScheduleDisplayPersisted = Pick<
+  ScheduleDisplayStore,
+  'showAttendanceStatus' | 'showOutOfWeekCourses' | 'collapseEmptyWeekdayColumns' | 'edgeSwipeWeekSwitch'
+>
 
 /**
  * 持久化策略。
@@ -34,6 +44,7 @@ export const scheduleDisplayPersistOptions: PersistOptions<ScheduleDisplayStore,
     showAttendanceStatus: state.showAttendanceStatus,
     showOutOfWeekCourses: state.showOutOfWeekCourses,
     collapseEmptyWeekdayColumns: state.collapseEmptyWeekdayColumns,
+    edgeSwipeWeekSwitch: state.edgeSwipeWeekSwitch,
   }),
   merge: (persistedState, currentState) => {
     const persisted = persistedState as Partial<ScheduleDisplayPersisted> | undefined
@@ -44,6 +55,7 @@ export const scheduleDisplayPersistOptions: PersistOptions<ScheduleDisplayStore,
       showAttendanceStatus: persisted?.showAttendanceStatus ?? currentState.showAttendanceStatus,
       showOutOfWeekCourses: persisted?.showOutOfWeekCourses ?? currentState.showOutOfWeekCourses,
       collapseEmptyWeekdayColumns: persisted?.collapseEmptyWeekdayColumns ?? currentState.collapseEmptyWeekdayColumns,
+      edgeSwipeWeekSwitch: persisted?.edgeSwipeWeekSwitch ?? currentState.edgeSwipeWeekSwitch,
     }
   },
 }
@@ -54,9 +66,11 @@ export const useScheduleDisplayStore = create<ScheduleDisplayStore>()(
       showAttendanceStatus: true,
       showOutOfWeekCourses: false,
       collapseEmptyWeekdayColumns: false,
+      edgeSwipeWeekSwitch: true,
       setShowAttendanceStatus: (value) => set({ showAttendanceStatus: value }),
       setShowOutOfWeekCourses: (value) => set({ showOutOfWeekCourses: value }),
       setCollapseEmptyWeekdayColumns: (value) => set({ collapseEmptyWeekdayColumns: value }),
+      setEdgeSwipeWeekSwitch: (value) => set({ edgeSwipeWeekSwitch: value }),
     }),
     scheduleDisplayPersistOptions
   )

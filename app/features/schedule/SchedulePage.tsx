@@ -82,6 +82,8 @@ export default function SchedulePage() {
           currentWeek={currentWeek}
           firstWeekStartDate={firstWeekStartDate}
           sectionTimes={sectionTimes}
+          maxWeek={maxWeek}
+          onWeekChange={setCurrentWeek}
           onCourseClick={(course) => setSelectedCourseId(course.id)}
         />
       </div>
