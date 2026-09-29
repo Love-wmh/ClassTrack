@@ -2,8 +2,15 @@ import { useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { ZOOM_MAX, ZOOM_MIN, ZOOM_TIERS } from '../constants'
 import { clampZoom, getDetailLevel, snapZoomTier } from '../utils'
+import { TAP_MOVE_TOLERANCE_PX, isTapSizedMove } from '../weekSwipe'
 
-type PointerPosition = { x: number; y: number }
+type PointerPosition = {
+  x: number
+  y: number
+  /** 按下点：只用于「这次抬起算不算点按」，不随移动更新。 */
+  downX: number
+  downY: number
+}
 
 type GestureState = {
   /** 进入双指手势时两指的间距，作为缩放比例的分母。 */
@@ -16,9 +23,6 @@ type GestureState = {
 
 /** 触摸端双击判定的最大间隔。 */
 const DOUBLE_TAP_INTERVAL_MS = 320
-
-/** 触摸端双击判定的最大位移，避免把连续两次拖动误判成双击。 */
-const DOUBLE_TAP_MOVE_TOLERANCE_PX = 24
 
 /**
  * 双击切换的去抖窗口。
@@ -92,7 +96,13 @@ export function useScheduleZoom() {
   }
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    // 同时记下按下点：抬起时要靠它判断「这次抬起算不算点按」（`downX`/`downY` 不随移动更新）。
+    pointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+      downX: event.clientX,
+      downY: event.clientY,
+    })
 
     if (pointersRef.current.size !== 2) return
 
@@ -133,7 +143,14 @@ export function useScheduleZoom() {
     setLiveZoom(next, (first.x + second.x) / 2)
   }
 
-  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+  /**
+   * 结束一个指针。
+   *
+   * `allowTap` 只在真正的 `pointerup` 上为真：触摸横向拖动时浏览器会发 `pointercancel`
+   * （即使该方向根本不能滚动也会发），它的坐标离按下点只有几 px —— 若参与双击判定，
+   * 连续两次横滑就会被误判成双击、缩放档位被来回切换。
+   */
+  const endPointer = (event: ReactPointerEvent<HTMLDivElement>, allowTap: boolean) => {
     const pointer = pointersRef.current.get(event.pointerId)
     pointersRef.current.delete(event.pointerId)
 
@@ -143,7 +160,13 @@ export function useScheduleZoom() {
     }
 
     // 双指手势之外的单指抬起：可能是触摸端的双击（WebView 不一定派发 dblclick）。
-    if (!pointer || event.pointerType !== 'touch') return
+    if (!allowTap || !pointer || event.pointerType !== 'touch') return
+
+    // 已经拖出去几十 px 的手势不是点按：按下点到抬起点的位移必须还在容差内。
+    if (!isTapSizedMove(pointer.downX, pointer.downY, event.clientX, event.clientY)) {
+      lastTapRef.current = null
+      return
+    }
 
     const now = Date.now()
     const lastTap = lastTapRef.current
@@ -152,14 +175,18 @@ export function useScheduleZoom() {
     const isDoubleTap =
       lastTap !== null &&
       now - lastTap.time < DOUBLE_TAP_INTERVAL_MS &&
-      Math.abs(event.clientX - lastTap.x) < DOUBLE_TAP_MOVE_TOLERANCE_PX &&
-      Math.abs(event.clientY - lastTap.y) < DOUBLE_TAP_MOVE_TOLERANCE_PX
+      Math.abs(event.clientX - lastTap.x) < TAP_MOVE_TOLERANCE_PX &&
+      Math.abs(event.clientY - lastTap.y) < TAP_MOVE_TOLERANCE_PX
 
     if (!isDoubleTap) return
 
     lastTapRef.current = null
     toggleZoom()
   }
+
+  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => endPointer(event, true)
+
+  const handlePointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => endPointer(event, false)
 
   const zoomIn = () => setZoom((current) => ZOOM_TIERS.find((tier) => tier > current) ?? ZOOM_MAX)
 
@@ -177,8 +204,9 @@ export function useScheduleZoom() {
     containerProps: {
       onPointerDown: handlePointerDown,
       onPointerMove: handlePointerMove,
-      onPointerUp: handlePointerEnd,
-      onPointerCancel: handlePointerEnd,
+      onPointerUp: handlePointerUp,
+      // cancel 只做记账（见 `endPointer` 的注释）：它不能参与双击判定。
+      onPointerCancel: handlePointerCancel,
       onDoubleClick: toggleZoom,
     },
     zoomIn,

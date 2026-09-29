@@ -107,7 +107,10 @@ export default function ScheduleHeader({
         </div>
 
         <div className="grid grid-cols-2 items-center gap-2 md:flex">
-          <span className="flex h-9 items-center justify-center rounded-md bg-card px-3 text-foreground shadow-xs">
+          <span
+            data-current-week={currentWeek}
+            className="flex h-9 items-center justify-center rounded-md bg-card px-3 text-foreground shadow-xs"
+          >
             第 {currentWeek} 周
           </span>
           <Button

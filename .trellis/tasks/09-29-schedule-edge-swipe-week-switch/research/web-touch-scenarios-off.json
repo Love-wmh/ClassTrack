@@ -1,0 +1,101 @@
+{
+  "s0Baseline": {
+    "week": 3,
+    "swipeState": null,
+    "inlineTransform": "",
+    "computedTransform": "none",
+    "opacity": "1",
+    "scrollLeft": 0,
+    "scrollWidth": 379,
+    "clientWidth": 379,
+    "scrollTop": 0,
+    "zoomLevel": "1"
+  },
+  "offSmallRightDrag": {
+    "probes": [
+      {
+        "step": 8,
+        "week": 3,
+        "swipeState": null,
+        "inlineTransform": "",
+        "computedTransform": "none",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 3,
+      "swipeState": null,
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "offBigRightDrag": {
+    "probes": [
+      {
+        "step": 16,
+        "week": 3,
+        "swipeState": null,
+        "inlineTransform": "",
+        "computedTransform": "none",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 3,
+      "swipeState": null,
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "offBigLeftDrag": {
+    "probes": [
+      {
+        "step": 16,
+        "week": 3,
+        "swipeState": null,
+        "inlineTransform": "",
+        "computedTransform": "none",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 3,
+      "swipeState": null,
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  }
+}

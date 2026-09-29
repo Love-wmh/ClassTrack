@@ -6,7 +6,7 @@
 
 ## Overview
 
-项目使用 Zustand 5、`immer` middleware、`persist` middleware 和 `createJSONStorage(() => localStorage)`。业务数据由 `app/store/index.ts` 导出的 `useClassStore` 持有（key `class-track-storage`）；**设备相关的偏好各有一个独立 store**：`app/store/mobileNavigationStore.ts`（key `class-track-mobile-navigation`，底部导航顺序）、`app/store/updateStore.ts`（key `class-track-update`，更新检测设置）、`app/store/attendanceStore.ts`（key `class-track-attendance`，出勤统计开关）。独立 store 的共同理由是：它们不该跟着备份 JSON 迁移到新设备，也不该牵动业务数据的 schema 版本与迁移逻辑。
+项目使用 Zustand 5、`immer` middleware、`persist` middleware 和 `createJSONStorage(() => localStorage)`。业务数据由 `app/store/index.ts` 导出的 `useClassStore` 持有（key `class-track-storage`）；**设备相关的偏好各有一个独立 store**：`app/store/mobileNavigationStore.ts`（key `class-track-mobile-navigation`，底部导航顺序）、`app/store/updateStore.ts`（key `class-track-update`，更新检测设置）、`app/store/attendanceStore.ts`（key `class-track-attendance`，出勤统计开关）、`app/store/scheduleDisplayStore.ts`（key `class-track-schedule-display`，课表显示开关：`showAttendanceStatus` / `showOutOfWeekCourses` / `collapseEmptyWeekdayColumns` / `edgeSwipeWeekSwitch`，新增字段必须同步初始值、`partialize`、`merge` 三处）。独立 store 的共同理由是：它们不该跟着备份 JSON 迁移到新设备，也不该牵动业务数据的 schema 版本与迁移逻辑。
 
 slice 组合遵循现有类型和初始化方式：
 
@@ -39,7 +39,7 @@ immer((...args) => ({
 
 ## When to Use Global State
 
-需要跨页面持久化的课程、出勤、学期、学校和课程元数据进入 `useClassStore`；**设备相关偏好各进自己的 store**：移动底部导航排序进 `useMobileNavigationStore`、更新检测设置进 `useUpdateStore`、出勤统计开关进 `useAttendanceStore`。仅一个组件的输入值、打开状态或临时选择不要扩展业务 store，除非现有导入/弹窗流程已由 `uiSlice` 负责。
+需要跨页面持久化的课程、出勤、学期、学校和课程元数据进入 `useClassStore`；**设备相关偏好各进自己的 store**：移动底部导航排序进 `useMobileNavigationStore`、更新检测设置进 `useUpdateStore`、出勤统计开关进 `useAttendanceStore`、课表显示开关进 `useScheduleDisplayStore`。仅一个组件的输入值、打开状态或临时选择不要扩展业务 store，除非现有导入/弹窗流程已由 `uiSlice` 负责。
 
 「出勤统计」开关（`useAttendanceStore` 的 `enabled`）是**纯展示开关**，页面读一次往下传（`attendanceEnabled` prop）：它只决定「画不画」，不决定「有没有数据」。关闭时任何一处都不得清空、过滤或重写 `classMarks` —— 备注（`ClassMark.note`）与代课管理都依赖它。
 

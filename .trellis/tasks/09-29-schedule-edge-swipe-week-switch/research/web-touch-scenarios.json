@@ -1,0 +1,242 @@
+{
+  "s0Baseline": {
+    "week": 3,
+    "swipeState": "idle",
+    "inlineTransform": "",
+    "computedTransform": "none",
+    "opacity": "1",
+    "scrollLeft": 0,
+    "scrollWidth": 379,
+    "clientWidth": 379,
+    "scrollTop": 0,
+    "zoomLevel": "1"
+  },
+  "s1SmallRightDrag": {
+    "probes": [
+      {
+        "step": 8,
+        "week": 3,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(36.9231px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, 36.9231, 0)",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 3,
+      "swipeState": "idle",
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "s2BigRightDrag": {
+    "probes": [
+      {
+        "step": 6,
+        "week": 3,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(42.1053px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, 42.1053, 0)",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      },
+      {
+        "step": 16,
+        "week": 3,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(61.9926px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, 61.9926, 0)",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 2,
+      "swipeState": "idle",
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "s3BigLeftDrag": {
+    "probes": [
+      {
+        "step": 16,
+        "week": 2,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(-61.9926px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, -61.9926, 0)",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 3,
+      "swipeState": "idle",
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "s4VerticalDrag": {
+    "probes": [
+      {
+        "step": 12,
+        "week": 3,
+        "swipeState": "idle",
+        "inlineTransform": "",
+        "computedTransform": "none",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 3,
+      "swipeState": "idle",
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "s5TwoQuickSwipesKeepZoom": {
+    "zoomBefore": "1",
+    "zoomAfter": "1"
+  },
+  "s6aAtFirstWeek": {
+    "week": 1,
+    "swipeState": "idle",
+    "inlineTransform": "",
+    "computedTransform": "none",
+    "opacity": "1",
+    "scrollLeft": 0,
+    "scrollWidth": 379,
+    "clientWidth": 379,
+    "scrollTop": 0,
+    "zoomLevel": "1"
+  },
+  "s6bBoundaryDrag": {
+    "probes": [
+      {
+        "step": 12,
+        "week": 1,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(60.9137px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, 60.9137, 0)",
+        "opacity": "1",
+        "scrollLeft": 0,
+        "scrollWidth": 379,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "1"
+      }
+    ],
+    "after": {
+      "week": 1,
+      "swipeState": "idle",
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 0,
+      "scrollWidth": 379,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "1"
+    }
+  },
+  "s7a2xBeforeScrolledDrag": {
+    "week": 1,
+    "swipeState": "idle",
+    "inlineTransform": "",
+    "computedTransform": "none",
+    "opacity": "1",
+    "scrollLeft": 259,
+    "scrollWidth": 758,
+    "clientWidth": 379,
+    "scrollTop": 0,
+    "zoomLevel": "2"
+  },
+  "s7bScrolledThenEdgeDrag": {
+    "probes": [
+      {
+        "step": 8,
+        "week": 1,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(0px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "scrollLeft": 370,
+        "scrollWidth": 758,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "2"
+      },
+      {
+        "step": 16,
+        "week": 1,
+        "swipeState": "dragging",
+        "inlineTransform": "translate3d(-50.1493px, 0px, 0px)",
+        "computedTransform": "matrix(1, 0, 0, 1, -50.1493, 0)",
+        "opacity": "1",
+        "scrollLeft": 379,
+        "scrollWidth": 758,
+        "clientWidth": 379,
+        "scrollTop": 0,
+        "zoomLevel": "2"
+      }
+    ],
+    "after": {
+      "week": 2,
+      "swipeState": "idle",
+      "inlineTransform": "",
+      "computedTransform": "none",
+      "opacity": "1",
+      "scrollLeft": 379,
+      "scrollWidth": 758,
+      "clientWidth": 379,
+      "scrollTop": 0,
+      "zoomLevel": "2"
+    }
+  }
+}

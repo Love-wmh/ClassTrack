@@ -11,6 +11,7 @@ import { CELL_CONTAINER_CLASS, GRID_CONTAINER_CLASS, cellScaleStyle } from './ce
 import { dayNames, sections, weekDays } from './constants'
 import ScheduleCourseCell from './ScheduleCourseCell'
 import { useScheduleZoom } from './hooks/useScheduleZoom'
+import { useWeekSwipeGesture } from './hooks/useWeekSwipeGesture'
 import { getDayDate } from './utils'
 import type { SectionTime, VisibleCourse } from './utils'
 
@@ -22,6 +23,9 @@ type ScheduleTableProps = {
   currentWeek: number
   firstWeekStartDate: string | null
   sectionTimes: Record<number, SectionTime>
+  maxWeek: number
+  /** 边缘滑动 / 顶栏 / 键盘共用的翻周入口。 */
+  onWeekChange: (week: number) => void
   onCourseClick: (course: Class) => void
 }
 
@@ -36,12 +40,25 @@ export default function ScheduleTable({
   currentWeek,
   firstWeekStartDate,
   sectionTimes,
+  maxWeek,
+  onWeekChange,
   onCourseClick,
 }: ScheduleTableProps) {
   const isMobile = useIsMobile()
   const { zoom, detailLevel, scrollRef, gridRef, containerProps, zoomIn, zoomOut, canZoomIn, canZoomOut } = useScheduleZoom()
 
   const collapseEmptyWeekdayColumns = useScheduleDisplayStore((state) => state.collapseEmptyWeekdayColumns)
+  const edgeSwipeWeekSwitch = useScheduleDisplayStore((state) => state.edgeSwipeWeekSwitch)
+
+  // 手机端课表的横向边缘阻尼手势。桌面端不启用（鼠标拖拽不在需求内），
+  // 开关关闭时连监听器都不挂，横滑完全回到改动前的行为。
+  useWeekSwipeGesture({
+    scrollRef,
+    enabled: isMobile && edgeSwipeWeekSwitch,
+    currentWeek,
+    maxWeek,
+    onWeekChange,
+  })
 
   const monthDate = getDayDate(firstWeekStartDate, currentWeek, 1)
   const getClassMark = (classId: string, week: number) => classMarks[getMarkKey(classId, week)]
@@ -80,121 +97,126 @@ export default function ScheduleTable({
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div
-        ref={scrollRef}
-        data-schedule-scroll
-        {...containerProps}
-        className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain rounded-md border border-border bg-card shadow-xs [touch-action:pan-x_pan-y]"
-      >
+      {/* 手势层要挪一整个滚动容器（位移写在它自己身上），所以外面必须有一层只负责裁剪的包装：
+          被 transform 的后代会计入滚动溢出区域，写在内层网格上会污染 scrollWidth 与边缘判定。
+          两层都是 `flex flex-col` + `min-h-0 flex-1`，尺寸分配与改动前等价（见任务基线文件）。 */}
+      <div data-schedule-swipe-stage className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
-          ref={gridRef}
-          data-schedule-grid
-          data-zoom-level={zoom}
-          data-zoom-tier={detailLevel}
-          className={cn(
-            'grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-rows-[2.25rem_repeat(12,minmax(3.875rem,1fr))] md:min-w-[760px]',
-            GRID_CONTAINER_CLASS,
-            // 关闭开关时列模板与历史实现逐字符一致（手机 2rem 节次列 / 桌面 4rem 节次列 + 7 个等宽列），
-            // 由 class 提供；开启时改由内联样式给出，这两条 class 直接不参与。
-            !collapseColumns && 'grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]'
-          )}
-          style={gridStyle}
+          ref={scrollRef}
+          data-schedule-scroll
+          {...containerProps}
+          className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain rounded-md border border-border bg-card shadow-xs [touch-action:pan-x_pan-y]"
         >
-          <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] [font-size:var(--cc-month)]">
-            <span className="md:hidden">{monthDate ? format(monthDate, 'M月') : '节'}</span>
-            <span className="hidden md:inline">节</span>
-          </div>
-          {weekDays.map((day) => {
-            const date = getDayDate(firstWeekStartDate, currentWeek, day)
-            return (
-              <div
-                key={day}
-                data-day-head
-                className={cn(
-                  'flex flex-col items-center justify-center border-b border-border bg-muted/60 font-medium text-muted-foreground md:flex-row',
-                  day !== 7 && 'border-r'
-                )}
-              >
-                <span className="[font-size:var(--cc-head)] [line-height:1.2]">{dayNames[day]}</span>
-                {date && (
-                  <span className="font-normal [font-size:var(--cc-head-sub)] [line-height:1.2] md:ml-1.5">{format(date, 'MM.dd')}</span>
-                )}
-              </div>
-            )
-          })}
-
-          {sections.map((section) => {
-            const sectionTime = sectionTimes[section]
-            return (
-              <div
-                key={`section-${section}`}
-                data-section-row={section}
-                className={cn(
-                  'sticky left-0 z-20 flex flex-col items-center justify-center border-r border-border bg-card font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)]',
-                  section !== 12 && 'border-b'
-                )}
-                style={{ gridColumn: 1, gridRow: section + 1 }}
-              >
-                <span className="[font-size:var(--cc-section-no)]">{section}</span>
-                {sectionTime?.start && (
-                  <span className="font-normal tabular-nums [font-size:var(--cc-section-time)] [line-height:1.2] md:hidden">
-                    {sectionTime.start}
-                  </span>
-                )}
-                {sectionTime?.end && (
-                  <span className="font-normal tabular-nums [font-size:var(--cc-section-time)] [line-height:1.2] md:hidden">
-                    {sectionTime.end}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-
-          {weekDays.flatMap((day) =>
-            sections.map((section) => {
-              if (occupiedCells.has(`${day}-${section}`)) return null
-
+          <div
+            ref={gridRef}
+            data-schedule-grid
+            data-zoom-level={zoom}
+            data-zoom-tier={detailLevel}
+            className={cn(
+              'grid h-full min-w-[calc(100%*var(--schedule-zoom,1))] grid-rows-[2.25rem_repeat(12,minmax(3.875rem,1fr))] md:min-w-[760px]',
+              GRID_CONTAINER_CLASS,
+              // 关闭开关时列模板与历史实现逐字符一致（手机 2rem 节次列 / 桌面 4rem 节次列 + 7 个等宽列），
+              // 由 class 提供；开启时改由内联样式给出，这两条 class 直接不参与。
+              !collapseColumns && 'grid-cols-[2rem_repeat(7,minmax(0,1fr))] md:grid-cols-[4rem_repeat(7,minmax(0,1fr))]'
+            )}
+            style={gridStyle}
+          >
+            <div className="sticky left-0 z-30 flex items-center justify-center border-b border-r border-border bg-muted font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)] [font-size:var(--cc-month)]">
+              <span className="md:hidden">{monthDate ? format(monthDate, 'M月') : '节'}</span>
+              <span className="hidden md:inline">节</span>
+            </div>
+            {weekDays.map((day) => {
+              const date = getDayDate(firstWeekStartDate, currentWeek, day)
               return (
                 <div
-                  key={`empty-${day}-${section}`}
-                  className={cn(day !== 7 && 'border-r', section !== 12 && 'border-b', 'border-border')}
-                  style={{ gridColumn: day + 1, gridRow: section + 1 }}
-                />
+                  key={day}
+                  data-day-head
+                  className={cn(
+                    'flex flex-col items-center justify-center border-b border-border bg-muted/60 font-medium text-muted-foreground md:flex-row',
+                    day !== 7 && 'border-r'
+                  )}
+                >
+                  <span className="[font-size:var(--cc-head)] [line-height:1.2]">{dayNames[day]}</span>
+                  {date && (
+                    <span className="font-normal [font-size:var(--cc-head-sub)] [line-height:1.2] md:ml-1.5">{format(date, 'MM.dd')}</span>
+                  )}
+                </div>
               )
-            })
-          )}
+            })}
 
-          {visibleCourses.map(({ course, isOutOfWeek }) => (
-            // 外层是**查询容器**：它故意不带任何内边距/边框，内容盒因此恰好等于网格给的这块区域。
-            // 内边距（`p-px`）与网格线（`border-r`/`border-b`）在最后一列/最后一行会缺一条边，
-            // 若把它们放在带 `container-type` 的这层上，容器内容盒就会随「这是不是最后一列」变化，
-            // 同尺寸格子的字号立刻不一致（见 cellScale.ts 的 CELL_CONTAINER_CLASS 注释）。
-            <div
-              key={course.id}
-              data-course-wrapper
-              className={cn('min-h-0 overflow-hidden', CELL_CONTAINER_CLASS)}
-              style={{
-                gridColumn: course.dayOfWeek + 1,
-                gridRow: `${course.startSection + 1} / ${course.endSection + 2}`,
-              }}
-            >
+            {sections.map((section) => {
+              const sectionTime = sectionTimes[section]
+              return (
+                <div
+                  key={`section-${section}`}
+                  data-section-row={section}
+                  className={cn(
+                    'sticky left-0 z-20 flex flex-col items-center justify-center border-r border-border bg-card font-medium text-muted-foreground shadow-[2px_0_4px_rgb(0_0_0_/_0.06)]',
+                    section !== 12 && 'border-b'
+                  )}
+                  style={{ gridColumn: 1, gridRow: section + 1 }}
+                >
+                  <span className="[font-size:var(--cc-section-no)]">{section}</span>
+                  {sectionTime?.start && (
+                    <span className="font-normal tabular-nums [font-size:var(--cc-section-time)] [line-height:1.2] md:hidden">
+                      {sectionTime.start}
+                    </span>
+                  )}
+                  {sectionTime?.end && (
+                    <span className="font-normal tabular-nums [font-size:var(--cc-section-time)] [line-height:1.2] md:hidden">
+                      {sectionTime.end}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+
+            {weekDays.flatMap((day) =>
+              sections.map((section) => {
+                if (occupiedCells.has(`${day}-${section}`)) return null
+
+                return (
+                  <div
+                    key={`empty-${day}-${section}`}
+                    className={cn(day !== 7 && 'border-r', section !== 12 && 'border-b', 'border-border')}
+                    style={{ gridColumn: day + 1, gridRow: section + 1 }}
+                  />
+                )
+              })
+            )}
+
+            {visibleCourses.map(({ course, isOutOfWeek }) => (
+              // 外层是**查询容器**：它故意不带任何内边距/边框，内容盒因此恰好等于网格给的这块区域。
+              // 内边距（`p-px`）与网格线（`border-r`/`border-b`）在最后一列/最后一行会缺一条边，
+              // 若把它们放在带 `container-type` 的这层上，容器内容盒就会随「这是不是最后一列」变化，
+              // 同尺寸格子的字号立刻不一致（见 cellScale.ts 的 CELL_CONTAINER_CLASS 注释）。
               <div
-                className={cn(
-                  'h-full w-full overflow-hidden border-border p-px',
-                  course.dayOfWeek !== 7 && 'border-r',
-                  course.endSection !== 12 && 'border-b'
-                )}
+                key={course.id}
+                data-course-wrapper
+                className={cn('min-h-0 overflow-hidden', CELL_CONTAINER_CLASS)}
+                style={{
+                  gridColumn: course.dayOfWeek + 1,
+                  gridRow: `${course.startSection + 1} / ${course.endSection + 2}`,
+                }}
               >
-                <ScheduleCourseCell
-                  course={course}
-                  mark={getClassMark(course.id, currentWeek)}
-                  attendanceEnabled={attendanceEnabled}
-                  isOutOfWeek={isOutOfWeek}
-                  onClick={() => onCourseClick(course)}
-                />
+                <div
+                  className={cn(
+                    'h-full w-full overflow-hidden border-border p-px',
+                    course.dayOfWeek !== 7 && 'border-r',
+                    course.endSection !== 12 && 'border-b'
+                  )}
+                >
+                  <ScheduleCourseCell
+                    course={course}
+                    mark={getClassMark(course.id, currentWeek)}
+                    attendanceEnabled={attendanceEnabled}
+                    isOutOfWeek={isOutOfWeek}
+                    onClick={() => onCourseClick(course)}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
