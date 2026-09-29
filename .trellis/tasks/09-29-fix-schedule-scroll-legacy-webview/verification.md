@@ -13,10 +13,10 @@
 | `pnpm typecheck` | 通过 |
 | `pnpm lint`（`--max-warnings 0`） | 通过（0 problems） |
 | `pnpm format:check` | 通过（All matched files use Prettier code style） |
-| `pnpm test` | 通过：**41 文件 / 392 用例**（基线 40 / 388；新增 `appCssViewportAnchor.test.ts` 4 例） |
+| `pnpm test` | 通过：**41 文件 / 393 用例**（基线 40 / 388；新增 `appCssViewportAnchor.test.ts` 5 例） |
 | `pnpm build` | 通过 |
-| `pnpm webview:check-css`（本任务新增） | 通过：`anchor in root-BhioNxaj.css` |
-| `pnpm test:webview-css`（本任务新增） | 通过：12 / 12 |
+| `pnpm webview:check-css`（本任务新增） | 通过：`anchor in root-B2iFJbFR.css`（含外壳锚点断言） |
+| `pnpm test:webview-css`（本任务新增） | 通过：14 / 14 |
 
 ## 改动清单
 
@@ -30,12 +30,19 @@
 | `.github/workflows/ci.yml` | `pnpm build` 之后新增 `pnpm webview:check-css`；测试段新增 `pnpm test:webview-css` |
 | `.trellis/spec/frontend/quality-guidelines.md` | 新增「构建产物的兼容性契约（视口高度锚点）」：基线、无兜底特性清单、写法契约、两条防回归检查 |
 | `.trellis/spec/frontend/mobile-schedule-layout.md` | Layout Contract 加前置依赖说明；验收配方新增「视口高度锚点的等价条件验收」与器械清单 |
+| `app/app.css`（C2 追加） | `@layer utilities` 内 `.app-viewport` 之后新增 `@supports not (height: 100dvh) { .app-viewport { height: 100vh; max-height: 100vh } }` —— 外壳自带的第二条高度锚点 |
+| `app/appCssViewportAnchor.test.ts`（追加） | 新增第 5 条用例：外壳锚点存在、覆盖 `.app-viewport`、写在基础规则之后 |
+| `scripts/check-webview-css-fallback.js` / `.test.js`（追加） | 产物断言与单测扩到外壳锚点（14 例）；扫描器边界补上 `{`，能定位 `@layer` / `@supports` 内的规则 |
+| `research/preventive-hardening-probe.mjs`（新增） | 加固候选矩阵（基线 / A / C2 / 锚点被拿掉 / 各组合），每场景带一次真实触摸拖动 |
+| `research/device-diagnostics.mjs`（新增） | 设备端一键诊断：`--print-snippet` 或给 CDP ws url，输出判定与定位提示 |
+| `quality-guidelines.md`（追加） | 「外壳锚点：不得单点依赖 `html/body`」小节 + 防回归检查覆盖范围 + 诊断器械用法 |
+| `mobile-schedule-layout.md`（追加） | 前置依赖加「双保险」说明；器械清单补两个新脚本 |
 
 ## 逐条结论
 
 ### AC-1 产物/工具链锚点 ✅
 
-`build/client/assets/root-BhioNxaj.css` 里同时存在（`pnpm build` 后实测 grep）：
+`build/client/assets/root-B2iFJbFR.css`（最后一次 `pnpm build` 的产物；C2 追加后的哈希）里同时存在：
 
 ```css
 html,body{background-color:var(--background);color:var(--foreground);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;height:100%;overflow:hidden}
@@ -98,6 +105,39 @@ html,body{background-color:var(--background);color:var(--foreground);-webkit-fon
 `navigator.userAgent` 里的 `Chrome/xxx`、`getComputedStyle(html/body).height`、`document.body.scrollHeight`、
 `[data-schedule-scroll]` 的 `clientHeight/scrollHeight`、纵向拖动时 `scrollTop` 是否变化。
 
+
+### AC-7 C2 外壳锚点（正常引擎零影响 + 锚点失效可救援）✅
+
+- **产物**：`pnpm webview:check-css` 通过，并在产物里查到
+  `@supports not (height:100dvh){.app-viewport{height:100vh;max-height:100vh}}` —— 位于 `@layer utilities` 内、
+  紧跟 `.app-viewport` 基础规则之后（同层后写 → 层叠上覆盖生效）。构建器**没有**把这个「对目标恒假」的块优化掉。
+- **正常引擎基线**（`research/preventive-hardening-probe.mjs` 场景 1/2 + `layout-probe.js`）：
+  412×915 → `shell 915` / `gridH 732` / `clientH 732` / `maxScrollTop 48` / `cell 47×121` / `font 10.1108px`；
+  1440×900 → `shell 900` / `gridH 798` / `clientH 798` / `maxScrollTop 0` / `cell 151×124` / `font 15px`
+  —— 与 AC-5 基线逐项相同。
+- **救援能力**（把 `html/body` 的 `height` 全部拿掉 = 修复前状态）：
+
+| 场景（412×915） | shell | gridH | clientH | `maxScrollTop` | 拖动后 `scrollTop` | 课程格 | 课名字号 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 锚点拿掉（= 修复前） | 963 | 780 | 780 | **0** | **0** | 49×121 | 10.5474px |
+| 锚点拿掉 + C2 | **915** | 732 | 732 | **48** | **48** | **47×121** | **10.1108px** |
+
+对照：不做 C2 而只做 A（网格 `min-height`）时 `maxScrollTop` 仍为 0 → 说明 A 救不了这一类，故未采纳。
+
+### AC-8 设备端诊断器械 ✅
+
+`research/device-diagnostics.mjs` 四种状态实测（`--print-snippet` 也能打印可粘贴的自包含表达式）：
+
+| # | 状态 | 期望 | 实测判定 |
+| --- | --- | --- | --- |
+| ① | 正常（412×915） | `ok` | `ok`（`max 48`、程序化可滚 `true`、外壳不比视口高）✅ |
+| ② | 注入 `html,body{height:auto}` 破坏锚点 | `layout-anchor` | `layout-anchor`（`max 0`、外壳 963 > `innerHeight` 915）✅ |
+| ③ | 412×1200（内容装得下） | `needs-no-scroll` | `needs-no-scroll`（`max 0`、外壳 1200 = `innerHeight`）✅ |
+| ④ | 正常 + `--touch-failed` | `touch-layer` | `touch-layer` ✅ |
+
+判定的关键信号是**外壳是否比视口高**，而不是「最后一个节次行是否被容器裁掉」：锚点塌陷时容器会长到内容高度，
+12 节都在容器内，被裁的是外壳底部 —— 这一点在实现期踩过（初版用「最后一行被裁」判断，把 ② 误判成
+`needs-no-scroll`）。
 ## 反证（证明守卫真的挡得住回归）
 
 把 `app/app.css` 还原成修复前的写法（`git show HEAD:app/app.css`，即同一条规则里 `height: 100%` +
@@ -116,7 +156,7 @@ html,body{background-color:var(--background);color:var(--foreground);-webkit-fon
 
 | 编号 | 风险 | 缓解 / 现状 |
 | --- | --- | --- |
-| R1 | 报告设备修完后仍滑不动（存在第二个原因） | 未验证；取数清单已写在 `prd.md` 与本节，本次不掩盖该可能 |
+| R1 | 报告设备修完后仍滑不动（存在第二个原因） | 已尽量前置：高度锚点类由 C2 双保险覆盖（AC-7 实测可救援），其余原因由 `research/device-diagnostics.mjs` 一次定位到层（AC-8）。设备侧仍未验证 |
 | R2 | Tailwind / Vite / lightningcss 升级后再次改变「冗余声明」策略 | 两条守卫：源码结构单测 + 真产物断言，任一红即挡在 CI 前；`research/lightningcss-fallback-matrix.mjs` 可复跑定位 |
 | R3 | `.h-svh` / `.min-h-svh` 与三处 `calc(100dvh-2rem)` 对话框仍无兜底 | 用户明确不在本次范围；已进入 spec 的「无兜底特性清单」，不再当成未知问题排查 |
 | R4 | Chromium < 111 上 `oklch` / `color-mix` / 容器查询单位的降级 | 出范围；课程格配色是硬编码 hex，因此课表本身仍可读，但应用外壳颜色会退化 |

@@ -43,6 +43,31 @@
 - `index.md`：仅在 Status/Description 需要时改动。
 - **验证**：人工通读 + `pnpm format:check`。
 
+### 1.5 C2：应用外壳自带视口锚点（design §2b，2026-09-29 追加）
+
+- `app/app.css` 的 `@layer utilities` 内在 `.app-viewport` 之后新增
+  `@supports not (height: 100dvh) { .app-viewport { height: 100vh; max-height: 100vh } }`；
+  **不要**写进 `.app-viewport` 自身规则（同规则双写会被 lightningcss 当冗余删掉）。
+- `app/appCssViewportAnchor.test.ts` 增加源码断言：该 `@supports not` 块存在、覆盖 `.app-viewport`、且写在
+  `.app-viewport` 基础规则之后。
+- `scripts/check-webview-css-fallback.js` 增加产物断言：产物里存在 `@supports not (height: 100dvh)` 且其中给
+  `.app-viewport` 设了 `100vh`；配套单测补正反例。
+- **验证**：`pnpm build && pnpm webview:check-css && pnpm test:webview-css`。
+
+### 1.6 D：设备端一键诊断器械（design §4 AC-8）
+
+- 新增 `research/device-diagnostics.mjs`：`node <此文件> <cdp-ws-url>` 连接并输出判定；
+  `--print-snippet` 打印同样的自包含表达式（便于贴进 WebView devtools）。
+- **验证**：本地三种状态各跑一次（正常 / 锚点被拿掉 / 内容不超出容器），判定分别为
+  `ok` / `layout-anchor` / `needs-no-scroll`。
+
+### 1.7 spec 与验收记录
+
+- `quality-guidelines.md`：补「外壳锚点不得单点依赖 `html/body`」、`@supports not` 写法与原因、
+  产物守卫的覆盖范围、以及诊断器械指引。
+- `mobile-schedule-layout.md`：器械清单补 `device-diagnostics.mjs`。
+- `verification.md`：补 AC-7 / AC-8 结论、加固后的基线复核、以及「老移动浏览器 `100vh`」残余风险。
+
 ## 2. 质量门与验收（Phase 2.2）
 
 | # | 项目 | 命令 / 器械 | 期望 |
@@ -52,6 +77,8 @@
 | 2.3 | AC-1 / AC-4 | `pnpm webview:check-css`、`pnpm test:webview-css`、`pnpm test` | 全绿；且**先用 `git stash` 或临时改回旧写法确认这些检查会红**（证明它们真的能挡住回归） |
 | 2.4 | 仓库五项门禁 | `pnpm typecheck` / `lint` / `format:check` / `test` / `build` | 全绿 |
 | 2.5 | 证据落盘 | 写 `verification.md` | 逐条 AC 结论 + **未验证项显式标注**（AC-6 真机） |
+| 2.6 | AC-7 | `research/preventive-hardening-probe.mjs` @412×915 与 1440×900 + `pnpm webview:check-css` | 场景 2 与基线逐项相同；场景 5 `maxScrollTop > 0` 且拖动后到 `maxScrollTop`；产物含 `@supports not (height: 100dvh)` |
+| 2.7 | AC-8 | `research/device-diagnostics.mjs` 在三种状态下各跑一次 | 判定分别为 `ok` / `layout-anchor` / `needs-no-scroll` |
 
 - 2.2 的「自查」用 `trellis-check` 技能按 AC 逐条核验（inline，不派子代理）。
 - 门禁失败时按需修，**不允许**把失败项写成「已知问题」蒙过去。

@@ -55,6 +55,40 @@ body {
 分界线扫描确认删兜底的阈值正好是 **Chrome 108**（= `dvh` 支持起点），且 **lightningcss 不会把「对目标恒真」的
 `@supports` 展开或删掉** —— 这是本方案成立的关键前提，已实测。
 
+## 2b. 预防性加固：外壳自带视口锚点（C2，2026-09-29 追加）
+
+`html/body` 是**唯一**的高度锚点：任何原因让它失效（构建器再删一次兜底、将来有人改写、未知引擎行为），
+都会重演本次故障。C2 让应用外壳自己再拿一个锚点，且只在**不支持 `dvh` 的引擎**上生效：
+
+```css
+@layer utilities {
+  .app-viewport { /* 原样不动 */ }
+
+  @supports not (height: 100dvh) {
+    .app-viewport {
+      height: 100vh;
+      max-height: 100vh;
+    }
+  }
+}
+```
+
+为什么是这个形状（都已实测）：
+
+- 用 `@supports not (height: 100dvh)` 而不是在同规则里再写一条 `height: 100vh`：后者会被 lightningcss 按
+  「被覆盖的冗余声明」删掉（与本次根因同一机制，见 §2 的矩阵）。
+- 实测 lightningcss **不会**把「对目标恒假」的 `@supports not` 块优化掉 → 块能落进产物（由产物守卫断言）。
+- 对支持 `dvh` 的引擎该块恒不生效 → 零影响（基线实测逐项不变）。
+- 在不支持 `dvh` 的引擎上 `100vh` == WebView 高度，与「`html/body` 正常时的 `100%`」等价；同为 `@layer utilities`
+  内后写的同优先级规则，层叠上自然覆盖 `.app-viewport` 原来的 `height: 100%` / `max-height: 100%`。
+
+救援能力实测（`research/preventive-hardening-probe.mjs`，把 `html/body` 的 `height` 全部拿掉 = 修复前状态）：
+
+| 场景（412×915） | `shellHeight` | `maxScrollTop` | 拖动后 `scrollTop` | 课程格 | 课名字号 |
+| --- | --- | --- | --- | --- | --- |
+| 锚点拿掉（= 修复前） | 963 | 0 | 0 | 49×121 | 10.5474px |
+| 锚点拿掉 + **C2** | **915** | **48** | **48** | **47×121** | **10.1108px** |
+
 ## 3. 被否决的替代方案
 
 | 方案 | 否决理由 |
@@ -65,6 +99,10 @@ body {
 | 用 JS（`resize` / `visualViewport`）设高度 | 引入运行时复杂度与首帧闪烁，纯 CSS 可解 |
 | 加 `@supports not (height:100dvh){…}` 反向块 | 语义冗余；且 `@supports` 本身不被支持的古内核会两边都落空 |
 | 顺带修 `.h-svh` / `.min-h-svh` / 三处 `calc(100dvh…)` 对话框 | 用户明确本次只修 `html/body` 这条致命项（见 PRD Non-goals） |
+| **A** 网格 `min-height`（=`48.75rem`） | 实测基线中性（只多出不可见的网格盒高 732 → 780），但**救不了**锚点丢失类（场景 4 仍 `maxScrollTop = 0`）—— 没有可复现的失败场景，属投机改动 |
+| **B** 手势位移挪到裁剪层 | 能消除「滚动容器带 transform」这个移动端已知坑类，但用户已实测排除它是本次原因，且会改动刚上线未真机验证的手势层 → 推迟到真机验收后 |
+| **E** 降低行最小值让 12 节不必滚动 | 会改视觉基线（违反 R4），并牵动 09-24 的字号尺度体系 → 不做 |
+| 用 JS 在启动时补 `documentElement.style.height` | 引入运行时依赖与首帧抖动；纯 CSS 的 C2 已能覆盖同一失效类 |
 
 ## 4. 验收设计
 
@@ -110,6 +148,32 @@ body {
 装新 APK 到报告问题的 Android 12 设备上确认。本沙盒无 `/dev/kvm`、`~/.android` 只读，无法用模拟器
 （同 `09-29-schedule-edge-swipe-device-verify` 的结论），因此这一条**必须由用户在设备上做**。
 
+### AC-7 C2 加固（正常引擎零影响 + 锚点失效可救援）
+
+器械：`research/preventive-hardening-probe.mjs`（一次跑 7 个场景：基线 / A 在正常引擎 / C2 注入在正常引擎 /
+锚点被拿掉 / +A / +C2 / +A+C2，每个场景都做一次真实触摸纵向拖动）。判据：
+
+- 正常引擎（场景 2）：`shellHeight` / `gridClientH` / `clientH` / `maxScrollTop` / 课程格尺寸 / 字号
+  与基线逐项相同；
+- 锚点被拿掉 + C2（场景 5）：`maxScrollTop > 0`、拖动后 `scrollTop === maxScrollTop`、
+  `shellHeight === innerHeight`、课程格与字号回到基线值；
+- 产物侧：`pnpm webview:check-css` 断言 `@supports not (height: 100dvh)` 块仍在产物里。
+
+### AC-8 设备诊断器械（D）
+
+`research/device-diagnostics.mjs`：给一个 CDP ws url 就连上去输出判定；`--print-snippet` 打印同样的
+自包含表达式，便于直接贴进 WebView devtools。输出包含：
+
+- `navigator.userAgent` 里的 `Chrome/xxx`（判断是否 < 108）；
+- 高度锚点链：`html` / `body` / `.app-viewport` 的 computed height 与 `window.innerHeight`；
+- 滚动容器：`clientHeight` / `scrollHeight` / `maxScrollTop` / `scrollTop` / `scrollLeft`；
+- 祖先链逐层的 `touch-action` / `overflow-y` / 内联 `transform`；
+- **程序化滚动对照**：把 `scrollTop` 置为 `maxScrollTop` 再读回；
+- 内容是否被裁：最后一个节次行的底边 vs 容器可视底边；
+- 判定：`ok` / `needs-no-scroll` / `layout-anchor` / `scroll-disabled` / `touch-layer`。
+
+三种状态的期望判定（本地实测）：正常 → `ok`；锚点失效 → `layout-anchor`；内容不超出容器 → `needs-no-scroll`。
+
 ## 5. spec 影响
 
 - `quality-guidelines.md`：在既有「## 构建环境」旁新增一节
@@ -121,6 +185,9 @@ body {
     `cqw/cqh`（105/111）—— 逐条标注「是否已知会降级 / 是否已在范围外」。
 - `mobile-schedule-layout.md`：在 Test Hooks / 契约区补一条交叉引用（课表可滚动性依赖视口高度锚点），
   并把 `cdp-dvh-equivalent.mjs` 记进「可复用验收脚本」。
+- `quality-guidelines.md` 的同一节再补：**外壳锚点不得单点依赖 `html/body`**（`@supports not (height: 100dvh)`
+  里的 `100vh`）、为什么不能同规则双写、以及产物守卫也覆盖这一条；并指向设备诊断器械。
+- `mobile-schedule-layout.md` 的器械清单补 `research/device-diagnostics.mjs`（设备侧一键判定落在哪一层）。
 
 ## 6. 风险与残余风险
 
@@ -131,6 +198,7 @@ body {
 | 只修了 height，Chromium < 111 上 `oklch`/`color-mix`/容器查询单位仍会降级 | 明确出本次范围，但写进 spec 的「无兜底特性清单」，避免再次当成「未知问题」排查 |
 | 报告设备修完后仍滑不动（说明另有第二原因） | 按 PRD 的「回到实测」清单重新定位；本次交付不掩盖该可能 |
 | 双写高度改变了支持 `dvh` 引擎的行为 | `@supports` 内只有一条声明且在层叠上后写覆盖；AC-5 基线比对覆盖 |
+| 不支持 `dvh` 的**老移动浏览器**（非 App）里，C2 的 `100vh` 是「大视口」高度，地址栏展开时外壳可能略高于可见区（底栏被挤到折叠线以下） | 只影响「老浏览器 + PWA」这一组合（App/WebView 里 `100vh` 与可视区一致）；接受该代价换取「外壳锚点不单点依赖」 |
 
 ## 7. 回滚
 

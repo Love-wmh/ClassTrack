@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url'
  * 1. 存在 `dvh` 升级块：`@supports (height: 100dvh) { html, body { height: 100dvh } }`；
  * 2. 存在**在升级块之外**的兜底：`html, body { … height: 100% … }`（写在块内等于只对支持 `dvh` 的引擎生效，救不了旧引擎）；
  * 3. 兜底规则出现在升级块之前（同优先级下后写者胜，顺序颠倒会让支持 `dvh` 的引擎也退回 `100%`）。
+ * 4. 应用外壳也有一条只对「没有 `dvh` 的引擎」生效的兜底：`@supports not (height: 100dvh)` 里给
+ *    `.app-viewport` 设 `100vh` —— 高度锚点不得单点依赖 `html/body`。
  */
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const BUILD_ASSETS_DIR = join(ROOT_DIR, 'build', 'client', 'assets')
@@ -35,6 +37,12 @@ const heightDeclaration = (value) => new RegExp(`(?<![\\w-])height\\s*:\\s*${val
 
 const HAS_FALLBACK_DECLARATION = heightDeclaration('100%')
 const HAS_DVH_DECLARATION = heightDeclaration('100dvh')
+const HAS_VH_DECLARATION = heightDeclaration('100vh')
+
+/** 应用外壳：高度锚点不得单点依赖 `html/body`，它自己也有一条 `100vh` 兜底（见下面的 `@supports not`）。 */
+const SHELL_SELECTOR = '.app-viewport'
+/** `@supports not (height: 100dvh)`：只在不支持 `dvh` 的引擎上生效的外壳兜底块。 */
+const DVH_SUPPORTS_NOT_HEADER = /@supports\s+not\s*\(\s*height\s*:\s*100dvh\s*\)\s*\{/
 
 /**
  * 从 `headerPattern` 命中处开始做花括号配对，返回整块（含头部与最外层花括号）。
@@ -96,7 +104,9 @@ export function scanRuleBodies(css, selector = TARGET_SELECTOR) {
     const open = css.indexOf('{', cursor)
     if (open === -1) break
 
-    const boundary = Math.max(css.lastIndexOf('}', open - 1), css.lastIndexOf(';', open - 1))
+    // 选择器总是紧跟在 `{` / `}` / `;` 之后，三者取最近的一个作为边界（`{` 覆盖了嵌套在
+    // `@layer` / `@supports` / `@media` 里的规则）。
+    const boundary = Math.max(css.lastIndexOf('}', open - 1), css.lastIndexOf(';', open - 1), css.lastIndexOf('{', open - 1))
     const candidate = normalizeSelector(css.slice(boundary + 1, open))
 
     if (candidate === wanted) {
@@ -133,7 +143,7 @@ function normalizeSelector(value) {
  * 在一份 CSS 文本里找视口高度锚点的三个组成部分。
  *
  * @param {string} css 样式文本（压缩或未压缩都可）。
- * @returns {{ hasFallback: boolean, hasDvhUpgrade: boolean, hasDvh: boolean, fallbackBeforeUpgrade: boolean }}
+ * @returns {{ hasFallback: boolean, hasDvhUpgrade: boolean, hasDvh: boolean, fallbackBeforeUpgrade: boolean, hasShellFallback: boolean }}
  */
 export function findViewportHeightAnchor(css) {
   const upgrade = readBlock(css, DVH_SUPPORTS_HEADER)
@@ -144,11 +154,18 @@ export function findViewportHeightAnchor(css) {
   const outsideUpgrade = upgrade ? css.slice(0, upgrade.start) + ' '.repeat(upgrade.end - upgrade.start) + css.slice(upgrade.end) : css
   const fallbackRules = scanRuleBodies(outsideUpgrade).filter((rule) => HAS_FALLBACK_DECLARATION.test(rule.body))
 
+  // 外壳锚点：`.app-viewport` 自己也要有一条只在「没有 dvh」的引擎上生效的高度兜底，
+  // 否则 `html/body` 那层一旦失效，整条高度链会一起塌（全站内部滚动区失效）。
+  const shellFallback = readBlock(css, DVH_SUPPORTS_NOT_HEADER)
+  const hasShellFallback =
+    shellFallback !== null && scanRuleBodies(shellFallback.body, SHELL_SELECTOR).some((rule) => HAS_VH_DECLARATION.test(rule.body))
+
   return {
     hasFallback: fallbackRules.length > 0,
     hasDvhUpgrade: upgradeRules.some((rule) => HAS_DVH_DECLARATION.test(rule.body)),
     hasDvh: HAS_DVH_DECLARATION.test(css),
     fallbackBeforeUpgrade: Boolean(upgrade) && fallbackRules.every((rule) => rule.index < upgrade.start),
+    hasShellFallback,
   }
 }
 
@@ -157,7 +174,7 @@ export function findViewportHeightAnchor(css) {
  *
  * @param {string} css 样式文本。
  * @param {string} label 报错时用的来源标识。
- * @returns {{ hasFallback: boolean, hasDvhUpgrade: boolean, hasDvh: boolean, fallbackBeforeUpgrade: boolean }}
+ * @returns {{ hasFallback: boolean, hasDvhUpgrade: boolean, hasDvh: boolean, fallbackBeforeUpgrade: boolean, hasShellFallback: boolean }}
  */
 export function assertViewportHeightAnchor(css, label = 'css') {
   const found = findViewportHeightAnchor(css)
@@ -176,6 +193,12 @@ export function assertViewportHeightAnchor(css, label = 'css') {
   }
   if (!found.fallbackBeforeUpgrade) {
     throw new Error(`${label}: height:100% 兜底出现在了 dvh 升级块之后 —— 同优先级下后写者胜，dvh 会被兜底覆盖掉`)
+  }
+  if (!found.hasShellFallback) {
+    throw new Error(
+      `${label}: 缺少 @supports not (height: 100dvh) { .app-viewport { height: 100vh } } 外壳锚点 —— ` +
+        '高度锚点不得单点依赖 html/body，否则那层失效时全站内部滚动区会跟着一起失效'
+    )
   }
 
   return found
@@ -204,7 +227,7 @@ export function readBuildStyles({ assetsDir = BUILD_ASSETS_DIR } = {}) {
  * 守卫入口：检查构建产物里的每份 CSS 都带着视口高度锚点。
  *
  * @param {{ assetsDir?: string }} [options] 允许测试注入目录。
- * @returns {{ anchorFile: string, styles: Array<{ name: string, hasFallback: boolean, hasDvhUpgrade: boolean, hasDvh: boolean, fallbackBeforeUpgrade: boolean }> }}
+ * @returns {{ anchorFile: string, styles: Array<{ name: string, hasFallback: boolean, hasDvhUpgrade: boolean, hasDvh: boolean, fallbackBeforeUpgrade: boolean, hasShellFallback: boolean }> }}
  */
 export function checkWebviewCssFallback(options) {
   const styles = readBuildStyles(options)
@@ -224,7 +247,7 @@ if (invokedModulePath === currentModulePath) {
     const result = checkWebviewCssFallback()
     console.log(
       `WebView CSS fallback check passed: ${result.styles.length} stylesheet(s), anchor in ${result.anchorFile} ` +
-        '(html,body height:100% fallback outside the block + @supports (height:100dvh) upgrade)'
+        '(html,body height:100% fallback outside the block + @supports (height:100dvh) upgrade + shell @supports not fallback)'
     )
   } catch (error) {
     console.error(`WebView CSS fallback check failed: ${error instanceof Error ? error.message : 'unknown failure'}`)

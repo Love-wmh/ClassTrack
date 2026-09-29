@@ -15,7 +15,10 @@ import {
 const PASSING_CSS =
   '@layer theme,base,components,utilities;' +
   'html,body{background-color:#fff;height:100%;overflow:hidden}' +
-  '@supports (height:100dvh){html,body{height:100dvh}}'
+  '@supports (height:100dvh){html,body{height:100dvh}}' +
+  // 外壳兜底块：真实产物里它落在 `@layer utilities` 内（只在没有 dvh 的引擎上生效）
+  '@layer utilities{.app-viewport{height:100%;min-height:0}' +
+  '@supports not (height:100dvh){.app-viewport{height:100vh;max-height:100vh}}}'
 
 test('接受「块外 height:100% 兜底 + @supports 升级」的真产物形态', () => {
   assert.deepEqual(findViewportHeightAnchor(PASSING_CSS), {
@@ -23,8 +26,22 @@ test('接受「块外 height:100% 兜底 + @supports 升级」的真产物形态
     hasDvhUpgrade: true,
     hasDvh: true,
     fallbackBeforeUpgrade: true,
+    hasShellFallback: true,
   })
   assert.doesNotThrow(() => assertViewportHeightAnchor(PASSING_CSS, 'fixture'))
+})
+
+test('拦住外壳锚点缺失（html/body 失效时无人兜底）', () => {
+  const noShell = 'html,body{height:100%}@supports (height:100dvh){html,body{height:100dvh}}'
+  assert.equal(findViewportHeightAnchor(noShell).hasShellFallback, false)
+  assert.throws(() => assertViewportHeightAnchor(noShell, 'fixture'), /外壳锚点/)
+})
+
+test('外壳兜底块必须真的给 .app-viewport 设 100vh（不是只写了个 @supports not 壳）', () => {
+  const emptyShellBlock =
+    'html,body{height:100%}@supports (height:100dvh){html,body{height:100dvh}}' +
+    '@supports not (height:100dvh){.app-viewport{height:100%}}'
+  assert.equal(findViewportHeightAnchor(emptyShellBlock).hasShellFallback, false)
 })
 
 test('拦住本次线上缺陷：兜底被构建器删掉、只剩 dvh', () => {
@@ -73,7 +90,19 @@ test('压缩与未压缩（prettier 换行）写法都能识别', () => {
     '    height: 100dvh;',
     '  }',
     '}',
+    '@layer utilities {',
+    '  .app-viewport {',
+    '    height: 100%;',
+    '    min-height: 0;',
+    '  }',
     '',
+    '  @supports not (height: 100dvh) {',
+    '    .app-viewport {',
+    '      height: 100vh;',
+    '      max-height: 100vh;',
+    '    }',
+    '  }',
+    '}',
   ].join('\n')
 
   assert.deepEqual(findViewportHeightAnchor(pretty), {
@@ -81,6 +110,7 @@ test('压缩与未压缩（prettier 换行）写法都能识别', () => {
     hasDvhUpgrade: true,
     hasDvh: true,
     fallbackBeforeUpgrade: true,
+    hasShellFallback: true,
   })
 })
 

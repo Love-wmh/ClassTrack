@@ -45,8 +45,8 @@ function readBlock(source: string, openIndex: number): string {
  * 按**空白归一化后的选择器**定位规则，因此 `html,\nbody {` 与 `html, body {` 都能命中
  * （不让断言绑死在 prettier 的换行选择上）。
  */
-function findRule(source: string, selector: string): FoundRule {
-  const wanted = selector.replace(/\s+/g, ' ')
+function findAllRules(source: string, selector: string): FoundRule[] {
+  const wanted = normalizeSelector(selector)
   const matches: FoundRule[] = []
 
   let cursor = 0
@@ -54,19 +54,41 @@ function findRule(source: string, selector: string): FoundRule {
     const open = source.indexOf('{', cursor)
     if (open === -1) break
 
-    const boundary = Math.max(source.lastIndexOf('}', open - 1), source.lastIndexOf(';', open - 1))
-    const candidate = source
-      .slice(boundary + 1, open)
-      .replace(/\s+/g, ' ')
-      .trim()
-    const selectorStart = boundary + 1
+    // 选择器总是紧跟在 `{` / `}` / `;` 之后，取最近的一个作边界（`{` 覆盖 @layer / @supports 里的规则）。
+    const boundary = Math.max(source.lastIndexOf('}', open - 1), source.lastIndexOf(';', open - 1), source.lastIndexOf('{', open - 1))
+    const candidate = normalizeSelector(source.slice(boundary + 1, open))
 
-    if (candidate === wanted) matches.push({ index: selectorStart, body: readBlock(source, open) })
+    if (candidate === wanted) matches.push({ index: boundary + 1, body: readBlock(source, open) })
     cursor = open + 1
   }
 
-  expect(matches, `app.css 里应恰好有一条 \`${wanted}\` 规则`).toHaveLength(1)
-  return matches[0]
+  return matches
+}
+
+/**
+ * 取**第一条**匹配的规则。
+ *
+ * 同一选择器在 app.css 里可能有多条（例如 `html, body` 的基础规则 + `@supports (height: 100dvh)` 里的
+ * 升级规则），需要全部时用 `findAllRules`；这里返回的第一条正是「基础规则」。
+ */
+function findRule(source: string, selector: string): FoundRule {
+  const [first] = findAllRules(source, selector)
+  expect(first, `app.css 里应至少有一条 ${normalizeSelector(selector)} 规则`).toBeDefined()
+  return first
+}
+
+/**
+ * 选择器归一化：空白折叠 + 逗号两侧去空白，于是 `html, body` / `html,\nbody` / `html,body` 等价
+ * （断言不绑死在 prettier 的换行选择上）。
+ *
+ * @param value 原始选择器文本。
+ * @returns 归一化后的选择器。
+ */
+function normalizeSelector(value: string): string {
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ',')
+    .trim()
 }
 
 /** 规则体里所有 `height` 声明的值（按出现顺序）。 */
@@ -93,6 +115,24 @@ describe('app.css 视口高度锚点', () => {
   it('升级块同时覆盖 html 与 body，避免两者高度来源不一致', () => {
     const upgrade = findRule(APP_CSS, '@supports (height: 100dvh)')
     expect(upgrade.body.replace(/\s+/g, ' ')).toContain('html, body {')
+  })
+
+  it('再不支持 dvh 的引擎上给外壳第二条高度锚点（@supports not 块，写在基础规则之后）', () => {
+    const shellRules = findAllRules(APP_CSS, '.app-viewport')
+    // 一条基础规则 + 一条外壳兜底规则
+    expect(shellRules.length).toBeGreaterThanOrEqual(2)
+
+    const base = shellRules[0]
+    expect(heightValues(base.body)).toEqual(['100%'])
+
+    const shellFallback = shellRules[shellRules.length - 1]
+    expect(shellFallback.index).toBeGreaterThan(base.index)
+    expect(heightValues(shellFallback.body)).toEqual(['100vh'])
+
+    // 必须包在 `@supports not (height: 100dvh)` 里：写进基础规则会被构建器当冗余声明删掉。
+    const supportsNotIndex = APP_CSS.lastIndexOf('@supports not (height: 100dvh)')
+    expect(supportsNotIndex).toBeGreaterThan(-1)
+    expect(supportsNotIndex).toBeLessThan(shellFallback.index)
   })
 
   it('兜底规则里的 overflow 与 dark 模式 color-scheme 块保持原样', () => {

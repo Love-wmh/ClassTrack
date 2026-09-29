@@ -19,6 +19,9 @@
 > （Chromium ≤ 107，Android 12 出厂 WebView 就在这条线以下）上 `html/body` 会变成 `height: auto`，
 > 课表滚动容器 `scrollHeight == clientHeight`、**完全无法上下滑动**，且溢出部分被 `body{overflow:hidden}` 裁掉。
 > 写法契约、无兜底特性清单与两条防回归检查见 `quality-guidelines.md` 的「构建产物的兼容性契约（视口高度锚点）」。
+> **双保险（2026-09-29 追加）**：应用外壳自己还有一条只在「不支持 `dvh` 的引擎」上生效的锚点
+> （`@supports not (height: 100dvh)` 里给 `.app-viewport` 设 `100vh`）—— 即使 `html/body` 那层失效，外壳仍成立。
+> 写法与实测见 `quality-guidelines.md` 的同一节。
 
 | 能力 | 手机端 (<768px) | 桌面端 (≥768px) |
 | --- | --- | --- |
@@ -379,6 +382,11 @@ agent-browser eval "String(document.querySelectorAll('[data-course-cell]').lengt
   兜底是否活到产物里；升级 Tailwind / Vite / lightningcss 之后怀疑兜底又被删时，先跑它。
 - `make-seed.mjs` —— 由归档夹具生成 `--init-script` 用的灌种子脚本（夹具里的中文与双引号经
   `agent-browser eval "$(cat …)"` 会被 shell 吃掉转义，写不进去）。
+- `preventive-hardening-probe.mjs` —— 加固候选矩阵（基线 / 网格 `min-height` / 外壳锚点 / 锚点被人为拿掉 / 各组合），
+  每个场景都做一次真实触摸纵向拖动，用来同时验「正常引擎零影响」与「失效时可救援」。
+- `device-diagnostics.mjs` —— **设备侧一键诊断**：`--print-snippet` 打印可贴进 WebView devtools 的自包含表达式，
+  给 CDP ws url 则直接输出判定（`ok` / `needs-no-scroll` / `layout-anchor` / `scroll-disabled` / `touch-layer`）。
+  遇到「滑不动」先用它定位到层，别直接改 CSS。
 ---
 
 ## Common Mistakes
