@@ -5,7 +5,7 @@ import { useClassStore } from '~/store'
 import { useAttendanceStore } from '~/store/attendanceStore'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import AddMakeupDialog, { type MakeupTarget } from './AddMakeupDialog'
-import MakeupDayDialog from './MakeupDayDialog'
+import DayQuickActionsDialog from './DayQuickActionsDialog'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
@@ -31,6 +31,7 @@ export default function SchedulePage() {
     addClass,
     removeClass,
     addClasses,
+    applyHoliday,
   } = useClassStore()
 
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
@@ -125,6 +126,32 @@ export default function SchedulePage() {
     [addClasses, currentWeek, makeupDayTarget, occupiedCells, sectionTimes]
   )
 
+  // 目标列头（周几）在当前周的全部课程：放假操作要把它们一次性标记为已上。
+  const targetDayCourses = useMemo(
+    () =>
+      makeupDayTarget === null
+        ? []
+        : classes.filter((classItem) => classItem.dayOfWeek === makeupDayTarget && classItem.weeks.includes(currentWeek)),
+    [classes, currentWeek, makeupDayTarget]
+  )
+
+  const handleDayHoliday = useCallback(
+    (holidayName: string) => {
+      if (makeupDayTarget === null) return
+
+      const classIds = targetDayCourses.map((classItem) => classItem.id)
+      if (classIds.length === 0) {
+        toast.error('这一天没有课程')
+        return
+      }
+
+      applyHoliday(classIds, currentWeek, holidayName)
+      setMakeupDayTarget(null)
+      toast.success(`已把 ${classIds.length} 节课标记为已上（${holidayName}）`)
+    },
+    [applyHoliday, currentWeek, makeupDayTarget, targetDayCourses]
+  )
+
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
 
@@ -177,15 +204,16 @@ export default function SchedulePage() {
         onOpenChange={(open) => !open && setMakeupTarget(null)}
         onConfirm={handleAddMakeup}
       />
-      <MakeupDayDialog
+      <DayQuickActionsDialog
         open={makeupDayTarget !== null}
         targetDayOfWeek={makeupDayTarget}
-        currentWeek={currentWeek}
         targetDate={makeupDayTarget !== null ? getDayDate(firstWeekStartDate, currentWeek, makeupDayTarget) : null}
         classes={classes}
         firstWeekStartDate={firstWeekStartDate}
+        targetCourseCount={targetDayCourses.length}
         onOpenChange={(open) => !open && setMakeupDayTarget(null)}
-        onConfirm={handleDayMakeup}
+        onConfirmMakeup={handleDayMakeup}
+        onConfirmHoliday={handleDayHoliday}
       />
       <ScheduleCourseDialog
         key={`${selectedCourse?.id || 'none'}-${currentWeek}`}

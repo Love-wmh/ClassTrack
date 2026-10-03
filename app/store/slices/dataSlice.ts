@@ -22,6 +22,8 @@ export interface DataSlice extends AppData {
   toggleAttendance: (classId: string, week: number) => void
   markWeekAsAttended: (classIds: string[], week: number) => void
   markWeekAsUnattended: (classIds: string[], week: number) => void
+  /** 放假：把这些课在该周一次性置为「已上」并把备注写成节日名称。 */
+  applyHoliday: (classIds: string[], week: number, note: string) => void
   setNote: (classId: string, week: number, note: string) => void
   setCurrentWeek: (week: number) => void
   setIsInitialized: (initialized: boolean) => void
@@ -157,6 +159,28 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
         } else {
           state.classMarks[key].isAttended = false
           state.classMarks[key].attendanceMarked = true
+        }
+      })
+      syncCurrentSemester(state, { classMarks: state.classMarks })
+    })
+  },
+
+  applyHoliday: (classIds, week, note) => {
+    set((state) => {
+      classIds.forEach((classId) => {
+        const key = getMarkKey(classId, week)
+        if (!state.classMarks[key]) {
+          state.classMarks[key] = {
+            classId,
+            week,
+            isAttended: true,
+            attendanceMarked: true,
+            note,
+          }
+        } else {
+          state.classMarks[key].isAttended = true
+          state.classMarks[key].attendanceMarked = true
+          state.classMarks[key].note = note
         }
       })
       syncCurrentSemester(state, { classMarks: state.classMarks })

@@ -144,7 +144,7 @@ export default function ScheduleTable({
                     <button
                       type="button"
                       data-day-head
-                      aria-label={`${dayNames[day]} 补课`}
+                      aria-label={`${dayNames[day]} 快捷操作`}
                       onClick={() => onDayHeaderClick(day)}
                       className={cn(
                         'flex cursor-pointer flex-col items-center justify-center border-b border-border bg-muted/60 font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring/40 md:flex-row',
@@ -159,7 +159,7 @@ export default function ScheduleTable({
                       )}
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">点击补课</TooltipContent>
+                  <TooltipContent side="bottom">快捷操作</TooltipContent>
                 </Tooltip>
               )
             })}
