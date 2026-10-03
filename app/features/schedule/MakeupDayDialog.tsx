@@ -4,7 +4,7 @@ import { zhCN } from 'date-fns/locale'
 import { Check } from 'lucide-react'
 import { Button } from '~/components/ui/button'
 import { DatePicker } from '~/components/ui/date-picker'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import type { Class } from '~/lib/types'
 import { cn } from '~/lib/utils'
 import { dayNames } from './constants'
@@ -43,7 +43,6 @@ export default function MakeupDayDialog(props: MakeupDayDialogProps) {
 
 function MakeupDayDialogBody({
   targetDayOfWeek,
-  currentWeek,
   targetDate,
   classes,
   firstWeekStartDate,
@@ -80,9 +79,6 @@ function MakeupDayDialogBody({
     <div className="flex max-h-[calc(100dvh-6rem)] flex-col gap-4 md:max-h-[72vh]">
       <DialogHeader className="pr-8 text-left">
         <DialogTitle className="text-lg">补课到 {targetLabel}</DialogTitle>
-        <DialogDescription>
-          选择一个日期，把那天的课补到第 {currentWeek} 周的 {dayNames[targetDayOfWeek]}。
-        </DialogDescription>
       </DialogHeader>
 
       {!firstWeekStartDate ? (
@@ -91,10 +87,7 @@ function MakeupDayDialogBody({
         </p>
       ) : (
         <>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">源日期</span>
-            <DatePicker date={sourceDate} onSelect={handlePickDate} placeholder="选择要补哪天的课" className="w-full" />
-          </div>
+          <DatePicker date={sourceDate} onSelect={handlePickDate} placeholder="选择要补哪天的课" className="w-full" />
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             {!sourceDate ? (
