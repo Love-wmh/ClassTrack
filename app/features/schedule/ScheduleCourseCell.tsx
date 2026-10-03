@@ -132,8 +132,8 @@ export default function ScheduleCourseCell({ course, mark, theme, attendanceEnab
         button.style.setProperty('--cc-scale', String(scale))
       }
 
-      // 文字块在卡片里居中、块内文字仍左对齐：把内层块收窄到「实际用到的最大行宽」，
-      // 再由外层 `items-center` 居中。逐行 `text-center` 会把每行都居中，长课名反而更难读。
+      // 内层块收窄到「实际用到的最大行宽」：手机端由外层 `items-center` 居中，桌面端
+      // （`md:items-start`）靠左对齐。逐行 `text-center` 会把每行都居中、长课名更难读，所以统一走块内左对齐。
       if (!block) return
       let used = 0
       for (const el of [parity, name, room, teacher, note]) {
@@ -197,7 +197,7 @@ export default function ScheduleCourseCell({ course, mark, theme, attendanceEnab
           否则短内容浮在卡片中间、长内容贴着顶部，同一屏里每格的起始高度都不一样。
           溢出时内容向下溢出并被 `overflow-hidden` 裁掉，顶部始终可见 —— 这正好与 PRD 里
           已确认的已知限制（极端格子允许纵向裁剪）一致。 */}
-      <span ref={contentRef} className="flex min-h-0 flex-1 flex-col items-center justify-start">
+      <span ref={contentRef} className="flex min-h-0 flex-1 flex-col items-center justify-start md:items-start">
         <span ref={blockRef} className="block text-left">
           <span ref={nameRef} data-course-name className={cn('block break-words font-semibold', theme.title, CELL_FONT_CLASS.name)}>
             {course.name}
