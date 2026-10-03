@@ -12,6 +12,10 @@ export type CreateSemesterInput = {
 export interface DataSlice extends AppData {
   setSchool: (school: School | null) => void
   setClasses: (classes: Class[]) => void
+  /** 追加一节课（手动创建的补课与导入课程完全同构，仅多一个 `isManual` 标记）。 */
+  addClass: (classItem: Class) => void
+  /** 删除一节课，并连带清掉它的所有出勤/备注标记（主要用于撤销手动补课）。 */
+  removeClass: (classId: string) => void
   setClassMarks: (marks: Record<string, ClassMark>) => void
   toggleAttendance: (classId: string, week: number) => void
   markWeekAsAttended: (classIds: string[], week: number) => void
@@ -57,6 +61,27 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
     set((state) => {
       state.classes = classes
       syncCurrentSemester(state, { classes })
+    })
+  },
+
+  addClass: (classItem) => {
+    set((state) => {
+      state.classes.push(classItem)
+      syncCurrentSemester(state, { classes: state.classes })
+    })
+  },
+
+  removeClass: (classId) => {
+    set((state) => {
+      const index = state.classes.findIndex((classItem) => classItem.id === classId)
+      if (index === -1) return
+
+      state.classes.splice(index, 1)
+      // 连带清掉这门课在所有周次的标记：标记键是 `${classId}-${week}`。
+      for (const key of Object.keys(state.classMarks)) {
+        if (state.classMarks[key].classId === classId) delete state.classMarks[key]
+      }
+      syncCurrentSemester(state, { classes: state.classes, classMarks: state.classMarks })
     })
   },
 

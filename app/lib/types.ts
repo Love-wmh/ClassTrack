@@ -15,6 +15,7 @@ export interface Class {
   classId: string // 教学班ID
   courseType: string // 课程性质
   courseCategory: string // 课程类别
+  isManual?: boolean // 是否为手动创建（补课）：与导入课程完全同构，仅标明来源，用于允许删除
 }
 
 // 课程标记类型

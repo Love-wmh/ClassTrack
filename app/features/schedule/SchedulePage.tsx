@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import ImportDialog from '~/components/dialog/ImportDialog'
 import { useClassStore } from '~/store'
 import { useAttendanceStore } from '~/store/attendanceStore'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
+import AddMakeupDialog, { type MakeupTarget } from './AddMakeupDialog'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import ScheduleCourseDialog from './ScheduleCourseDialog'
 import { buildCourseColorMap } from './courseColor'
+import { buildMakeupClass, cellKey, getMakeupCourseOptions, getMakeupEndSection } from './makeupLesson'
 import { deriveSectionTimes, getCurrentRealWeek, getMaxWeek, getVisibleCourses } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
 import { useWeekKeyboardNavigation } from './hooks/useWeekKeyboardNavigation'
@@ -24,9 +27,12 @@ export default function SchedulePage() {
     setNote,
     setCurrentWeek,
     firstWeekStartDate,
+    addClass,
+    removeClass,
   } = useClassStore()
 
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
+  const [makeupTarget, setMakeupTarget] = useState<MakeupTarget | null>(null)
 
   useEffect(() => {
     if (!isInitialized) {
@@ -49,6 +55,48 @@ export default function SchedulePage() {
 
   // 「课程号 → 配色档位」的稳定映射：用整学期课程构建，保证同一门课在任意周次都同色。
   const courseColorMap = useMemo(() => buildCourseColorMap(classes), [classes])
+
+  // 补课可选的源课程（只能从现有课程里挑），整学期去重。
+  const makeupCourseOptions = useMemo(() => getMakeupCourseOptions(classes), [classes])
+
+  // 当前周已占用的格子集合：既用于「空格子才能补课」，也用于补课跨节时的截断（不与现有课程重叠）。
+  const occupiedCells = useMemo(() => {
+    const cells = new Set<string>()
+    visibleCourses.forEach(({ course }) => {
+      for (let section = course.startSection; section <= course.endSection; section += 1) {
+        cells.add(cellKey(course.dayOfWeek, section))
+      }
+    })
+    return cells
+  }, [visibleCourses])
+
+  const handleAddMakeup = useCallback(
+    (option: (typeof makeupCourseOptions)[number]) => {
+      if (!makeupTarget) return
+
+      const endSection = getMakeupEndSection(occupiedCells, makeupTarget.dayOfWeek, makeupTarget.section, option.length)
+      addClass(
+        buildMakeupClass(option.source, {
+          week: currentWeek,
+          dayOfWeek: makeupTarget.dayOfWeek,
+          startSection: makeupTarget.section,
+          endSection,
+          sectionTimes,
+        })
+      )
+      setMakeupTarget(null)
+      toast.success('已补一节课')
+    },
+    [addClass, currentWeek, makeupTarget, occupiedCells, sectionTimes]
+  )
+
+  const handleDeleteCourse = useCallback(
+    (classId: string) => {
+      removeClass(classId)
+      setSelectedCourseId(null)
+    },
+    [removeClass]
+  )
 
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
@@ -90,8 +138,17 @@ export default function SchedulePage() {
           maxWeek={maxWeek}
           onWeekChange={setCurrentWeek}
           onCourseClick={(course) => setSelectedCourseId(course.id)}
+          onEmptyCellClick={(dayOfWeek, section) => setMakeupTarget({ dayOfWeek, section })}
         />
       </div>
+      <AddMakeupDialog
+        open={makeupTarget !== null}
+        target={makeupTarget}
+        currentWeek={currentWeek}
+        options={makeupCourseOptions}
+        onOpenChange={(open) => !open && setMakeupTarget(null)}
+        onConfirm={handleAddMakeup}
+      />
       <ScheduleCourseDialog
         key={`${selectedCourse?.id || 'none'}-${currentWeek}`}
         course={selectedCourse}
@@ -102,6 +159,7 @@ export default function SchedulePage() {
         onOpenChange={(open) => !open && setSelectedCourseId(null)}
         onToggleAttendance={toggleAttendance}
         onSaveNote={setNote}
+        onDelete={handleDeleteCourse}
       />
     </div>
   )

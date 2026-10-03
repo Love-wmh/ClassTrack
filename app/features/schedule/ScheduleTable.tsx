@@ -30,6 +30,8 @@ type ScheduleTableProps = {
   /** 边缘滑动 / 顶栏 / 键盘共用的翻周入口。 */
   onWeekChange: (week: number) => void
   onCourseClick: (course: Class) => void
+  /** 点击空白格子：用于在该时段补一节课（补课）。 */
+  onEmptyCellClick: (dayOfWeek: number, section: number) => void
 }
 
 /** 「收起整周无课的日期列」时，无课列的轨道：`1.75rem` 是最小列宽保护，保证「周六 + 10.03」仍放得下。 */
@@ -47,6 +49,7 @@ export default function ScheduleTable({
   maxWeek,
   onWeekChange,
   onCourseClick,
+  onEmptyCellClick,
 }: ScheduleTableProps) {
   const isMobile = useIsMobile()
   const { zoom, detailLevel, scrollRef, gridRef, containerProps, zoomIn, zoomOut, canZoomIn, canZoomOut } = useScheduleZoom()
@@ -180,11 +183,21 @@ export default function ScheduleTable({
                 if (occupiedCells.has(`${day}-${section}`)) return null
 
                 return (
-                  <div
+                  <button
                     key={`empty-${day}-${section}`}
-                    className={cn(day !== 7 && 'border-r', section !== 12 && 'border-b', 'border-border')}
+                    type="button"
+                    aria-label={`${dayNames[day]} 第 ${section} 节 补课`}
+                    onClick={() => onEmptyCellClick(day, section)}
+                    className={cn(
+                      'group/empty flex items-center justify-center text-muted-foreground/60 outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring/40',
+                      day !== 7 && 'border-r',
+                      section !== 12 && 'border-b',
+                      'border-border'
+                    )}
                     style={{ gridColumn: day + 1, gridRow: section + 1 }}
-                  />
+                  >
+                    <Plus className="size-3.5 opacity-0 transition-opacity group-hover/empty:opacity-70 group-focus-visible/empty:opacity-70" />
+                  </button>
                 )
               })
             )}
