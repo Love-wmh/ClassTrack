@@ -83,7 +83,7 @@ function DayQuickActionsBody({
   return (
     <div className="flex max-h-[calc(100dvh-6rem)] flex-col gap-4 md:max-h-[76vh]">
       <DialogHeader className="pr-8 text-left">
-        <DialogTitle className="text-lg">{targetLabel}当天的快捷操作</DialogTitle>
+        <DialogTitle className="text-lg">{targetLabel} 当天的快捷操作</DialogTitle>
       </DialogHeader>
 
       <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-1">
@@ -154,7 +154,7 @@ function DayQuickActionsBody({
         </section>
 
         {/* 放假操作 */}
-        <section className="space-y-3 border-t pt-4">
+        <section className="space-y-3">
           <h3 className="text-sm font-semibold text-foreground">放假操作</h3>
           <input
             type="text"
