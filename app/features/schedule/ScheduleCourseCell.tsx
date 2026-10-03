@@ -4,7 +4,14 @@ import type { Class, ClassMark } from '~/lib/types'
 import { cn } from '~/lib/utils'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import { isAttendanceMarked } from '~/store/utils'
-import { CELL_ABSENT_RING_CLASS, CELL_BADGE_CLASS, CELL_FALLBACK_SCALES, CELL_FONT_CLASS, CELL_SOFT_RING_CLASS } from './cellScale'
+import {
+  CELL_ABSENT_RING_CLASS,
+  CELL_ATTENDED_RING_CLASS,
+  CELL_BADGE_CLASS,
+  CELL_FALLBACK_SCALES,
+  CELL_FONT_CLASS,
+  CELL_SOFT_RING_CLASS,
+} from './cellScale'
 import type { CourseColorTheme } from './courseColor'
 import { getWeekParityLabel } from './utils'
 
@@ -48,8 +55,9 @@ export default function ScheduleCourseCell({ course, mark, theme, attendanceEnab
    * 「还没标记」不等于「缺勤」，课表不该替用户下这个结论。
    */
   const showAttendanceMarks = showAttendance && attendanceMarked
-  /** 缺勤红描边：受同样的两层开关与「非本周优先」约束（非本周走灰色态，不叠出勤痕迹）。 */
+  /** 缺勤红描边 / 已上绿描边：受同样的两层开关与「非本周优先」约束（非本周走灰色态，不叠出勤痕迹）。 */
   const showAbsentRing = showAttendance && isAbsent
+  const showAttendedRing = showAttendance && isAttended
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLSpanElement>(null)
@@ -178,8 +186,8 @@ export default function ScheduleCourseCell({ course, mark, theme, attendanceEnab
         'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden text-left focus-visible:z-10 focus-visible:outline-none',
         // 尺度全部由课程格容器的尺寸推导（见 cellScale.ts）：内边距、圆角、描边都不再是固定 px。
         '[padding:var(--cc-pad-y)_var(--cc-pad-x)] [border-radius:var(--cc-radius)]',
-        // 描边：常态细灰内描边；缺勤换成实色红（见 cellScale.ts）。
-        showAbsentRing ? CELL_ABSENT_RING_CLASS : CELL_SOFT_RING_CLASS,
+        // 描边：已上=绿、缺勤=红，其余=细灰（见 cellScale.ts）。
+        showAbsentRing ? CELL_ABSENT_RING_CLASS : showAttendedRing ? CELL_ATTENDED_RING_CLASS : CELL_SOFT_RING_CLASS,
         theme.surface
       )}
       onClick={onClick}
@@ -221,7 +229,7 @@ export default function ScheduleCourseCell({ course, mark, theme, attendanceEnab
         </span>
       </span>
       {showAttendanceMarks && (
-        <span className={cn('absolute bottom-1 right-1', theme.title)}>
+        <span className={cn('absolute bottom-1 right-1', isAttended ? 'text-emerald-600' : 'text-rose-600')}>
           {isAttended ? <CheckCircle2 className={CELL_BADGE_CLASS} /> : <CircleAlert className={CELL_BADGE_CLASS} />}
         </span>
       )}
