@@ -158,6 +158,16 @@ export const CELL_RING_CLASS =
   '[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(255_255_255_/_0.55)] focus-visible:[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(255_255_255_/_0.55),0_0_0_2px_var(--ring)]'
 
 /**
+ * 卡片描边（浅色主题常态）：极细的半透明深灰内描边，给浅底卡片一条清晰边缘。
+ *
+ * 新版课程格改用「浅底 + 深字」，旧的半透明**白**内描边在浅底上几乎不可见，于是改用半透明
+ * **深灰** `rgb(15 23 42 / 0.08)` 的内描边；宽度仍共用 `--cc-ring`（随容器走），缺勤仍走
+ * `CELL_ABSENT_RING_CLASS`（实色红），聚焦态补一圈 `--ring`。**必须是字面量**（Tailwind 只扫源码里的类名）。
+ */
+export const CELL_SOFT_RING_CLASS =
+  '[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(15_23_42_/_0.08)] focus-visible:[box-shadow:inset_0_0_0_var(--cc-ring)_rgb(15_23_42_/_0.08),0_0_0_2px_var(--ring)]'
+
+/**
  * 卡片描边（缺勤）：**实色红**内描边，宽度与常态白描边共用同一个 `--cc-ring`。
  *
  * 为什么缺勤不用「整卡变淡」：`opacity-60 saturate-50` 与非本周课程的淡化色观感雷同——同一张

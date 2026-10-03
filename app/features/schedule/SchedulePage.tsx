@@ -7,6 +7,7 @@ import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import ScheduleCourseDialog from './ScheduleCourseDialog'
+import { buildCourseColorMap } from './courseColor'
 import { deriveSectionTimes, getCurrentRealWeek, getMaxWeek, getVisibleCourses } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
 import { useWeekKeyboardNavigation } from './hooks/useWeekKeyboardNavigation'
@@ -46,6 +47,9 @@ export default function SchedulePage() {
   // 节次时间用整个学期的课程推导（不是仅本周），这样只在其他周出现的节次也能拿到时间。
   const sectionTimes = useMemo(() => deriveSectionTimes(classes), [classes])
 
+  // 「课程号 → 配色档位」的稳定映射：用整学期课程构建，保证同一门课在任意周次都同色。
+  const courseColorMap = useMemo(() => buildCourseColorMap(classes), [classes])
+
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
 
@@ -78,6 +82,7 @@ export default function SchedulePage() {
         <ScheduleTable
           visibleCourses={visibleCourses}
           classMarks={classMarks}
+          courseColorMap={courseColorMap}
           attendanceEnabled={attendanceEnabled}
           currentWeek={currentWeek}
           firstWeekStartDate={firstWeekStartDate}

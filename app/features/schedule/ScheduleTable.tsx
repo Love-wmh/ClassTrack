@@ -8,6 +8,7 @@ import { getMarkKey } from '~/store/utils'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import { cn } from '~/lib/utils'
 import { CELL_CONTAINER_CLASS, GRID_CONTAINER_CLASS, cellScaleStyle } from './cellScale'
+import { resolveCourseTheme } from './courseColor'
 import { dayNames, sections, weekDays } from './constants'
 import ScheduleCourseCell from './ScheduleCourseCell'
 import { useScheduleZoom } from './hooks/useScheduleZoom'
@@ -18,6 +19,8 @@ import type { SectionTime, VisibleCourse } from './utils'
 type ScheduleTableProps = {
   visibleCourses: VisibleCourse[]
   classMarks: Record<string, ClassMark>
+  /** 「课程号 → 配色档位」的稳定映射（见 `courseColor.ts`），保证一门课固定一色。 */
+  courseColorMap: Map<string, number>
   /** 「出勤统计」是否开启；关闭时课程格不画出勤痕迹（备注照常显示）。 */
   attendanceEnabled: boolean
   currentWeek: number
@@ -36,6 +39,7 @@ const BUSY_DAY_TRACK = 'minmax(0, 1fr)'
 export default function ScheduleTable({
   visibleCourses,
   classMarks,
+  courseColorMap,
   attendanceEnabled,
   currentWeek,
   firstWeekStartDate,
@@ -209,6 +213,7 @@ export default function ScheduleTable({
                   <ScheduleCourseCell
                     course={course}
                     mark={getClassMark(course.id, currentWeek)}
+                    theme={resolveCourseTheme(course.courseId, courseColorMap, isOutOfWeek)}
                     attendanceEnabled={attendanceEnabled}
                     isOutOfWeek={isOutOfWeek}
                     onClick={() => onCourseClick(course)}

@@ -4,12 +4,15 @@ import type { Class, ClassMark } from '~/lib/types'
 import { cn } from '~/lib/utils'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import { isAttendanceMarked } from '~/store/utils'
-import { CELL_ABSENT_RING_CLASS, CELL_BADGE_CLASS, CELL_FALLBACK_SCALES, CELL_FONT_CLASS, CELL_RING_CLASS } from './cellScale'
-import { getCourseColor, getCourseOutOfWeekColor, getWeekParityLabel } from './utils'
+import { CELL_ABSENT_RING_CLASS, CELL_BADGE_CLASS, CELL_FALLBACK_SCALES, CELL_FONT_CLASS, CELL_SOFT_RING_CLASS } from './cellScale'
+import type { CourseColorTheme } from './courseColor'
+import { getWeekParityLabel } from './utils'
 
 type ScheduleCourseCellProps = {
   course: Class
   mark: ClassMark | undefined
+  /** 这门课的配色主题（浅底 + 深字），由上层按 `courseId` 稳定解析后传入。 */
+  theme: CourseColorTheme
   /**
    * 「出勤统计」是否开启（个人中心的开关）。
    *
@@ -22,7 +25,7 @@ type ScheduleCourseCellProps = {
   onClick: () => void
 }
 
-export default function ScheduleCourseCell({ course, mark, attendanceEnabled, isOutOfWeek, onClick }: ScheduleCourseCellProps) {
+export default function ScheduleCourseCell({ course, mark, theme, attendanceEnabled, isOutOfWeek, onClick }: ScheduleCourseCellProps) {
   const showAttendanceStatus = useScheduleDisplayStore((state) => state.showAttendanceStatus)
   /**
    * 这一格是否**做过出勤判断** —— 判据只用 `isAttendanceMarked()`（`app/store/utils.ts`）：
@@ -35,8 +38,6 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
   const isAbsent = attendanceMarked && !isAttended
   const note = mark?.note || ''
   const parityLabel = isOutOfWeek ? '非本周' : getWeekParityLabel(course.weeks)
-  const courseColor = getCourseColor(course.courseId)
-  const courseOutOfWeekColor = getCourseOutOfWeekColor(course.courseId)
   // 出勤痕迹要同时满足「出勤统计已开启」与「用户在课表显示里没关掉它」，且只针对本周课：
   // 非本周课一般没有当周标记，灰色态优先，不再叠加任何出勤痕迹。
   const showAttendance = attendanceEnabled && showAttendanceStatus && !isOutOfWeek
@@ -177,9 +178,9 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
         'group relative flex h-full min-h-0 w-full cursor-pointer flex-col overflow-hidden text-left focus-visible:z-10 focus-visible:outline-none',
         // 尺度全部由课程格容器的尺寸推导（见 cellScale.ts）：内边距、圆角、描边都不再是固定 px。
         '[padding:var(--cc-pad-y)_var(--cc-pad-x)] [border-radius:var(--cc-radius)]',
-        // 描边：常态半透明白；缺勤换成实色红（宽度共用同一个 `--cc-ring`，不为缺勤另起尺度）。
-        showAbsentRing ? CELL_ABSENT_RING_CLASS : CELL_RING_CLASS,
-        isOutOfWeek ? courseOutOfWeekColor : courseColor
+        // 描边：常态细灰内描边；缺勤换成实色红（见 cellScale.ts）。
+        showAbsentRing ? CELL_ABSENT_RING_CLASS : CELL_SOFT_RING_CLASS,
+        theme.surface
       )}
       onClick={onClick}
       title={`${course.name}${showAttendanceMarks ? `，${isAttended ? '已上' : '未上'}` : ''}${isOutOfWeek ? '，非本周' : ''}，点击查看详情`}
@@ -190,29 +191,29 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
           已确认的已知限制（极端格子允许纵向裁剪）一致。 */}
       <span ref={contentRef} className="flex min-h-0 flex-1 flex-col items-center justify-start">
         <span ref={blockRef} className="block text-left">
-          <span ref={nameRef} data-course-name className={cn('block break-words font-semibold text-white', CELL_FONT_CLASS.name)}>
+          <span ref={nameRef} data-course-name className={cn('block break-words font-semibold', theme.title, CELL_FONT_CLASS.name)}>
             {course.name}
           </span>
           {parityLabel && (
             // 自然态即在手机端可见（不再是 `hidden` + JS 打开）：可见性完全交给 CSS 断点，
             // JS 只负责空间不够时把它关掉，判据里因此不再需要视口布尔值。
-            <span ref={parityRef} data-course-parity className={cn('block text-white/70 md:hidden', CELL_FONT_CLASS.room)}>
+            <span ref={parityRef} data-course-parity className={cn('block opacity-80 md:hidden', theme.body, CELL_FONT_CLASS.room)}>
               {parityLabel}
             </span>
           )}
           {course.classroom && (
-            <span ref={roomRef} data-course-room className={cn('mt-0.5 block break-words text-white/85', CELL_FONT_CLASS.room)}>
+            <span ref={roomRef} data-course-room className={cn('mt-0.5 block break-words', theme.body, CELL_FONT_CLASS.room)}>
               {course.classroom}
             </span>
           )}
           {course.teacher && (
-            <span ref={teacherRef} data-course-teacher className={cn('hidden break-all text-white/80', CELL_FONT_CLASS.room)}>
+            <span ref={teacherRef} data-course-teacher className={cn('hidden break-all opacity-90', theme.body, CELL_FONT_CLASS.room)}>
               {course.teacher}
             </span>
           )}
-          <span ref={noteRef} data-course-note className={cn('hidden break-all text-white/70 md:truncate', CELL_FONT_CLASS.room)}>
+          <span ref={noteRef} data-course-note className={cn('hidden break-all opacity-80 md:truncate', theme.body, CELL_FONT_CLASS.room)}>
             {note || (
-              <span className="hidden text-white/60 transition-opacity md:inline md:opacity-0 md:group-hover:opacity-100">
+              <span className={cn('hidden opacity-70 transition-opacity md:inline md:opacity-0 md:group-hover:opacity-70', theme.body)}>
                 点击查看详情
               </span>
             )}
@@ -220,7 +221,7 @@ export default function ScheduleCourseCell({ course, mark, attendanceEnabled, is
         </span>
       </span>
       {showAttendanceMarks && (
-        <span className="absolute bottom-1 right-1 text-white/90">
+        <span className={cn('absolute bottom-1 right-1', theme.title)}>
           {isAttended ? <CheckCircle2 className={CELL_BADGE_CLASS} /> : <CircleAlert className={CELL_BADGE_CLASS} />}
         </span>
       )}

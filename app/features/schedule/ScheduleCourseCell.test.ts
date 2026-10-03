@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { Class, ClassMark } from '~/lib/types'
 import ScheduleCourseCell from './ScheduleCourseCell'
-import { CELL_ABSENT_RING_CLASS, CELL_RING_CLASS } from './cellScale'
+import { CELL_ABSENT_RING_CLASS, CELL_SOFT_RING_CLASS } from './cellScale'
+import { COURSE_COLOR_THEMES } from './courseColor'
 
 type ScheduleCourseCellProps = Parameters<typeof ScheduleCourseCell>[0]
 
@@ -34,6 +35,7 @@ function render(overrides: Partial<ScheduleCourseCellProps> = {}) {
     createElement(ScheduleCourseCell, {
       course,
       mark: attendedMark,
+      theme: COURSE_COLOR_THEMES[0],
       attendanceEnabled: true,
       isOutOfWeek: false,
       onClick: () => {},
@@ -71,7 +73,7 @@ describe('课程格的出勤外观', () => {
 
     for (const cls of DIM_CLASSES) expect(html).not.toContain(cls)
     expect(html).toContain(CELL_ABSENT_RING_CLASS)
-    expect(html).not.toContain(CELL_RING_CLASS)
+    expect(html).not.toContain(CELL_SOFT_RING_CLASS)
     expect(html).toContain(ALERT_ICON)
     expect(html).not.toContain(CHECK_ICON)
     expect(badgeCount(html)).toBe(1)
@@ -82,7 +84,7 @@ describe('课程格的出勤外观', () => {
     const html = render({ mark: attendedMark, attendanceEnabled: true })
 
     for (const cls of DIM_CLASSES) expect(html).not.toContain(cls)
-    expect(html).toContain(CELL_RING_CLASS)
+    expect(html).toContain(CELL_SOFT_RING_CLASS)
     expect(html).not.toContain(CELL_ABSENT_RING_CLASS)
     expect(html).toContain(CHECK_ICON)
     expect(badgeCount(html)).toBe(1)
