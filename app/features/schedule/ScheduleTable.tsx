@@ -7,6 +7,7 @@ import type { Class, ClassMark } from '~/lib/types'
 import { getMarkKey } from '~/store/utils'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import { cn } from '~/lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { CELL_CONTAINER_CLASS, GRID_CONTAINER_CLASS, cellScaleStyle } from './cellScale'
 import { resolveCourseTheme } from './courseColor'
 import { dayNames, sections, weekDays } from './constants'
@@ -32,6 +33,8 @@ type ScheduleTableProps = {
   onCourseClick: (course: Class) => void
   /** 点击空白格子：用于在该时段补一节课（补课）。 */
   onEmptyCellClick: (dayOfWeek: number, section: number) => void
+  /** 点击列头（周几）：用于把某天的课整天补到这一天。 */
+  onDayHeaderClick: (dayOfWeek: number) => void
 }
 
 /** 「收起整周无课的日期列」时，无课列的轨道：`1.75rem` 是最小列宽保护，保证「周六 + 10.03」仍放得下。 */
@@ -50,6 +53,7 @@ export default function ScheduleTable({
   onWeekChange,
   onCourseClick,
   onEmptyCellClick,
+  onDayHeaderClick,
 }: ScheduleTableProps) {
   const isMobile = useIsMobile()
   const { zoom, detailLevel, scrollRef, gridRef, containerProps, zoomIn, zoomOut, canZoomIn, canZoomOut } = useScheduleZoom()
@@ -135,19 +139,28 @@ export default function ScheduleTable({
             {weekDays.map((day) => {
               const date = getDayDate(firstWeekStartDate, currentWeek, day)
               return (
-                <div
-                  key={day}
-                  data-day-head
-                  className={cn(
-                    'flex flex-col items-center justify-center border-b border-border bg-muted/60 font-medium text-muted-foreground md:flex-row',
-                    day !== 7 && 'border-r'
-                  )}
-                >
-                  <span className="[font-size:var(--cc-head)] [line-height:1.2]">{dayNames[day]}</span>
-                  {date && (
-                    <span className="font-normal [font-size:var(--cc-head-sub)] [line-height:1.2] md:ml-1.5">{format(date, 'MM.dd')}</span>
-                  )}
-                </div>
+                <Tooltip key={day}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      data-day-head
+                      aria-label={`${dayNames[day]} 补课`}
+                      onClick={() => onDayHeaderClick(day)}
+                      className={cn(
+                        'flex cursor-pointer flex-col items-center justify-center border-b border-border bg-muted/60 font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring/40 md:flex-row',
+                        day !== 7 && 'border-r'
+                      )}
+                    >
+                      <span className="[font-size:var(--cc-head)] [line-height:1.2]">{dayNames[day]}</span>
+                      {date && (
+                        <span className="font-normal [font-size:var(--cc-head-sub)] [line-height:1.2] md:ml-1.5">
+                          {format(date, 'MM.dd')}
+                        </span>
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">点击补课</TooltipContent>
+                </Tooltip>
               )
             })}
 

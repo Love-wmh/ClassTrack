@@ -14,6 +14,8 @@ export interface DataSlice extends AppData {
   setClasses: (classes: Class[]) => void
   /** 追加一节课（手动创建的补课与导入课程完全同构，仅多一个 `isManual` 标记）。 */
   addClass: (classItem: Class) => void
+  /** 批量追加课程（如按日期一次补过来整天的课）。 */
+  addClasses: (classItems: Class[]) => void
   /** 删除一节课，并连带清掉它的所有出勤/备注标记（主要用于撤销手动补课）。 */
   removeClass: (classId: string) => void
   setClassMarks: (marks: Record<string, ClassMark>) => void
@@ -67,6 +69,14 @@ export const createDataSlice: StoreSlice<DataSlice> = (set, get) => ({
   addClass: (classItem) => {
     set((state) => {
       state.classes.push(classItem)
+      syncCurrentSemester(state, { classes: state.classes })
+    })
+  },
+
+  addClasses: (classItems) => {
+    if (classItems.length === 0) return
+    set((state) => {
+      state.classes.push(...classItems)
       syncCurrentSemester(state, { classes: state.classes })
     })
   },

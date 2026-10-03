@@ -112,3 +112,106 @@ export function buildMakeupClass(
     isManual: true,
   }
 }
+
+/** 把 JS 的 `getDay()`（周日=0）换成课表口径（周一=1、周日=7）。 */
+function toClassDayOfWeek(date: Date) {
+  const day = date.getDay()
+  return day === 0 ? 7 : day
+}
+
+/** 把 `YYYY-MM-DD` 或可解析日期解析成本地零点；无法解析返回 null。 */
+function parseLocalDate(value: string): Date | null {
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const date = dateOnly ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3])) : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+/**
+ * 根据开学第一天推算某个自然日期落在第几教学周。
+ *
+ * @returns 教学周（从 1 开始）；缺少开学日期或日期早于开学则返回 null。
+ */
+export function getTeachingWeek(firstWeekStartDate: string | null, date: Date): number | null {
+  const start = firstWeekStartDate ? parseLocalDate(firstWeekStartDate) : null
+  if (!start) return null
+
+  const target = new Date(date)
+  target.setHours(0, 0, 0, 0)
+  const diffDays = Math.floor((target.getTime() - start.getTime()) / 86_400_000)
+  if (diffDays < 0) return null
+
+  return Math.floor(diffDays / 7) + 1
+}
+
+/**
+ * 取某个自然日期当天上的全部课程。
+ *
+ * 用于「按日期补课」：先把日期换算成教学周 + 星期，再筛出那天实际有的课。
+ *
+ * @param classes 整学期课程。
+ * @param firstWeekStartDate 开学第一天 ISO 日期；为空时无法换算，返回空。
+ * @param date 源日期。
+ * @returns 当天的课程（按起始节次排序）。
+ */
+export function getCoursesOnDate(classes: Class[], firstWeekStartDate: string | null, date: Date): Class[] {
+  const week = getTeachingWeek(firstWeekStartDate, date)
+  if (week == null) return []
+
+  const weekday = toClassDayOfWeek(date)
+  return classes
+    .filter((classItem) => classItem.dayOfWeek === weekday && classItem.weeks.includes(week))
+    .sort((left, right) => left.startSection - right.startSection)
+}
+
+/**
+ * 规划「把一批源课程补到目标星期」要新建哪些补课。
+ *
+ * 保持每门课原本的节次不变，只改到目标 星期/周次；与目标日已占用的格子（含同批已排入的）**冲突则跳过**，
+ * 绝不重叠。纯函数，便于测试。
+ *
+ * @returns `toCreate` 为可直接 `addClasses` 的补课；`skipped` 为因冲突被跳过的门数。
+ */
+export function planDayMakeup(input: {
+  sourceCourses: Class[]
+  targetDayOfWeek: number
+  week: number
+  occupied: ReadonlySet<string>
+  sectionTimes: Record<number, SectionTime>
+}): { toCreate: Class[]; skipped: number } {
+  const { sourceCourses, targetDayOfWeek, week, occupied, sectionTimes } = input
+  const working = new Set(occupied)
+  const toCreate: Class[] = []
+  let skipped = 0
+
+  for (const source of sourceCourses) {
+    let hasConflict = false
+    for (let section = source.startSection; section <= source.endSection; section += 1) {
+      if (working.has(cellKey(targetDayOfWeek, section))) {
+        hasConflict = true
+        break
+      }
+    }
+
+    if (hasConflict) {
+      skipped += 1
+      continue
+    }
+
+    toCreate.push(
+      buildMakeupClass(source, {
+        week,
+        dayOfWeek: targetDayOfWeek,
+        startSection: source.startSection,
+        endSection: source.endSection,
+        sectionTimes,
+      })
+    )
+    for (let section = source.startSection; section <= source.endSection; section += 1) {
+      working.add(cellKey(targetDayOfWeek, section))
+    }
+  }
+
+  return { toCreate, skipped }
+}

@@ -5,13 +5,14 @@ import { useClassStore } from '~/store'
 import { useAttendanceStore } from '~/store/attendanceStore'
 import { useScheduleDisplayStore } from '~/store/scheduleDisplayStore'
 import AddMakeupDialog, { type MakeupTarget } from './AddMakeupDialog'
+import MakeupDayDialog from './MakeupDayDialog'
 import ScheduleEmptyState from './ScheduleEmptyState'
 import ScheduleHeader from './ScheduleHeader'
 import ScheduleTable from './ScheduleTable'
 import ScheduleCourseDialog from './ScheduleCourseDialog'
 import { buildCourseColorMap } from './courseColor'
-import { buildMakeupClass, cellKey, getMakeupCourseOptions, getMakeupEndSection } from './makeupLesson'
-import { deriveSectionTimes, getCurrentRealWeek, getMaxWeek, getVisibleCourses } from './utils'
+import { buildMakeupClass, cellKey, getMakeupCourseOptions, getMakeupEndSection, planDayMakeup } from './makeupLesson'
+import { deriveSectionTimes, getCurrentRealWeek, getDayDate, getMaxWeek, getVisibleCourses } from './utils'
 import { useWeekAttendance } from './hooks/useWeekAttendance'
 import { useWeekKeyboardNavigation } from './hooks/useWeekKeyboardNavigation'
 
@@ -29,10 +30,12 @@ export default function SchedulePage() {
     firstWeekStartDate,
     addClass,
     removeClass,
+    addClasses,
   } = useClassStore()
 
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
   const [makeupTarget, setMakeupTarget] = useState<MakeupTarget | null>(null)
+  const [makeupDayTarget, setMakeupDayTarget] = useState<number | null>(null)
 
   useEffect(() => {
     if (!isInitialized) {
@@ -98,6 +101,30 @@ export default function SchedulePage() {
     [removeClass]
   )
 
+  const handleDayMakeup = useCallback(
+    (sourceCourses: typeof classes) => {
+      if (makeupDayTarget === null) return
+
+      const { toCreate, skipped } = planDayMakeup({
+        sourceCourses,
+        targetDayOfWeek: makeupDayTarget,
+        week: currentWeek,
+        occupied: occupiedCells,
+        sectionTimes,
+      })
+
+      addClasses(toCreate)
+      setMakeupDayTarget(null)
+
+      if (toCreate.length === 0) {
+        toast.error('这一天的对应时段都已有课，没有可补的')
+        return
+      }
+      toast.success(`已补 ${toCreate.length} 节课${skipped > 0 ? `，${skipped} 节因冲突跳过` : ''}`)
+    },
+    [addClasses, currentWeek, makeupDayTarget, occupiedCells, sectionTimes]
+  )
+
   const maxWeek = useMemo(() => getMaxWeek(classes), [classes])
   const currentRealWeek = useMemo(() => getCurrentRealWeek(classes, firstWeekStartDate), [classes, firstWeekStartDate])
 
@@ -139,6 +166,7 @@ export default function SchedulePage() {
           onWeekChange={setCurrentWeek}
           onCourseClick={(course) => setSelectedCourseId(course.id)}
           onEmptyCellClick={(dayOfWeek, section) => setMakeupTarget({ dayOfWeek, section })}
+          onDayHeaderClick={(dayOfWeek) => setMakeupDayTarget(dayOfWeek)}
         />
       </div>
       <AddMakeupDialog
@@ -148,6 +176,16 @@ export default function SchedulePage() {
         options={makeupCourseOptions}
         onOpenChange={(open) => !open && setMakeupTarget(null)}
         onConfirm={handleAddMakeup}
+      />
+      <MakeupDayDialog
+        open={makeupDayTarget !== null}
+        targetDayOfWeek={makeupDayTarget}
+        currentWeek={currentWeek}
+        targetDate={makeupDayTarget !== null ? getDayDate(firstWeekStartDate, currentWeek, makeupDayTarget) : null}
+        classes={classes}
+        firstWeekStartDate={firstWeekStartDate}
+        onOpenChange={(open) => !open && setMakeupDayTarget(null)}
+        onConfirm={handleDayMakeup}
       />
       <ScheduleCourseDialog
         key={`${selectedCourse?.id || 'none'}-${currentWeek}`}
